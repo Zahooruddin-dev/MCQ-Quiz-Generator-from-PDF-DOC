@@ -1,19 +1,19 @@
 // utils/parsePdf.js
-import * as pdfjsLib from 'pdfjs-dist/build/pdf'
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry'
+import * as pdfjsLib from 'pdfjs-dist';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
+// Set up the worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 export const parsePdf = async (file) => {
-  const arrayBuffer = await file.arrayBuffer()
-  const pdf = await pdfjsLib.getDocument(arrayBuffer).promise
-  let text = ''
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+  let text = '';
   
   for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i)
-    const content = await page.getTextContent()
-    text += content.items.map(item => item.str).join(' ') + '\n'
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(' ') + '\n';
   }
   
-  return text
-}
+  return text;
+};
