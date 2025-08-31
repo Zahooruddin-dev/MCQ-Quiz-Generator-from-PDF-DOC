@@ -6,8 +6,7 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
   const [useAI, setUseAI] = useState(hasAI);
   const [aiOptions, setAiOptions] = useState({
     numQuestions: 10,
-    difficulty: 'medium',
-    questionTypes: ['multiple-choice']
+    difficulty: 'medium'
   });
 
   const handleDragOver = (e) => {
@@ -30,12 +29,7 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
   };
 
   const handleFileSelect = (file) => {
-    if (file.type === 'application/pdf' || 
-        file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      onFileUpload(file, useAI, aiOptions);
-    } else {
-      alert('Please select a PDF or DOCX file.');
-    }
+    onFileUpload(file, useAI, aiOptions);
   };
 
   return (
@@ -108,10 +102,8 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
           <>
             <div className="upload-icon">📁</div>
             <h3>Click to upload or drag and drop</h3>
-            <p>Supported formats: PDF, DOCX</p>
-            <p className="ai-indicator">
-              {hasAI ? (useAI ? '🤖 AI-powered generation enabled' : '📝 Traditional parsing mode') : '📝 Traditional parsing only'}
-            </p>
+            <p>Supported formats: TXT, DOCX, HTML, PDF</p>
+            <p className="pdf-note">📝 PDFs will show instructions for text extraction</p>
           </>
         )}
       </div>
@@ -120,7 +112,7 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
         id="file-input"
         type="file"
         className="file-input"
-        accept=".pdf,.docx"
+        accept=".txt,.docx,.html,.pdf"
         onChange={(e) => {
           if (e.target.files.length > 0) {
             handleFileSelect(e.target.files[0]);
