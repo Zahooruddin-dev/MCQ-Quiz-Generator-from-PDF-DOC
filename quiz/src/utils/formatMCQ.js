@@ -1,47 +1,41 @@
-// utils/formatMCQ.js
 export const extractQuestionsFromText = (text) => {
-  // Split text into lines and remove empty lines
-  const lines = text.split('\n').filter(line => line.trim() !== '')
-  const questions = []
-  let currentQuestion = null
+  const questions = [];
+  const questionBlocks = text.split(/\n\s*\n/).filter(block => block.trim());
   
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
+  for (const block of questionBlocks) {
+    const lines = block.split('\n').filter(line => line.trim());
     
-    // Detect question (supports multiple formats)
-    if (line.match(/^Q\d+\.|^Question \d+:|^\d+\./)) {
-      if (currentQuestion) {
-        questions.push(currentQuestion)
-      }
+    if (lines.length < 5) continue;
+    
+    const questionLine = lines.find(line => /^\d+\./.test(line.trim()));
+    if (!questionLine) continue;
+    
+    const question = questionLine.replace(/^\d+\.\s*/, '').trim();
+    const options = [];
+    let correctAnswer = -1;
+    
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      const optionMatch = line.match(/^[a-d]\)\s*(.+)/i);
       
-      currentQuestion = {
-        q: line.replace(/^Q\d+\.|^Question \d+:|^\d+\./, '').trim(),
-        options: [],
-        answer: ''
-      }
-    } 
-    // Detect options (a), b), c), d)
-    else if (line.match(/^[a-d]\)/)) {
-      if (currentQuestion) {
-        currentQuestion.options.push(line.replace(/^[a-d]\)/, '').trim())
+      if (optionMatch) {
+        options.push(optionMatch[1]);
+        
+        if (line.includes('*') || line.includes('✓')) {
+          correctAnswer = options.length - 1;
+        }
       }
     }
-    // Detect answer
-    else if (line.match(/^Answer:/i)) {
-      if (currentQuestion) {
-        currentQuestion.answer = line.replace(/^Answer:/i, '').trim()
-      }
-    }
-    // Handle case where question continues on next line
-    else if (currentQuestion && currentQuestion.options.length === 0) {
-      currentQuestion.q += ' ' + line
+    
+    if (options.length === 4) {
+      questions.push({
+        question,
+        options,
+        correctAnswer: correctAnswer >= 0 ? correctAnswer : 0,
+        explanation: "Answer determined from source material"
+      });
     }
   }
   
-  // Add the last question
-  if (currentQuestion) {
-    questions.push(currentQuestion)
-  }
-  
-  return questions
-}
+  return questions;
+};

@@ -8,12 +8,10 @@ export class LLMService {
   async generateQuizQuestions(text, options = {}) {
     const {
       numQuestions = 10,
-      difficulty = 'medium',
-      questionTypes = ['multiple-choice']
+      difficulty = 'medium'
     } = options;
 
-    const prompt = `
-Based on the following text, generate ${numQuestions} multiple choice questions with 4 options each. 
+    const prompt = `Based on the following text, generate ${numQuestions} multiple choice questions with 4 options each. 
 Format your response as a JSON array where each question has:
 - question: the question text
 - options: array of 4 possible answers  
@@ -23,15 +21,14 @@ Format your response as a JSON array where each question has:
 Difficulty: ${difficulty}
 Text: ${text}
 
-Return only valid JSON, no other text.
-`;
+Return only valid JSON, no other text.`;
 
     try {
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-goog-api-key': this.apiKey // Use your API key here
+          'X-goog-api-key': this.apiKey
         },
         body: JSON.stringify({
           contents: [{
@@ -47,7 +44,6 @@ Return only valid JSON, no other text.
       const data = await response.json();
       const generatedText = data.candidates[0].content.parts[0].text;
       
-      // Parse the JSON response
       const questions = JSON.parse(generatedText.replace(/```json\n?|\n?```/g, ''));
       return questions;
 
