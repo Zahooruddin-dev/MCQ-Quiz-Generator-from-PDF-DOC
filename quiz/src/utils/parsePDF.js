@@ -1,8 +1,11 @@
 // utils/parsePdf.js
 import * as pdfjs from 'pdfjs-dist';
 
-// Set worker path
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+// Use local worker instead of CDN
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.js',
+  import.meta.url
+).toString();
 
 export const parsePdf = async (file) => {
   try {
