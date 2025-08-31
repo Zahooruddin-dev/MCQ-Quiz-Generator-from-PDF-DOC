@@ -4,7 +4,7 @@ import QuizEngine from './components/QuizEngine'
 import ResultPage from './components/ResultPage'
 import FileUpload from './components/FileUpload'
 import { extractQuestionsFromText } from './utils/formatMCQ'
-import { parsePdf } from './utils/parsePdf'
+import { parsePdf } from './utils/parsePDF'
 import { parseDocx } from './utils/parseDocx'
 import './App.css'
 
