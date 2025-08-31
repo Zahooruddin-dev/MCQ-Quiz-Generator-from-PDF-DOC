@@ -24,18 +24,12 @@ const FileUpload = ({ onFileUpload }) => {
     }
   }
 
-  const handleFileSelect = async (file) => {
+  const handleFileSelect = (file) => {
     if (file.type === 'application/pdf' || 
         file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      try {
-        setLoading(true);
-        await onFileUpload(file);
-      } catch (error) {
-        console.error('File processing error:', error);
-        alert('Error processing file. Please try again with a different file.');
-      } finally {
-        setLoading(false);
-      }
+      setLoading(true)
+      onFileUpload(file)
+      setLoading(false)
     } else {
       alert('Please select a PDF or DOCX file.')
     }
