@@ -1,34 +1,51 @@
+// LLMService.js
 export class LLMService {
 	constructor(apiKey, baseUrl) {
 		this.apiKey = apiKey;
 		this.baseUrl = baseUrl;
 	}
 
-	// Simple file reader that works with text-based files
+	// Reads text content from common file formats
 	async readFileContent(file) {
 		try {
-			// For text files, docx, html - use direct text extraction
+			// TXT / HTML
 			if (
 				file.type.includes('text') ||
-				file.type.includes('document') ||
 				file.name.endsWith('.txt') ||
 				file.name.endsWith('.html')
 			) {
 				return await file.text();
 			}
 
-			// For PDFs - guide users to copy-paste text
-			if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-				throw new Error(`For PDF files:
-1. Open the PDF in your browser or PDF reader
-2. Copy (Ctrl+A, then Ctrl+C) all the text
-3. Paste it directly in the text input box below
-4. Click 'Generate Questions'`);
+			// DOCX (using mammoth)
+			if (
+				file.type ===
+					'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+				file.name.endsWith('.docx')
+			) {
+				const arrayBuffer = await file.arrayBuffer();
+				const mammoth = await import('mammoth/mammoth.browser.js'); // browser build
+				const { value } = await mammoth.extractRawText({ arrayBuffer });
+				return value;
 			}
 
-			throw new Error(
-				'Unsupported file type. Please use text-based files or copy-paste PDF content.'
-			);
+			// PDF (using pdfjs-dist)
+			if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+				const pdfjsLib = await import('pdfjs-dist/build/pdf');
+				const worker = await import('pdfjs-dist/build/pdf.worker.entry'); // required in browser builds
+				pdfjsLib.GlobalWorkerOptions.workerSrc = worker;
+
+				const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+				let text = '';
+				for (let i = 1; i <= pdf.numPages; i++) {
+					const page = await pdf.getPage(i);
+					const content = await page.getTextContent();
+					text += content.items.map((item) => item.str).join(' ') + '\n';
+				}
+				return text.trim();
+			}
+
+			throw new Error('Unsupported file type. Use TXT, HTML, DOCX, or PDF.');
 		} catch (error) {
 			throw new Error(`File reading failed: ${error.message}`);
 		}
@@ -46,32 +63,34 @@ export class LLMService {
 		const { numQuestions = 10, difficulty = 'medium' } = options;
 
 		try {
-			// Handle both file uploads and direct text input
+			// Support both direct text input and uploaded files
 			const text =
 				typeof fileOrText === 'string'
 					? fileOrText
 					: await this.readFileContent(fileOrText);
 
-			const prompt = `Create ${numQuestions} multiple choice questions. For each question:
-- Make it self-contained and clear
-- Include relevant context
-- Use varied answer patterns (don't make all correct answers the same letter)
-- Make distractors plausible but clearly incorrect
-- Include specific details from the source
+			const prompt = `Create ${numQuestions} multiple choice questions from the following text.
+Each question must have:
+- 1 clear question
+- 4 unique options
+- "correctAnswer" as the index of the right option (0–3)
+- "explanation" as a short reason
+Return ONLY valid JSON. No extra text, no markdown fences.
 
-Format as JSON array:
+Format:
 {
   "questions": [
     {
-      "question": "Clear, specific question text",
-      "options": ["Correct Answer", "Plausible Wrong 1", "Plausible Wrong 2", "Plausible Wrong 3"],
+      "question": "string",
+      "options": ["string", "string", "string", "string"],
       "correctAnswer": 0,
-      "explanation": "Brief explanation why this is correct"
+      "explanation": "string"
     }
   ]
 }
 
-Content: ${text}`;
+Content:
+${text}`;
 
 			const response = await fetch(this.baseUrl, {
 				method: 'POST',
@@ -80,11 +99,7 @@ Content: ${text}`;
 					'X-goog-api-key': this.apiKey,
 				},
 				body: JSON.stringify({
-					contents: [
-						{
-							parts: [{ text: prompt }],
-						},
-					],
+					contents: [{ parts: [{ text: prompt }] }],
 				}),
 			});
 
@@ -93,13 +108,17 @@ Content: ${text}`;
 			}
 
 			const data = await response.json();
-			const generatedText = data.candidates[0].content.parts[0].text;
+			const rawText = data.candidates[0].content.parts[0].text;
 
-			let questions = JSON.parse(
-				generatedText.replace(/```json\n?|\n?```/g, '')
-			).questions;
+			// --- Safe JSON extraction ---
+			let jsonString = rawText.replace(/```json|```/g, '').trim();
+			const match = jsonString.match(/\{[\s\S]*\}/);
+			if (!match) throw new Error('No JSON found in LLM response');
 
-			// Randomize options for each question
+			const parsed = JSON.parse(match[0]);
+			let questions = parsed.questions;
+
+			// Shuffle options for variety
 			questions = questions.map((q) => {
 				const options = [...q.options];
 				const correctOption = options[q.correctAnswer];
@@ -131,7 +150,7 @@ Content: ${text}`;
 					questionText.charAt(0).toUpperCase() + questionText.slice(1);
 			}
 
-			// Ensure options are unique
+			// Ensure unique options
 			const uniqueOptions = [...new Set(q.options)];
 			if (uniqueOptions.length !== 4) {
 				throw new Error('All options must be unique');
