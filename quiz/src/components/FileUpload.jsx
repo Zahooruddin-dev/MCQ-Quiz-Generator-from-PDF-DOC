@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 
 const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
@@ -33,25 +32,33 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
   };
 
   return (
-    <div className="upload-section">
+    <div className="upload-container">
       {hasAI && (
-        <div className="ai-options">
-          <h3>Generation Options</h3>
-          <div className="option-group">
-            <label>
+        <div className="ai-config-panel">
+          <div className="panel-header">
+            <span className="icon">⚙️</span>
+            <h3>AI Generation Settings</h3>
+          </div>
+          
+          <div className="ai-toggle">
+            <label className="switch">
               <input
                 type="checkbox"
                 checked={useAI}
                 onChange={(e) => setUseAI(e.target.checked)}
               />
-              Use AI to generate questions
+              <span className="slider"></span>
             </label>
+            <span className="toggle-label">Use AI Generation</span>
           </div>
 
           {useAI && (
-            <div className="ai-settings">
-              <div className="setting">
-                <label>Number of Questions:</label>
+            <div className="ai-controls">
+              <div className="control-group">
+                <label>
+                  <span className="icon">🔢</span>
+                  Number of Questions
+                </label>
                 <input
                   type="number"
                   min="5"
@@ -61,16 +68,22 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
                     ...prev,
                     numQuestions: parseInt(e.target.value)
                   }))}
+                  className="number-input"
                 />
               </div>
-              <div className="setting">
-                <label>Difficulty:</label>
+
+              <div className="control-group">
+                <label>
+                  <span className="icon">🎚️</span>
+                  Difficulty Level
+                </label>
                 <select
                   value={aiOptions.difficulty}
                   onChange={(e) => setAiOptions(prev => ({
                     ...prev,
                     difficulty: e.target.value
                   }))}
+                  className="select-input"
                 >
                   <option value="easy">Easy</option>
                   <option value="medium">Medium</option>
@@ -80,31 +93,41 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
             </div>
           )}
 
-          <button onClick={onReconfigure} className="reconfigure-btn">
-            Change API Settings
+          <button onClick={onReconfigure} className="btn btn-secondary">
+            <span className="icon">⚙️</span>
+            Configure API
           </button>
         </div>
       )}
 
       <div 
-        className={`upload-box ${dragOver ? 'drag-over' : ''}`}
+        className={`dropzone ${dragOver ? 'drag-active' : ''} ${loading ? 'loading' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => document.getElementById('file-input').click()}
       >
         {loading ? (
-          <div className="loading">
+          <div className="loading-state">
             <div className="spinner"></div>
-            <p>Processing your file with AI...</p>
+            <h3>Processing with AI</h3>
+            <p>Please wait while we analyze your document...</p>
           </div>
         ) : (
-          <>
-            <div className="upload-icon">📁</div>
-            <h3>Click to upload or drag and drop</h3>
-            <p>Supported formats: TXT, DOCX, HTML, PDF</p>
-            <p className="pdf-note">📝 PDFs will show instructions for text extraction</p>
-          </>
+          <div className="upload-content">
+            <span className="upload-icon">📁</span>
+            <h3>Upload Your Document</h3>
+            <p>Drag & drop your file here or click to browse</p>
+            <div className="supported-formats">
+              <span>Supported formats:</span>
+              <div className="format-tags">
+                <span className="format-tag">PDF</span>
+                <span className="format-tag">DOCX</span>
+                <span className="format-tag">TXT</span>
+                <span className="format-tag">HTML</span>
+              </div>
+            </div>
+          </div>
         )}
       </div>
       
