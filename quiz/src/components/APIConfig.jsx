@@ -1,9 +1,17 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const APIConfig = ({ onConfigSave }) => {
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
+
+  // Load API key from localStorage on component mount
+  useEffect(() => {
+    const savedApiKey = localStorage.getItem('geminiApiKey');
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+      onConfigSave(savedApiKey, baseUrl);
+    }
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -11,6 +19,8 @@ const APIConfig = ({ onConfigSave }) => {
       alert('Please enter your API key');
       return;
     }
+    // Save API key to localStorage
+    localStorage.setItem('geminiApiKey', apiKey.trim());
     onConfigSave(apiKey.trim(), baseUrl);
   };
 
@@ -29,10 +39,15 @@ const APIConfig = ({ onConfigSave }) => {
               placeholder="Enter your Gemini API key here"
               required
             />
-            <small>Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+            <small>
+              Get your API key from{' '}
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
+                Google AI Studio
+              </a>
+            </small>
           </div>
 
-          <button type="submit" className="config-button">
+          <button type="submit" className="btn">
             Start Using AI Quiz Generator
           </button>
         </form>

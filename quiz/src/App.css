@@ -7,7 +7,7 @@
 }
 
 body {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #66eac2 0%, #0b361c 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -26,7 +26,7 @@ body {
 }
 
 .app-header {
-  background: linear-gradient(to right, #4b6cb7, #182848);
+  background: linear-gradient(to right, #798f93, #18482e);
   color: white;
   padding: 25px;
   text-align: center;
@@ -349,31 +349,94 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-/* Responsive Styles */
+/* API Configuration Styles */
+.api-config {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: 20px;
+}
+
+.config-card {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.config-card h2 {
+  color: #182848;
+  font-size: 1.8rem;
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 25px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #4b6cb7;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+  border-color: #4b6cb7;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.1);
+}
+
+.form-group small {
+  display: block;
+  margin-top: 8px;
+  color: #6c757d;
+}
+
+.form-group a {
+  color: #4b6cb7;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.form-group a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive styles for API Config */
 @media (max-width: 768px) {
-  .app-header h1 {
-    font-size: 1.8rem;
-  }
-  
-  .app-main {
+  .config-card {
     padding: 20px;
   }
-  
-  .stats {
-    grid-template-columns: 1fr;
+
+  .config-card h2 {
+    font-size: 1.5rem;
   }
-  
-  .btn {
-    padding: 10px 20px;
-    font-size: 0.9rem;
+
+  .form-group input {
+    padding: 10px;
   }
-  
-  .score-circle {
-    width: 120px;
-    height: 120px;
+}
+
+@media (max-width: 480px) {
+  .api-config {
+    padding: 15px;
   }
-  
-  .score-value {
-    font-size: 2rem;
+
+  .config-card h2 {
+    font-size: 1.3rem;
   }
 }
