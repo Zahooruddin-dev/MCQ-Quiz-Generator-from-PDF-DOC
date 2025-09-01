@@ -44,6 +44,30 @@ body {
 .app-main {
   padding: 30px;
 }
+/* Add to your App.css */
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error-message button {
+  background: none;
+  border: none;
+  color: #c62828;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0 8px;
+}
+
+.error-message button:hover {
+  opacity: 0.8;
+}
 
 /* File Upload Styles */
 .upload-container {

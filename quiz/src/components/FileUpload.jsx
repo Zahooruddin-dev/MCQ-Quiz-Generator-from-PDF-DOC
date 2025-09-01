@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LLMService } from '../utils/llmService';
 
 const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
   const [dragOver, setDragOver] = useState(false);
@@ -7,6 +8,7 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
     numQuestions: 10,
     difficulty: 'medium'
   });
+  const [error, setError] = useState(null);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -27,8 +29,30 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
     }
   };
 
-  const handleFileSelect = (file) => {
-    onFileUpload(file, useAI, aiOptions);
+  const handleFileSelect = async (file) => {
+    if (!useAI) {
+      onFileUpload(file, false, null);
+      return;
+    }
+
+    try {
+      const llmService = new LLMService(
+        localStorage.getItem('geminiApiKey'),
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+      );
+
+      // First handle file content
+      const questions = await llmService.generateQuizQuestions(file, {
+        numQuestions: aiOptions.numQuestions,
+        difficulty: aiOptions.difficulty
+      });
+
+      // Pass the generated questions to parent component
+      onFileUpload(questions, true, aiOptions);
+    } catch (error) {
+      setError(error.message);
+      console.error('Error processing file:', error);
+    }
   };
 
   const handleReconfigure = (e) => {
@@ -40,6 +64,13 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
 
   return (
     <div className="upload-container">
+      {error && (
+        <div className="error-message">
+          {error}
+          <button onClick={() => setError(null)}>✕</button>
+        </div>
+      )}
+      
       {hasAI && (
         <div className="ai-config-panel">
           <div className="panel-header">
