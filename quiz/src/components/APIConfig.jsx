@@ -3,15 +3,17 @@ import { useState, useEffect } from 'react';
 const APIConfig = ({ onConfigSave }) => {
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent');
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Load API key from localStorage on component mount
   useEffect(() => {
     const savedApiKey = localStorage.getItem('geminiApiKey');
-    if (savedApiKey) {
+    if (savedApiKey && isInitialLoad) {
       setApiKey(savedApiKey);
-      onConfigSave(savedApiKey, baseUrl);
+      setIsInitialLoad(false);
+      // Remove the automatic onConfigSave call here
     }
-  }, []);
+  }, [isInitialLoad]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
