@@ -31,6 +31,13 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
     onFileUpload(file, useAI, aiOptions);
   };
 
+  const handleReconfigure = (e) => {
+    e.preventDefault();
+    if (typeof onReconfigure === 'function') {
+      onReconfigure();
+    }
+  };
+
   return (
     <div className="upload-container">
       {hasAI && (
@@ -93,7 +100,11 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
             </div>
           )}
 
-          <button onClick={onReconfigure} className="btn btn-secondary">
+          <button 
+            onClick={handleReconfigure} 
+            className="btn btn-secondary"
+            type="button"
+          >
             <span className="icon">⚙️</span>
             Configure API
           </button>
