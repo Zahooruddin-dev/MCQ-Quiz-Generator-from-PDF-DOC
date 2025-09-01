@@ -1,95 +1,114 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { LLMService } from '../utils/llmService';
 
-const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
+const FileUpload = ({ onFileUpload, hasAI, loading: loadingFromParent = false, onReconfigure }) => {
   const [dragOver, setDragOver] = useState(false);
   const [useAI, setUseAI] = useState(hasAI);
-  const [showTextInput, setShowTextInput] = useState(false);
-  const [textContent, setTextContent] = useState('');
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const busyRef = useRef(false); // prevent re-entrancy
+
   const [aiOptions, setAiOptions] = useState({
     numQuestions: 10,
-    difficulty: 'medium'
+    difficulty: 'medium',
   });
-  const [error, setError] = useState(null);
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
+  const startLoading = () => { setError(null); setIsLoading(true); busyRef.current = true; };
+  const stopLoading = () => { setIsLoading(false); busyRef.current = false; };
 
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-  };
+  const handleDragOver = (e) => { e.preventDefault(); setDragOver(true); };
+  const handleDragLeave = (e) => { e.preventDefault(); setDragOver(false); };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
     const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleFileSelect(files[0]);
-    }
+    if (files && files.length > 0) handleFileSelect(files[0]);
   };
 
   const handleFileSelect = async (file) => {
+    if (busyRef.current) return; // ignore while processing
     setError(null);
-    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-      setShowTextInput(true);
-      return;
-    }
 
     try {
+      if (!file) return;
+
+      // If AI is off, just hand file up to parent
       if (!useAI) {
         onFileUpload(file, false, null);
         return;
       }
 
+      const apiKey = localStorage.getItem('geminiApiKey');
+      if (!apiKey || apiKey.trim().length < 8) {
+        setError('Please configure your API key first.');
+        return;
+      }
+
+      startLoading();
+
       const llmService = new LLMService(
-        localStorage.getItem('geminiApiKey'),
+        apiKey,
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
       );
 
       const questions = await llmService.generateQuizQuestions(file, aiOptions);
       onFileUpload(questions, true, aiOptions);
-    } catch (error) {
-      setError(error.message);
-      console.error('Error processing file:', error);
+    } catch (err) {
+      console.error('Error processing file:', err);
+      setError(err?.message || 'Failed to process file.');
+    } finally {
+      stopLoading();
     }
   };
 
-  const handleTextSubmit = async () => {
-    if (!textContent.trim()) {
-      setError('Please paste some content first');
-      return;
-    }
+  const handleTextSubmit = async (textContent) => {
+    // If you also keep a manual text mode elsewhere, call this with content.
+    if (busyRef.current) return;
+    setError(null);
 
     try {
+      const apiKey = localStorage.getItem('geminiApiKey');
+      if (!apiKey || apiKey.trim().length < 8) {
+        setError('Please configure your API key first.');
+        return;
+      }
+
+      if (!textContent || !textContent.trim()) {
+        setError('Please paste some content first.');
+        return;
+      }
+
+      startLoading();
+
       const llmService = new LLMService(
-        localStorage.getItem('geminiApiKey'),
+        apiKey,
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
       );
 
       const questions = await llmService.generateQuizQuestions(textContent, aiOptions);
       onFileUpload(questions, true, aiOptions);
-    } catch (error) {
-      setError(error.message);
-      console.error('Error processing text:', error);
+    } catch (err) {
+      console.error('Error processing text:', err);
+      setError(err?.message || 'Failed to process text.');
+    } finally {
+      stopLoading();
     }
   };
 
   const handleReconfigure = (e) => {
     e.preventDefault();
-    if (typeof onReconfigure === 'function') {
-      onReconfigure();
-    }
+    if (typeof onReconfigure === 'function') onReconfigure();
   };
+
+  const effectiveLoading = isLoading || loadingFromParent;
 
   return (
     <div className="upload-container">
       {error && (
         <div className="error-message">
-          {error}
-          <button onClick={() => setError(null)}>✕</button>
+          <span>{error}</span>
+          <button onClick={() => setError(null)} aria-label="Dismiss error">✕</button>
         </div>
       )}
 
@@ -99,13 +118,14 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
             <span className="icon">⚙️</span>
             <h3>AI Generation Settings</h3>
           </div>
-          
+
           <div className="ai-toggle">
             <label className="switch">
               <input
                 type="checkbox"
                 checked={useAI}
                 onChange={(e) => setUseAI(e.target.checked)}
+                disabled={effectiveLoading}
               />
               <span className="slider"></span>
             </label>
@@ -124,11 +144,14 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
                   min="5"
                   max="50"
                   value={aiOptions.numQuestions}
-                  onChange={(e) => setAiOptions(prev => ({
-                    ...prev,
-                    numQuestions: parseInt(e.target.value)
-                  }))}
+                  onChange={(e) =>
+                    setAiOptions((prev) => ({
+                      ...prev,
+                      numQuestions: Number(e.target.value || 10),
+                    }))
+                  }
                   className="number-input"
+                  disabled={effectiveLoading}
                 />
               </div>
 
@@ -139,11 +162,14 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
                 </label>
                 <select
                   value={aiOptions.difficulty}
-                  onChange={(e) => setAiOptions(prev => ({
-                    ...prev,
-                    difficulty: e.target.value
-                  }))}
+                  onChange={(e) =>
+                    setAiOptions((prev) => ({
+                      ...prev,
+                      difficulty: e.target.value,
+                    }))
+                  }
                   className="select-input"
+                  disabled={effectiveLoading}
                 >
                   <option value="easy">Easy</option>
                   <option value="medium">Medium</option>
@@ -153,29 +179,32 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
             </div>
           )}
 
-          <button 
-            onClick={handleReconfigure} 
+          <button
+            onClick={handleReconfigure}
             className="btn btn-secondary"
             type="button"
+            disabled={effectiveLoading}
           >
-            <span className="icon">⚙️</span>
+            <span className="icon">🔐</span>
             Configure API
           </button>
         </div>
       )}
 
-      <div 
-        className={`dropzone ${dragOver ? 'drag-active' : ''} ${loading ? 'loading' : ''}`}
+      <div
+        className={`dropzone ${dragOver ? 'drag-active' : ''} ${effectiveLoading ? 'loading' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => document.getElementById('file-input').click()}
+        onClick={() => !effectiveLoading && document.getElementById('file-input')?.click()}
+        role="button"
+        tabIndex={0}
       >
-        {loading ? (
+        {effectiveLoading ? (
           <div className="loading-state">
-            <div className="spinner"></div>
-            <h3>Processing with AI</h3>
-            <p>Please wait while we analyze your document...</p>
+            <div className="spinner" aria-hidden="true"></div>
+            <h3>Generating MCQs…</h3>
+            <p>We’re analyzing your document and creating questions.</p>
           </div>
         ) : (
           <div className="upload-content">
@@ -194,17 +223,18 @@ const FileUpload = ({ onFileUpload, hasAI, loading, onReconfigure }) => {
           </div>
         )}
       </div>
-      
+
       <input
         id="file-input"
         type="file"
         className="file-input"
         accept=".txt,.docx,.html,.pdf"
         onChange={(e) => {
-          if (e.target.files.length > 0) {
-            handleFileSelect(e.target.files[0]);
-          }
+          const file = e.target.files && e.target.files[0];
+          if (file) handleFileSelect(file);
+          e.target.value = ''; // allow re-upload same file
         }}
+        disabled={effectiveLoading}
       />
     </div>
   );
