@@ -1,29 +1,29 @@
 // components/ResultPage.jsx
 const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
   const calculateResults = () => {
-    let correct = 0
-    let wrong = 0
-    let unattempted = 0
+    let correct = 0;
+    let wrong = 0;
+    let unattempted = 0;
     
     userAnswers.forEach((answer, index) => {
       if (answer === null) {
-        unattempted++
-      } else if (questions[index].options[answer] === questions[index].answer) {
-        correct++
+        unattempted++;
+      } else if (answer === questions[index].correctAnswer) { // Changed this line
+        correct++;
       } else {
-        wrong++
+        wrong++;
       }
-    })
+    });
     
     return {
       correct,
       wrong,
       unattempted,
       score: (correct / questions.length) * 100
-    }
-  }
+    };
+  };
 
-  const results = calculateResults()
+  const results = calculateResults();
 
   return (
     <div className="results-container">
@@ -57,9 +57,9 @@ const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
       <div className="review-section">
         <h3>Question Review</h3>
         {questions.map((question, index) => {
-          const userAnswerIndex = userAnswers[index]
+          const userAnswerIndex = userAnswers[index];
           const isCorrect = userAnswerIndex !== null && 
-                           question.options[userAnswerIndex] === question.answer
+                          userAnswerIndex === question.correctAnswer; // Changed this line
           
           return (
             <div key={index} className="review-question">
@@ -70,22 +70,22 @@ const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
                 </span>
               </div>
               
-              <div className="review-question-text">{question.q}</div>
+              <div className="review-question-text">{question.question}</div> {/* Changed from q to question */}
               
               <div className="review-options">
                 {question.options.map((option, optIndex) => {
-                  let className = 'review-option'
-                  if (option === question.answer) {
-                    className += ' correct-answer'
+                  let className = 'review-option';
+                  if (optIndex === question.correctAnswer) { // Changed this line
+                    className += ' correct-answer';
                   } else if (userAnswerIndex === optIndex) {
-                    className += ' user-answer'
+                    className += ' user-answer';
                   }
                   
                   return (
                     <div key={optIndex} className={className}>
                       {String.fromCharCode(97 + optIndex)}) {option}
                     </div>
-                  )
+                  );
                 })}
               </div>
             </div>
