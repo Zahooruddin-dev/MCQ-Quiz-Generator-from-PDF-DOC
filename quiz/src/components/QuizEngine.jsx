@@ -50,7 +50,7 @@ const QuizEngine = ({ questions, onFinish }) => {
       
       <div className="question">
         <div className="question-number">Question {currentQuestion + 1}</div>
-        <div className="question-text">{questions[currentQuestion].q}</div>
+        <div className="question-text">{questions[currentQuestion].question}</div>
         
         <div className="options">
           {questions[currentQuestion].options.map((option, index) => (
