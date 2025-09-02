@@ -1,5 +1,6 @@
 // components/QuizEngine.jsx
 import { useState } from 'react';
+import Context from './Context';
 
 const QuizEngine = ({ questions, onFinish }) => {
 	const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -59,6 +60,8 @@ const QuizEngine = ({ questions, onFinish }) => {
 				<div className='question-text'>
 					{questions[currentQuestion].question}
 				</div>
+
+				<Context context={questions[currentQuestion].context} />
 
 				<div className='options'>
 					{questions[currentQuestion].options.map((option, index) => (

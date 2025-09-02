@@ -118,12 +118,18 @@ export class LLMService {
       const text = trimForPrompt(sourceText);
 
       const prompt = `Create ${numQuestions} ${difficulty} multiple choice questions from the following text.
+Important rules for questions:
+1. Each question MUST be completely self-contained - never reference "the passage" or "the text"
+2. Include necessary context within the question itself
+3. Bad example: "What does the passage say about climate change?"
+4. Good example: "According to the 2023 IPCC report, what was identified as the primary driver of climate change?"
+
 Each question must have:
-- "question": clear question (concise, self-contained)
+- "question": self-contained question with context (no references to "the passage" or "the text")
 - "options": 4 unique options (strings)
 - "correctAnswer": index of the correct option (0–3)
 - "explanation": 1–2 lines why it's correct
-Return ONLY valid JSON. Do not add commentary or markdown.
+- "context": relevant excerpt from source text that contains the answer (max 200 chars)
 
 Format:
 {
@@ -132,7 +138,8 @@ Format:
       "question": "string",
       "options": ["string", "string", "string", "string"],
       "correctAnswer": 0,
-      "explanation": "string"
+      "explanation": "string",
+      "context": "string"
     }
   ]
 }
