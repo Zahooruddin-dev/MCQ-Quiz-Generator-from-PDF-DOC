@@ -27,7 +27,35 @@ const QuizEngine = ({ questions, onFinish }) => {
 	};
 
 	const handleFinish = () => {
-		onFinish(userAnswers);
+		// Check if all questions are answered
+		const unansweredCount = userAnswers.filter((answer) => answer === null)
+			.length;
+
+		if (unansweredCount > 0) {
+			const confirm = window.confirm(
+				`You have ${unansweredCount} unanswered ${
+					unansweredCount === 1 ? 'question' : 'questions'
+				}. Are you sure you want to finish?`
+			);
+			if (!confirm) return;
+		}
+
+		// Calculate results
+		const results = {
+			answers: userAnswers,
+			score:
+				(userAnswers.filter(
+					(answer, index) =>
+						answer === questions[index].correctAnswer
+				).length / questions.length) * 100,
+			totalQuestions: questions.length,
+			answeredQuestions: questions.length - unansweredCount,
+		};
+
+		// Call the onFinish prop with results
+		if (typeof onFinish === 'function') {
+			onFinish(results);
+		}
 	};
 
 	const calculateProgress = () => {

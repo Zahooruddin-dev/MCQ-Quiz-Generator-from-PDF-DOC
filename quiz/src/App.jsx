@@ -1,53 +1,58 @@
 // App.jsx
 import { useState } from 'react';
 import FileUpload from './components/FileUpload';
-import APIConfig from './components/APIConfig';
 import QuizEngine from './components/QuizEngine';
+import ResultPage from './components/ResultPage';
+import APIConfig from './components/APIConfig';
 import './App.css';
 
 const App = () => {
   const [questions, setQuestions] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [showApiConfig, setShowApiConfig] = useState(false);
+  const [quizResults, setQuizResults] = useState(null);
+  const [showResults, setShowResults] = useState(false);
+  const [showApiConfig, setShowApiConfig] = useState(true);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('geminiApiKey'));
 
-  const handleFileUpload = async (data, useAI, options) => {
-    setLoading(true);
-    try {
-      if (useAI && Array.isArray(data)) {
-        // If AI was used, data is already the questions array
-        setQuestions(data);
-      } else {
-        // Handle non-AI case if needed
-        // ... your existing logic ...
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      // Handle error (show to user)
-    } finally {
-      setLoading(false);
-    }
+  const handleConfigSave = (newApiKey, baseUrl) => {
+    setApiKey(newApiKey);
+    setShowApiConfig(false);
+  };
+
+  const handleFileUpload = (generatedQuestions) => {
+    setQuestions(generatedQuestions);
+  };
+
+  const handleQuizFinish = (results) => {
+    setQuizResults(results);
+    setShowResults(true);
+  };
+
+  const handleNewQuiz = () => {
+    setQuestions(null);
+    setQuizResults(null);
+    setShowResults(false);
   };
 
   return (
     <div className="app">
       {showApiConfig ? (
-        <APIConfig onConfigSave={(apiKey) => {
-          localStorage.setItem('geminiApiKey', apiKey);
-          setShowApiConfig(false);
-        }} />
-      ) : questions ? (
-        <QuizEngine 
+        <APIConfig onConfigSave={handleConfigSave} />
+      ) : !questions ? (
+        <FileUpload
+          hasAI={!!apiKey}
+          onFileUpload={handleFileUpload}
+          onReconfigure={() => setShowApiConfig(true)}
+        />
+      ) : showResults ? (
+        <ResultPage 
+          results={quizResults} 
           questions={questions} 
-          onFinish={(answers) => {
-            // Handle quiz completion
-          }} 
+          onNewQuiz={handleNewQuiz}
         />
       ) : (
-        <FileUpload
-          hasAI={!!localStorage.getItem('geminiApiKey')}
-          loading={loading}
-          onReconfigure={() => setShowApiConfig(true)}
-          onFileUpload={handleFileUpload}
+        <QuizEngine 
+          questions={questions} 
+          onFinish={handleQuizFinish}
         />
       )}
     </div>
