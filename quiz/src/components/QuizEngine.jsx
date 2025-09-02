@@ -43,6 +43,7 @@ const QuizEngine = ({ questions, onFinish }) => {
 		// Calculate results
 		const results = {
 			answers: userAnswers,
+			fileName: 'Quiz', // Add this line
 			score:
 				(userAnswers.filter(
 					(answer, index) =>
