@@ -157,83 +157,110 @@ body {
 }
 
 /* Quiz Engine Styles */
+.quiz-container {
+  padding: 30px;
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
 .quiz-header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.quiz-header h2 {
+  color: #182848;
+  font-size: 2rem;
   margin-bottom: 20px;
 }
 
 .progress-bar {
-  height: 10px;
+  height: 8px;
   background: #e9ecef;
-  border-radius: 5px;
-  margin: 15px 0;
+  border-radius: 50px;
+  margin: 20px 0;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(to right, #4b6cb7, #182848);
-  border-radius: 5px;
+  background: linear-gradient(to right, #66eac2, #0b361c);
+  border-radius: 50px;
   transition: width 0.3s ease;
 }
 
 .quiz-info {
   display: flex;
   justify-content: space-between;
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: #6c757d;
+  margin-top: 15px;
 }
 
 .question {
   background: #f8f9fa;
   border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  padding: 25px;
+  margin: 30px 0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
 .question-number {
   font-weight: 600;
-  color: #4b6cb7;
-  margin-bottom: 10px;
+  color: #0b361c;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
 }
 
 .question-text {
-  color: black;
-  font-size: 1.1rem;
-  margin-bottom: 15px;
+  color: #182848;
+  font-size: 1.2rem;
+  line-height: 1.6;
+  margin-bottom: 25px;
   font-weight: 500;
 }
 
 .options {
   display: grid;
-  grid-gap: 10px;
+  gap: 12px;
 }
 
 .option {
-  color: black;
-  padding: 12px 15px;
+  padding: 15px 20px;
   background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-size: 1.1rem;
+  color: #182848;
 }
 
 .option:hover {
-  background: #e9ecef;
+  background: #f8f9fa;
+  border-color: #66eac2;
   transform: translateX(5px);
 }
 
 .option.selected {
-  background: #4b6cb7;
-  color: white;
-  border-color: #4b6cb7;
+  background: #66eac2;
+  color: #0b361c;
+  border-color: #0b361c;
+  font-weight: 500;
 }
 
 .navigation {
   display: flex;
   justify-content: space-between;
+  gap: 15px;
   margin-top: 30px;
+}
+
+.navigation button {
+  min-width: 120px;
 }
 
 /* Results Page Styles */
