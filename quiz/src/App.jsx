@@ -45,9 +45,10 @@ const App = () => {
         />
       ) : showResults ? (
         <ResultPage 
-          results={quizResults} 
-          questions={questions} 
+          questions={questions}
+          userAnswers={quizResults.answers} // Add this line
           onNewQuiz={handleNewQuiz}
+          fileName={quizResults.fileName || 'Quiz'} // Add this line
         />
       ) : (
         <QuizEngine 

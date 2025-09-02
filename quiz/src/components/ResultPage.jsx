@@ -1,5 +1,19 @@
 // components/ResultPage.jsx
 const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
+  // Add validation
+  if (!questions || !userAnswers) {
+    return (
+      <div className="results-container">
+        <div className="results-header">
+          <h2>No Results Available</h2>
+          <button className="btn" onClick={onNewQuiz}>
+            Start New Quiz
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const calculateResults = () => {
     let correct = 0;
     let wrong = 0;
