@@ -58,14 +58,22 @@ body {
 
 /* App shell */
 .app {
+  min-height: 100vh;
+  background: var(--color-bg-gradient);
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+}
+
+.card {
+  background: var(--color-card-bg);
+  padding: 2rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 12px var(--color-shadow);
   width: 100%;
-  max-width: 980px;
-  background: var(--card-bg);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  margin: 20px auto;
-  color: var(--text-primary);
+  max-width: 800px;
 }
 
 /* Header */

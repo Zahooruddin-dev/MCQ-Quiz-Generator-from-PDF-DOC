@@ -33,29 +33,31 @@ const App = () => {
 		setQuizResults(null);
 		setShowResults(false);
 	};
+return (
+  <div className="app">
+    <div className="card">
+      {showApiConfig ? (
+        <APIConfig onConfigSave={handleConfigSave} />
+      ) : !questions ? (
+        <FileUpload
+          hasAI={!!apiKey}
+          onFileUpload={handleFileUpload}
+          onReconfigure={() => setShowApiConfig(true)}
+        />
+      ) : showResults ? (
+        <ResultPage
+          questions={questions}
+          userAnswers={quizResults.answers}
+          onNewQuiz={handleNewQuiz}
+          fileName={quizResults.fileName || 'Quiz'}
+        />
+      ) : (
+        <QuizEngine questions={questions} onFinish={handleQuizFinish} />
+      )}
+    </div>
+  </div>
+);
 
-	return (
-		<div className='app'>
-			{showApiConfig ? (
-				<APIConfig onConfigSave={handleConfigSave} />
-			) : !questions ? (
-				<FileUpload
-					hasAI={!!apiKey}
-					onFileUpload={handleFileUpload}
-					onReconfigure={() => setShowApiConfig(true)}
-				/>
-			) : showResults ? (
-				<ResultPage
-					questions={questions}
-					userAnswers={quizResults.answers} 
-					onNewQuiz={handleNewQuiz}
-					fileName={quizResults.fileName || 'Quiz'} 
-				/>
-			) : (
-				<QuizEngine questions={questions} onFinish={handleQuizFinish} />
-			)}
-		</div>
-	);
 };
 
 export default App;
