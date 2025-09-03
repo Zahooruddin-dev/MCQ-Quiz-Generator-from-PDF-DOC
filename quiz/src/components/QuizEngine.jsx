@@ -79,9 +79,12 @@ const QuizEngine = ({ questions, onFinish }) => {
 			</div>
 
 			{/* Context toggle for the original material (above all questions) */}
-			<div className="quiz-context">
-				<Context context={questions[0]?.context || "No context provided"} />
-			</div>
+		{questions[currentQuestion].context && (
+	<div className="quiz-context">
+		<Context context={questions[currentQuestion].context} />
+	</div>
+)}
+
 
 			<div className='question'>
 				<div className='question-number'>Question {currentQuestion + 1}</div>

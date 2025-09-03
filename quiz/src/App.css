@@ -370,6 +370,47 @@ body {
 	font-size: 0.95rem;
 	margin-bottom: 1rem;
 }
+/* Context Card */
+.context-card {
+	background: #f9fafb; /* light background */
+	border: 1px solid #d1d5db; /* subtle gray border */
+	border-radius: 12px;
+	padding: 1rem;
+	margin: 1rem 0;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Toggle Button */
+.context-toggle {
+	width: 100%;
+	background: #2563eb; /* blue */
+	color: white;
+	font-weight: 600;
+	border: none;
+	border-radius: 8px;
+	padding: 0.6rem 1rem;
+	cursor: pointer;
+	transition: background 0.2s ease;
+}
+
+.context-toggle:hover {
+	background: #1e40af; /* darker blue on hover */
+}
+
+/* Context Text */
+.context-content {
+	margin-top: 0.75rem;
+	padding: 0.75rem;
+	background: white;
+	border-radius: 8px;
+	border: 1px solid #e5e7eb;
+	color: #374151;
+	font-size: 0.95rem;
+	line-height: 1.5;
+	max-height: 300px;
+	overflow-y: auto;
+}
+
 
 /* Options */
 .options {
