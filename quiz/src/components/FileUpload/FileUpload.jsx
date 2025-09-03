@@ -3,6 +3,9 @@ import { LLMService } from '../../utils/llmService';
 import ErrorMessage from './ErrorMessage';
 import AIConfigPanel from './AIConfigPanel';
 import Dropzone from './Dropzone';
+import SampleTextButtons from './SampleTextButtons';
+import HiddenFileInput from './HiddenFileInput';
+
 import TextModeInput from './TextModeInput';
 import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from './utils';
 
@@ -212,34 +215,16 @@ const FileUpload = ({
 				onDragLeave={handleDragLeave}
 			/>
 
-			{/* 🔹 Sample and Text Mode Buttons */}
-			<div style={{ marginTop: 12, textAlign: 'center' }}>
-				<button
-					className='btn'
-					onClick={() => handleTextSubmit(SAMPLE_TEXT)}
-					disabled={effectiveLoading}
-				>
-					Try Sample Text
-				</button>
+			<SampleTextButtons
+				onSampleClick={() => handleTextSubmit(SAMPLE_TEXT)}
+				onToggleTextMode={() => setShowTextMode((prev) => !prev)}
+				showTextMode={showTextMode}
+				effectiveLoading={effectiveLoading}
+			/>
 
-				<button
-					className='btn btn-secondary'
-					onClick={() => setShowTextMode((prev) => !prev)} // 🔁 toggle mode
-					disabled={effectiveLoading}
-					style={{ marginLeft: 8 }}
-				>
-					{showTextMode ? 'Close Text Input' : 'Paste Your Own Text'}
-				</button>
-			</div>
-
-			{/* 🔹 Hidden File Input (for triggering via Dropzone click) */}
-			<input
-				id='file-input'
-				type='file'
-				accept='.txt,.docx,.doc,.html,.pdf'
-				onChange={(e) => handleFileSelect(e.target.files[0])}
-				disabled={effectiveLoading}
-				style={{ display: 'none' }} // Keep hidden if Dropzone handles the trigger
+			<HiddenFileInput
+				onFileSelect={handleFileSelect}
+				effectiveLoading={effectiveLoading}
 			/>
 
 			{/* 🔹 Text Input Mode */}
