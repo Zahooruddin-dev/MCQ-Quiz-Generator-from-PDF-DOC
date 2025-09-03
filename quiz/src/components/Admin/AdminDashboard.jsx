@@ -1,5 +1,6 @@
+// src/components/Admin/AdminDashboard.jsx
 import { useEffect, useState } from "react";
-import { db } from "../../firebaseConfig";
+import { db, auth } from "../../firebaseConfig";
 import {
   collection,
   query,
@@ -14,10 +15,15 @@ const AdminDashboard = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch all premium requests
+  // Fetch all premium requests (force token refresh to ensure admin claims are applied)
   const fetchRequests = async () => {
     setLoading(true);
     try {
+      // Force ID token refresh so Firestore sees updated admin claim
+      if (auth.currentUser) {
+        await auth.currentUser.getIdToken(true);
+      }
+
       const q = query(
         collection(db, "premiumRequests"),
         orderBy("createdAt", "desc")
@@ -32,7 +38,9 @@ const AdminDashboard = () => {
       setRequests(list);
     } catch (err) {
       console.error("Error fetching requests:", err);
-      alert("⚠️ Failed to fetch requests. Make sure you are logged in as admin.");
+      alert(
+        "⚠️ Failed to fetch requests. Make sure you are logged in as admin."
+      );
     } finally {
       setLoading(false);
     }
