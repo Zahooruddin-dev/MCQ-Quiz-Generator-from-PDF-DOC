@@ -204,6 +204,7 @@ ${text}`;
           options: shuffledOptions,
           correctAnswer: newCorrectIndex,
           explanation: (q.explanation || '').toString().trim(),
+          context: (q.context || '').toString().trim(), // ✅ preserve context
         };
       });
 
@@ -231,6 +232,7 @@ ${text}`;
         options: q.options,
         correctAnswer: q.correctAnswer,
         explanation: q.explanation,
+        context: q.context, // ✅ don’t drop it
       };
     });
   }
