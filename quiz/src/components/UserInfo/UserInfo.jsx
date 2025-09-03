@@ -7,15 +7,12 @@ import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import './UserInfo.css';
 import { useNavigate } from 'react-router-dom';
 
-const UserInfo = ({ user, onClose, isAdmin }) => {
-  const { credits: userCredits, isPremium } = useAuth();
+const UserInfo = ({ user, onClose }) => {
+  const { credits, isPremium, isAdmin } = useAuth();
   const [requestSent, setRequestSent] = useState(false);
   const navigate = useNavigate();
 
   if (!user) return null;
-
-  // Admin always has 3000 credits
-  const credits = isAdmin ? 3000 : isPremium ? '∞' : userCredits;
 
   const lastLogin = user.metadata?.lastSignInTime
     ? new Date(user.metadata.lastSignInTime).toLocaleString()
@@ -83,7 +80,7 @@ const UserInfo = ({ user, onClose, isAdmin }) => {
             <strong>Last Login:</strong> {lastLogin}
           </p>
 
-          {/* 🔹 Request Premium button (hidden for admin) */}
+          {/* 🔹 Request Premium button (hidden for admins & premium users) */}
           {!isAdmin && !isPremium && !requestSent && (
             <button className='btn small-btn' onClick={handleRequestPremium}>
               Request Premium Upgrade
