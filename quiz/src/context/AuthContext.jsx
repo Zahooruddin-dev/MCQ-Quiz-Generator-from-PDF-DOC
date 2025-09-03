@@ -21,37 +21,58 @@ export const AuthProvider = ({ children }) => {
   // 👀 Watch for login/logout
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
+      try {
+        if (firebaseUser) {
+          setUser(firebaseUser);
 
-        // 🔹 Load credits from Firestore
-        const userRef = doc(db, "users", firebaseUser.uid);
-        const snap = await getDoc(userRef);
-        if (snap.exists()) {
-          setCredits(snap.data().credits);
+          // 🔹 Load credits from Firestore with error handling
+          const userRef = doc(db, "users", firebaseUser.uid);
+          try {
+            const snap = await getDoc(userRef);
+            if (snap.exists()) {
+              setCredits(snap.data().credits);
+            } else {
+              // First time user → give free credits (e.g. 5)
+              await setDoc(userRef, { credits: 5 });
+              setCredits(5);
+            }
+          } catch (firestoreError) {
+            console.warn("Firestore operation failed, using default credits:", firestoreError);
+            setCredits(5); // Default fallback
+          }
         } else {
-          // First time user → give free credits (e.g. 5)
-          await setDoc(userRef, { credits: 5 });
-          setCredits(5);
+          setUser(null);
+          setCredits(0);
         }
-      } else {
-        setUser(null);
-        setCredits(0);
+      } catch (error) {
+        console.error("Auth state change error:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
+
     return unsubscribe;
   }, []);
 
   // Google Login
   const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Google login failed:", error);
+      throw error;
+    }
   };
 
   // Logout
   const logout = async () => {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Logout failed:", error);
+      throw error;
+    }
   };
 
   // Deduct credit (when quiz is generated)
@@ -59,10 +80,15 @@ export const AuthProvider = ({ children }) => {
     if (!user) return false;
     if (credits <= 0) return false;
 
-    const userRef = doc(db, "users", user.uid);
-    await updateDoc(userRef, { credits: credits - 1 });
-    setCredits((c) => c - 1);
-    return true;
+    try {
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, { credits: credits - 1 });
+      setCredits((c) => c - 1);
+      return true;
+    } catch (error) {
+      console.error("Failed to deduct credit:", error);
+      return false;
+    }
   };
 
   return (

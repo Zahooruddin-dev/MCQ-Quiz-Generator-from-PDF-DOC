@@ -5,15 +5,17 @@ import AIConfigPanel from './AIConfigPanel';
 import Dropzone from './Dropzone';
 import SampleTextButtons from './SampleTextButtons';
 import HiddenFileInput from './HiddenFileInput';
-
 import TextModeInput from './TextModeInput';
 import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from './utils';
+import AppHeader from '../Layout/AppHeader';
 
 const FileUpload = ({
 	onFileUpload,
 	hasAI,
 	loading: loadingFromParent = false,
 	onReconfigure,
+	  onProfileClick, // ✅ add this prop
+
 }) => {
 	const [error, setError] = useState(null);
 	const [useAI, setUseAI] = useState(hasAI);
@@ -188,6 +190,8 @@ const FileUpload = ({
 	// ---- JSX ----
 	return (
 		<div className='upload-container'>
+			  {/* ✅ App Header at top */}
+      <AppHeader onProfileClick={onProfileClick} />
 			<ErrorMessage error={error} onDismiss={() => setError(null)} />
 
 			{hasAI && (
