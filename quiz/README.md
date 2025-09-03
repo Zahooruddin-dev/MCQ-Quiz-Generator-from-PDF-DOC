@@ -56,9 +56,13 @@ quiz-generator/
 ├── src/
 │   ├── components/
 │   │   ├── FileUpload.jsx
+![alt text](src/assets/img/fileupload.png)
 │   │   ├── QuizEngine.jsx
+![alt text](src/assets/img/quiz.png)
 │   │   ├── ResultPage.jsx
+![alt text](src/assets/img/results.png)
 │   │   └── APIConfig.jsx
+![alt text](src/assets/img/api.png)
 │   ├── utils/
 │   │   └── formatMCQ.js
 │   ├── App.jsx
