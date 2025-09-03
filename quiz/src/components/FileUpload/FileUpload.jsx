@@ -4,8 +4,6 @@ import ErrorMessage from "./ErrorMessage";
 import AIConfigPanel from "./AIConfigPanel";
 import Dropzone from "./Dropzone";
 import TextModeInput from "./TextModeInput";
-import SampleTextButton from './SampleTextButton';
-import PasteTextMode from './PasteTextMode';
 import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from "./utils";
 
 const FileUpload = ({ onFileUpload, hasAI, loading: loadingFromParent = false, onReconfigure }) => {
