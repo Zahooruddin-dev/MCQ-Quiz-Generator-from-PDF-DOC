@@ -180,7 +180,7 @@ return (
       onDragLeave={handleDragLeave}
     />
 
-    {/* 🔹 Sample Button Here */}
+    {/* 🔹 Sample and Text Mode Buttons */}
     <div style={{ marginTop: 12, textAlign: "center" }}>
       <button
         className="btn"
@@ -189,16 +189,28 @@ return (
       >
         Try Sample Text
       </button>
+
+      <button
+        className="btn btn-secondary"
+        onClick={() => setShowTextMode(true)}
+        disabled={effectiveLoading}
+        style={{ marginLeft: 8 }}
+      >
+        Paste Your Own Text
+      </button>
     </div>
 
+    {/* 🔹 Hidden File Input (for triggering via Dropzone click) */}
     <input
       id="file-input"
       type="file"
       accept=".txt,.docx,.doc,.html,.pdf"
       onChange={(e) => handleFileSelect(e.target.files[0])}
       disabled={effectiveLoading}
+      style={{ display: "none" }} // Keep hidden if Dropzone handles the trigger
     />
 
+    {/* 🔹 Text Input Mode */}
     {showTextMode && (
       <TextModeInput
         pastedText={pastedText}
