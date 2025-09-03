@@ -42,3 +42,10 @@
   color: green;
   font-weight: bold;
 }
+.admin-btn {
+  background: #ff9800;
+  margin-top: 10px;
+}
+.admin-btn:hover {
+  background: #e68900;
+}

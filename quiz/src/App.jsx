@@ -1,17 +1,20 @@
 // src/App.jsx
-import { useState } from 'react';
-import FileUpload from './components/FileUpload/FileUpload';
-import QuizEngine from './components/Engine/QuizEngine';
-import ResultPage from './components/Results/ResultPage';
-import APIConfig from './components/APIconfig/APIConfig';
-import AuthForm from './components/Auth/AuthForm';
-import { useAuth } from './context/AuthContext';
-import UserInfo from './components/UserInfo/UserInfo';
-import AppHeader from './components/Layout/AppHeader'; // ✅ include header
-import './App.css';
+import { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import FileUpload from "./components/FileUpload/FileUpload";
+import QuizEngine from "./components/Engine/QuizEngine";
+import ResultPage from "./components/Results/ResultPage";
+import APIConfig from "./components/APIconfig/APIConfig";
+import AuthForm from "./components/Auth/AuthForm";
+import { useAuth } from "./context/AuthContext";
+import UserInfo from "./components/UserInfo/UserInfo";
+import AdminDashboard from "./components/Admin/AdminDashboard"; // ✅ new import
+import "./App.css";
+
+const ADMIN_EMAIL = "mizuka886@gmail.com"; // change to your admin email
 
 const App = () => {
-  const { user, credits, isPremium, useCredit } = useAuth();
+  const { user, logout } = useAuth();
   const [showUserInfo, setShowUserInfo] = useState(false);
 
   const [questions, setQuestions] = useState(null);
@@ -19,10 +22,10 @@ const App = () => {
   const [showResults, setShowResults] = useState(false);
 
   const [apiKey, setApiKey] = useState(
-    () => localStorage.getItem('geminiApiKey') || ''
+    () => localStorage.getItem("geminiApiKey") || ""
   );
   const [baseUrl, setBaseUrl] = useState(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
   );
   const [showApiConfig, setShowApiConfig] = useState(!apiKey);
 
@@ -32,15 +35,7 @@ const App = () => {
     setShowApiConfig(false);
   };
 
-  const handleFileUpload = async (generatedQuestions) => {
-    // ✅ Deduct a credit before quiz generation
-    if (!isPremium) {
-      const success = await useCredit();
-      if (!success) {
-        alert("You're out of credits! Come back in 24h or upgrade to Premium.");
-        return;
-      }
-    }
+  const handleFileUpload = (generatedQuestions) => {
     setQuestions(generatedQuestions);
   };
 
@@ -64,46 +59,70 @@ const App = () => {
   }
 
   return (
-    <div className="app">
+    <Router>
+      <Routes>
+        {/* ✅ Main App */}
+        <Route
+          path="/"
+          element={
+            <div className="app">
+              {showUserInfo && (
+                <UserInfo
+                  user={user}
+                  onClose={() => setShowUserInfo(false)}
+                  isAdmin={user.email === ADMIN_EMAIL}
+                />
+              )}
 
-      {/* ✅ User Info Popup */}
-      {showUserInfo && (
-        <UserInfo user={user} onClose={() => setShowUserInfo(false)} />
-      )}
+              {showApiConfig ? (
+                <APIConfig onConfigSave={handleConfigSave} />
+              ) : !questions ? (
+                <FileUpload
+                  hasAI={!!apiKey}
+                  onFileUpload={handleFileUpload}
+                  onProfileClick={() => setShowUserInfo(true)}
+                  onReconfigure={() => setShowApiConfig(true)}
+                />
+              ) : (
+                <div className="quiz-wrapper">
+                  <button className="close-btn" onClick={handleNewQuiz}>
+                    ✖
+                  </button>
 
-      {showApiConfig ? (
-        <APIConfig onConfigSave={handleConfigSave} />
-      ) : !questions ? (
-        <FileUpload
-          hasAI={!!apiKey}
-          onFileUpload={handleFileUpload}
-          onProfileClick={() => setShowUserInfo(true)}
-          onReconfigure={() => setShowApiConfig(true)}
+                  {showResults ? (
+                    <ResultPage
+                      questions={questions}
+                      userAnswers={quizResults.answers}
+                      onNewQuiz={handleNewQuiz}
+                      fileName={quizResults.fileName || "Quiz"}
+                    />
+                  ) : (
+                    <QuizEngine
+                      questions={questions}
+                      onFinish={handleQuizFinish}
+                      apiKey={apiKey}
+                      baseUrl={baseUrl}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          }
         />
-      ) : (
-        <div className="quiz-wrapper">
-          <button className="close-btn" onClick={handleNewQuiz}>
-            ✖
-          </button>
 
-          {showResults ? (
-            <ResultPage
-              questions={questions}
-              userAnswers={quizResults.answers}
-              onNewQuiz={handleNewQuiz}
-              fileName={quizResults.fileName || 'Quiz'}
-            />
-          ) : (
-            <QuizEngine
-              questions={questions}
-              onFinish={handleQuizFinish}
-              apiKey={apiKey}
-              baseUrl={baseUrl}
-            />
-          )}
-        </div>
-      )}
-    </div>
+        {/* ✅ Admin Dashboard (protected) */}
+        <Route
+          path="/admin"
+          element={
+            user.email === ADMIN_EMAIL ? (
+              <AdminDashboard />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+      </Routes>
+    </Router>
   );
 };
 

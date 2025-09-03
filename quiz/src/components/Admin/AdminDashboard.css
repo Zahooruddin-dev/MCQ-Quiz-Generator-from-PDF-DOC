@@ -1,37 +1,24 @@
 /* src/components/Admin/AdminDashboard.css */
 .admin-dashboard {
   padding: 20px;
-  max-width: 700px;
-  margin: auto;
 }
 
-.request-list {
-  list-style: none;
-  padding: 0;
+.admin-dashboard h2 {
+  margin-bottom: 20px;
 }
 
-.request-card {
-  background: #fff;
-  padding: 15px;
-  margin-bottom: 12px;
-  border-radius: 10px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+.admin-dashboard table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.request-card p {
-  margin: 4px 0;
+.admin-dashboard th,
+.admin-dashboard td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: left;
 }
 
-.actions {
-  margin-top: 10px;
-  display: flex;
-  gap: 10px;
-}
-
-.approve {
-  background: #4caf50;
-}
-
-.deny {
-  background: #e53935;
+.admin-dashboard button {
+  margin-right: 8px;
 }

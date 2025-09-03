@@ -1,92 +1,90 @@
 // src/components/Admin/AdminDashboard.jsx
 import { useEffect, useState } from "react";
+import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-  updateDoc,
-  doc,
-} from "firebase/firestore";
-import { motion } from "framer-motion";
 import "./AdminDashboard.css";
 
 const AdminDashboard = () => {
   const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(
-      collection(db, "premiumRequests"),
-      orderBy("createdAt", "desc")
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setRequests(data);
-    });
-
-    return unsubscribe;
+    const fetchRequests = async () => {
+      try {
+        const snap = await getDocs(collection(db, "premiumRequests"));
+        setRequests(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.error("Error fetching requests:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRequests();
   }, []);
 
-  const handleApproval = async (request, approved) => {
+  const handleUpdate = async (uid, status) => {
     try {
-      // Update request status
-      await updateDoc(doc(db, "premiumRequests", request.id), {
-        status: approved ? "approved" : "denied",
-      });
-
-      // If approved → update user record
-      if (approved) {
-        await updateDoc(doc(db, "users", request.uid), {
-          isPremium: true,
-        });
+      await updateDoc(doc(db, "premiumRequests", uid), { status });
+      if (status === "approved") {
+        await updateDoc(doc(db, "users", uid), { isPremium: true });
       }
+      alert(`Request ${status}`);
+      setRequests((prev) =>
+        prev.map((r) => (r.id === uid ? { ...r, status } : r))
+      );
     } catch (err) {
       console.error("Error updating request:", err);
-      alert("Failed to update request.");
+      alert("Failed to update request");
     }
   };
 
+  if (loading) return <p>Loading requests...</p>;
+
   return (
-    <motion.div
-      className="admin-dashboard"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-    >
+    <div className="admin-dashboard">
       <h2>Admin Dashboard</h2>
       {requests.length === 0 ? (
-        <p>No premium requests yet.</p>
+        <p>No premium requests found.</p>
       ) : (
-        <ul className="request-list">
-          {requests.map((req) => (
-            <li key={req.id} className="request-card">
-              <p><strong>Name:</strong> {req.name}</p>
-              <p><strong>Email:</strong> {req.email}</p>
-              <p><strong>Status:</strong> {req.status}</p>
-              <div className="actions">
-                {req.status === "pending" && (
-                  <>
-                    <button
-                      className="btn small-btn approve"
-                      onClick={() => handleApproval(req, true)}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      className="btn small-btn deny"
-                      onClick={() => handleApproval(req, false)}
-                    >
-                      Deny
-                    </button>
-                  </>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {requests.map((req) => (
+              <tr key={req.id}>
+                <td>{req.email}</td>
+                <td>{req.name}</td>
+                <td>{req.status}</td>
+                <td>
+                  {req.status === "pending" && (
+                    <>
+                      <button
+                        onClick={() => handleUpdate(req.uid, "approved")}
+                        className="btn small-btn"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleUpdate(req.uid, "denied")}
+                        className="btn small-btn"
+                      >
+                        Deny
+                      </button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
-    </motion.div>
+    </div>
   );
 };
 
