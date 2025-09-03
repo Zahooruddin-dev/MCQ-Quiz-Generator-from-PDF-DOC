@@ -44,7 +44,7 @@ const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
 		<div className='results-container'>
 			<div className='results-header'>
 				<h2>Quiz Results</h2>
-				<p>File: {fileName}</p>
+				<p>File: {fileName || 'Unknown File'}</p>
 			</div>
 
 			<div className='score-display'>
