@@ -777,6 +777,25 @@ input:checked + .slider {
 }
 input:checked + .slider:before {
 	transform: translateX(26px);
+} /* close button */
+.quiz-wrapper {
+  position: relative;
+}
+
+.close-btn {
+  position: absolute;
+  top: 8%;
+  right: 12px;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #9c2b2b;
+  transition: color 0.2s ease;
+}
+
+.close-btn:hover {
+  color: #d9534f; /* red on hover */
 }
 
 /* ========== RESPONSIVE ========== */
