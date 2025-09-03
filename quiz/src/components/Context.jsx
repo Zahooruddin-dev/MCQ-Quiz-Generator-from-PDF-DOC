@@ -1,24 +1,25 @@
 import { useState } from 'react';
 
 const Context = ({ context }) => {
-	const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
-	return (
-		<div className="context-card">
-			<button
-				className="context-toggle"
-				onClick={() => setIsOpen(!isOpen)}
-			>
-				{isOpen ? 'Hide Context ▲' : 'Show Context ▼'}
-			</button>
+  if (!context || context.trim() === '') return null;
 
-			{isOpen && (
-				<div className="context-content">
-					<p>{context}</p>
-				</div>
-			)}
-		</div>
-	);
+  return (
+    <div className="context-container">
+      <button 
+        className="context-toggle" 
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        {isExpanded ? 'Hide Context ▼' : 'Show Context ▶'}
+      </button>
+      {isExpanded && (
+        <div className="context-content">
+          <blockquote>{context}</blockquote>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default Context;
