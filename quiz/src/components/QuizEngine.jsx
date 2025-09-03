@@ -1,4 +1,3 @@
-// components/QuizEngine.jsx
 import { useState } from 'react';
 import Context from './Context';
 
@@ -27,9 +26,7 @@ const QuizEngine = ({ questions, onFinish }) => {
 	};
 
 	const handleFinish = () => {
-		// Check if all questions are answered
-		const unansweredCount = userAnswers.filter((answer) => answer === null)
-			.length;
+		const unansweredCount = userAnswers.filter((answer) => answer === null).length;
 
 		if (unansweredCount > 0) {
 			const confirm = window.confirm(
@@ -40,20 +37,17 @@ const QuizEngine = ({ questions, onFinish }) => {
 			if (!confirm) return;
 		}
 
-		// Calculate results
 		const results = {
 			answers: userAnswers,
-			fileName: 'Quiz', // Add this line
+			fileName: 'Quiz',
 			score:
 				(userAnswers.filter(
-					(answer, index) =>
-						answer === questions[index].correctAnswer
+					(answer, index) => answer === questions[index].correctAnswer
 				).length / questions.length) * 100,
 			totalQuestions: questions.length,
 			answeredQuestions: questions.length - unansweredCount,
 		};
 
-		// Call the onFinish prop with results
 		if (typeof onFinish === 'function') {
 			onFinish(results);
 		}
@@ -84,13 +78,16 @@ const QuizEngine = ({ questions, onFinish }) => {
 				</div>
 			</div>
 
+			{/* Context toggle for the original material (above all questions) */}
+			<div className="quiz-context">
+				<Context context={questions[0]?.context || "No context provided"} />
+			</div>
+
 			<div className='question'>
 				<div className='question-number'>Question {currentQuestion + 1}</div>
 				<div className='question-text'>
 					{questions[currentQuestion].question}
 				</div>
-
-				<Context context={questions[currentQuestion].context} />
 
 				<div className='options'>
 					{questions[currentQuestion].options.map((option, index) => (
