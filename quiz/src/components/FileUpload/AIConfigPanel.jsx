@@ -59,9 +59,9 @@ const AIConfigPanel = ({ useAI, setUseAI, aiOptions, setAiOptions, effectiveLoad
         <button onClick={onReconfigure} className="btn btn-secondary" disabled={effectiveLoading}>
           🔐 Configure API
         </button>
-        <button onClick={onSample} className="btn" disabled={effectiveLoading}>
+{/*         <button onClick={onSample} className="btn" disabled={effectiveLoading}>
           Try sample text
-        </button>
+        </button> */}
       </div>
     </div>
   );
