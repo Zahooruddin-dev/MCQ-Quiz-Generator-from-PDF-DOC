@@ -1,15 +1,16 @@
-// src/App.jsx
 import { useState } from "react";
 import FileUpload from "./components/FileUpload/FileUpload";
 import QuizEngine from "./components/Engine/QuizEngine";
 import ResultPage from "./components/Results/ResultPage";
 import APIConfig from "./components/APIconfig/APIConfig";
-import AuthForm from "./components/Auth/AuthForm"; // ✅ new import
-import { useAuth } from "./context/AuthContext"; // ✅ use auth context
+import AuthForm from "./components/Auth/AuthForm";
+import { useAuth } from "./context/AuthContext";
+import UserInfo from "./components/UserInfo/UserInfo"; // ✅ new import
 import "./App.css";
 
 const App = () => {
-  const { user, logout } = useAuth(); // ✅ from AuthContext
+  const { user, logout } = useAuth();
+  const [showUserInfo, setShowUserInfo] = useState(false); // ✅ toggle state
 
   const [questions, setQuestions] = useState(null);
   const [quizResults, setQuizResults] = useState(null);
@@ -42,7 +43,6 @@ const App = () => {
     setShowResults(false);
   };
 
-  // 🔹 If user is NOT logged in, show AuthForm
   if (!user) {
     return (
       <div className="app auth-wrapper">
@@ -51,19 +51,25 @@ const App = () => {
     );
   }
 
-  // 🔹 Logged-in view
   return (
     <div className="app">
-      {/* ✅ Simple Header with Logout */}
+      {/* ✅ Header */}
       <header className="app-header">
         <h1>AI Quiz Generator</h1>
-        <div className="user-info">
-          <span>👤 {user.displayName || user.email}</span>
+        <div className="header-actions">
+          <button className="btn small-btn" onClick={() => setShowUserInfo(true)}>
+            👤 Profile
+          </button>
           <button className="btn small-btn" onClick={logout}>
             Logout
           </button>
         </div>
       </header>
+
+      {/* ✅ User Info Popup */}
+      {showUserInfo && (
+        <UserInfo user={user} onClose={() => setShowUserInfo(false)} />
+      )}
 
       {showApiConfig ? (
         <APIConfig onConfigSave={handleConfigSave} />
@@ -75,7 +81,6 @@ const App = () => {
         />
       ) : (
         <div className="quiz-wrapper">
-          {/* ❌ Close Button */}
           <button className="close-btn" onClick={handleNewQuiz}>
             ✖
           </button>

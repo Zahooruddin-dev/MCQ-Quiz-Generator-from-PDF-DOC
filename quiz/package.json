@@ -12,6 +12,7 @@
   "dependencies": {
     "@types/pdfjs-dist": "^2.10.377",
     "firebase": "^12.2.1",
+    "framer-motion": "^12.23.12",
     "mammoth": "^1.10.0",
     "pdfjs-dist": "^5.4.149",
     "react": "^19.1.1",
