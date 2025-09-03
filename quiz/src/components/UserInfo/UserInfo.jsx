@@ -29,13 +29,17 @@ const UserInfo = ({ user, onClose, isAdmin }) => {
 				return;
 			}
 
-			await setDoc(requestRef, {
-				uid: user.uid,
-				email: user.email,
-				name: user.displayName || 'N/A',
-				createdAt: serverTimestamp(),
-				status: 'pending',
-			});
+			await setDoc(
+				requestRef,
+				{
+					uid: user.uid,
+					email: user.email,
+					name: user.displayName || 'N/A',
+					createdAt: serverTimestamp(),
+					status: 'pending',
+				},
+				{ merge: true }
+			); // ← prevents update issues
 
 			setRequestSent(true);
 		} catch (err) {

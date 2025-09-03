@@ -1,49 +1,88 @@
-// src/components/Admin/AdminDashboard.jsx
 import { useEffect, useState } from "react";
-import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
+import {
+  collection,
+  query,
+  orderBy,
+  getDocs,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
 import "./AdminDashboard.css";
 
 const AdminDashboard = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        const snap = await getDocs(collection(db, "premiumRequests"));
-        setRequests(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      } catch (err) {
-        console.error("Error fetching requests:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRequests();
-  }, []);
-
-  const handleUpdate = async (uid, status) => {
+  // Fetch all premium requests
+  const fetchRequests = async () => {
+    setLoading(true);
     try {
-      await updateDoc(doc(db, "premiumRequests", uid), { status });
-      if (status === "approved") {
-        await updateDoc(doc(db, "users", uid), { isPremium: true });
-      }
-      alert(`Request ${status}`);
-      setRequests((prev) =>
-        prev.map((r) => (r.id === uid ? { ...r, status } : r))
+      const q = query(
+        collection(db, "premiumRequests"),
+        orderBy("createdAt", "desc")
       );
+      const snap = await getDocs(q);
+
+      const list = snap.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+
+      setRequests(list);
     } catch (err) {
-      console.error("Error updating request:", err);
-      alert("Failed to update request");
+      console.error("Error fetching requests:", err);
+      alert("⚠️ Failed to fetch requests. Make sure you are logged in as admin.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) return <p>Loading requests...</p>;
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  // Approve request
+  const approveRequest = async (id, uid) => {
+    try {
+      await updateDoc(doc(db, "premiumRequests", id), {
+        status: "approved",
+      });
+
+      await updateDoc(doc(db, "users", uid), {
+        isPremium: true,
+      });
+
+      alert("✅ User upgraded to Premium!");
+      fetchRequests(); // refresh list
+    } catch (err) {
+      console.error("Error approving request:", err);
+      alert("⚠️ Failed to approve request.");
+    }
+  };
+
+  // Reject request
+  const rejectRequest = async (id) => {
+    try {
+      await updateDoc(doc(db, "premiumRequests", id), {
+        status: "rejected",
+      });
+
+      alert("❌ Request rejected.");
+      fetchRequests(); // refresh list
+    } catch (err) {
+      console.error("Error rejecting request:", err);
+      alert("⚠️ Failed to reject request.");
+    }
+  };
 
   return (
     <div className="admin-dashboard">
       <h2>Admin Dashboard</h2>
-      {requests.length === 0 ? (
+
+      {loading ? (
+        <p>Loading requests...</p>
+      ) : requests.length === 0 ? (
         <p>No premium requests found.</p>
       ) : (
         <table>
@@ -62,21 +101,23 @@ const AdminDashboard = () => {
                 <td>{req.name}</td>
                 <td>{req.status}</td>
                 <td>
-                  {req.status === "pending" && (
+                  {req.status === "pending" ? (
                     <>
                       <button
-                        onClick={() => handleUpdate(req.uid, "approved")}
-                        className="btn small-btn"
+                        className="btn approve-btn"
+                        onClick={() => approveRequest(req.id, req.uid)}
                       >
                         Approve
                       </button>
                       <button
-                        onClick={() => handleUpdate(req.uid, "denied")}
-                        className="btn small-btn"
+                        className="btn reject-btn"
+                        onClick={() => rejectRequest(req.id)}
                       >
-                        Deny
+                        Reject
                       </button>
                     </>
+                  ) : (
+                    <em>{req.status}</em>
                   )}
                 </td>
               </tr>
