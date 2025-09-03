@@ -1,0 +1,142 @@
+/* src/components/Auth/auth.css */
+
+.auth-card {
+  background: var(--card-bg);
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 420px;
+  margin: auto;
+  text-align: center;
+}
+
+.auth-card h2 {
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+  font-size: 1.6rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--text-secondary);
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 0.6rem;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+  transition: border 0.2s;
+}
+
+.form-group input:focus {
+  border-color: var(--accent-teal);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(28, 162, 153, 0.15);
+}
+
+.auth-btn {
+  width: 100%;
+  padding: 0.8rem;
+  margin-top: 0.6rem;
+  background: var(--primary-gradient);
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: var(--btn-radius);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.auth-btn:hover {
+  opacity: 0.9;
+}
+
+.google-btn {
+  width: 100%;
+  padding: 0.8rem;
+  margin-top: 1rem;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: var(--btn-radius);
+  cursor: pointer;
+  font-weight: 500;
+  color: #333;
+  transition: background 0.2s;
+}
+
+.google-btn:hover {
+  background: #f9f9f9;
+}
+
+.auth-divider {
+  margin: 1.2rem 0;
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid #ddd;
+  margin: 0 0.75rem;
+}
+
+.toggle-auth {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.toggle-auth span {
+  color: var(--accent-teal);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toggle-auth span:hover {
+  text-decoration: underline;
+}
+
+.forgot-link {
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--accent-pink);
+  cursor: pointer;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+.auth-error {
+  background: #ffe5e5;
+  color: #a40000;
+  padding: 0.6rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.auth-success {
+  background: #e5ffe9;
+  color: #006d1f;
+  padding: 0.6rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
