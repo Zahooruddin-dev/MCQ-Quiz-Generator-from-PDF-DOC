@@ -1,6 +1,6 @@
-// components/ResultPage.jsx
+import { useState } from "react";
+
 const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
-	// Add validation
 	if (!questions || !userAnswers) {
 		return (
 			<div className='results-container'>
@@ -23,7 +23,6 @@ const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
 			if (answer === null) {
 				unattempted++;
 			} else if (answer === questions[index].correctAnswer) {
-				// Changed this line
 				correct++;
 			} else {
 				wrong++;
@@ -40,11 +39,18 @@ const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
 
 	const results = calculateResults();
 
+	// State to handle collapse/expand per question
+	const [expandedIndex, setExpandedIndex] = useState(null);
+
+	const toggleExpand = (index) => {
+		setExpandedIndex(expandedIndex === index ? null : index);
+	};
+
 	return (
 		<div className='results-container'>
 			<div className='results-header'>
 				<h2>Quiz Results</h2>
-				<p>File: {fileName || 'Unknown File'}</p>
+				<p>File: {fileName || "Unknown File"}</p>
 			</div>
 
 			<div className='score-display'>
@@ -75,41 +81,52 @@ const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
 					const userAnswerIndex = userAnswers[index];
 					const isCorrect =
 						userAnswerIndex !== null &&
-						userAnswerIndex === question.correctAnswer; // Changed this line
+						userAnswerIndex === question.correctAnswer;
+
+					const isExpanded = expandedIndex === index;
 
 					return (
 						<div key={index} className='review-question'>
-							<div className='review-question-header'>
+							<div
+								className='review-question-header'
+								onClick={() => toggleExpand(index)}
+							>
 								<span>Question {index + 1}</span>
 								<span
-									className={`status ${isCorrect ? 'correct' : 'incorrect'}`}
+									className={`status ${isCorrect ? "correct" : "incorrect"}`}
 								>
 									{userAnswerIndex === null
-										? 'Unattempted'
+										? "Unattempted"
 										: isCorrect
-										? 'Correct'
-										: 'Incorrect'}
+										? "Correct"
+										: "Incorrect"}
+								</span>
+								<span className='toggle-icon'>
+									{isExpanded ? "▲" : "▼"}
 								</span>
 							</div>
-							<div className='review-question-text'>{question.question}</div>{' '}
-							{/* Changed from q to question */}
-							<div className='review-options'>
-								{question.options.map((option, optIndex) => {
-									let className = 'review-option';
-									if (optIndex === question.correctAnswer) {
-										// Changed this line
-										className += ' correct-answer';
-									} else if (userAnswerIndex === optIndex) {
-										className += ' user-answer';
-									}
 
-									return (
-										<div key={optIndex} className={className}>
-											{String.fromCharCode(97 + optIndex)}) {option}
-										</div>
-									);
-								})}
-							</div>
+							{isExpanded && (
+								<div className='review-body'>
+									<div className='review-question-text'>{question.question}</div>
+									<div className='review-options'>
+										{question.options.map((option, optIndex) => {
+											let className = "review-option";
+											if (optIndex === question.correctAnswer) {
+												className += " correct-answer";
+											} else if (userAnswerIndex === optIndex) {
+												className += " user-answer";
+											}
+
+											return (
+												<div key={optIndex} className={className}>
+													{String.fromCharCode(97 + optIndex)}) {option}
+												</div>
+											);
+										})}
+									</div>
+								</div>
+							)}
 						</div>
 					);
 				})}
