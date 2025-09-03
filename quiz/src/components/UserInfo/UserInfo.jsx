@@ -1,9 +1,16 @@
 // src/components/UserInfo/UserInfo.jsx
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../../context/AuthContext";
 import "./UserInfo.css";
 
 const UserInfo = ({ user, onClose }) => {
+  const { credits, isPremium } = useAuth();
+
   if (!user) return null;
+
+  const lastLogin = user.metadata?.lastSignInTime
+    ? new Date(user.metadata.lastSignInTime).toLocaleString()
+    : "Unknown";
 
   return (
     <AnimatePresence>
@@ -23,6 +30,9 @@ const UserInfo = ({ user, onClose }) => {
           <h3>User Info</h3>
           <p><strong>Name:</strong> {user.displayName || "N/A"}</p>
           <p><strong>Email:</strong> {user.email}</p>
+          <p><strong>Status:</strong> {isPremium ? "🌟 Premium User" : "Free User"}</p>
+          <p><strong>Credits:</strong> {isPremium ? "∞" : credits}</p>
+          <p><strong>Last Login:</strong> {lastLogin}</p>
 
           <button className="btn small-btn" onClick={onClose}>
             Close
