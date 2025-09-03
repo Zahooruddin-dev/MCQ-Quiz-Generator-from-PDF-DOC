@@ -2,11 +2,10 @@
 
 // --- Imports for PDF handling ---
 import * as pdfjsLib from "pdfjs-dist";
-// Let Vite serve the worker as an asset URL
 import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
-const MAX_CHARS = 18000; // keep prompts manageable
+const MAX_CHARS = 18000; // keeping prompts manageable
 const REQUEST_TIMEOUT_MS = 90_000;
 
 function trimForPrompt(text) {

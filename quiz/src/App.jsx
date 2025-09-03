@@ -1,4 +1,3 @@
-// App.jsx
 import { useState } from 'react';
 import FileUpload from './components/FileUpload';
 import QuizEngine from './components/QuizEngine';
@@ -48,9 +47,9 @@ const App = () => {
 			) : showResults ? (
 				<ResultPage
 					questions={questions}
-					userAnswers={quizResults.answers} // Add this line
+					userAnswers={quizResults.answers} 
 					onNewQuiz={handleNewQuiz}
-					fileName={quizResults.fileName || 'Quiz'} // Add this line
+					fileName={quizResults.fileName || 'Quiz'} 
 				/>
 			) : (
 				<QuizEngine questions={questions} onFinish={handleQuizFinish} />
