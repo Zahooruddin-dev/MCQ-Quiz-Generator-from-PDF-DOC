@@ -1,231 +1,262 @@
-import { useState, useRef } from "react";
-import { LLMService } from "../../utils/llmService";
-import ErrorMessage from "./ErrorMessage";
-import AIConfigPanel from "./AIConfigPanel";
-import Dropzone from "./Dropzone";
-import TextModeInput from "./TextModeInput";
-import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from "./utils";
+import { useState, useRef } from 'react';
+import { LLMService } from '../../utils/llmService';
+import ErrorMessage from './ErrorMessage';
+import AIConfigPanel from './AIConfigPanel';
+import Dropzone from './Dropzone';
+import TextModeInput from './TextModeInput';
+import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from './utils';
 
-const FileUpload = ({ onFileUpload, hasAI, loading: loadingFromParent = false, onReconfigure }) => {
-  const [error, setError] = useState(null);
-  const [useAI, setUseAI] = useState(hasAI);
-  const [aiOptions, setAiOptions] = useState({ numQuestions: 10, difficulty: "medium" });
+const FileUpload = ({
+	onFileUpload,
+	hasAI,
+	loading: loadingFromParent = false,
+	onReconfigure,
+}) => {
+	const [error, setError] = useState(null);
+	const [useAI, setUseAI] = useState(hasAI);
+	const [aiOptions, setAiOptions] = useState({
+		numQuestions: 10,
+		difficulty: 'medium',
+	});
 
-  const [fileName, setFileName] = useState("");
-  const [fileSize, setFileSize] = useState(null);
-  const [fileType, setFileType] = useState("");
-  const [dragOver, setDragOver] = useState(false);
+	const [fileName, setFileName] = useState('');
+	const [fileSize, setFileSize] = useState(null);
+	const [fileType, setFileType] = useState('');
+	const [dragOver, setDragOver] = useState(false);
 
-  const [showTextMode, setShowTextMode] = useState(true);
-  const [pastedText, setPastedText] = useState("");
+	const [showTextMode, setShowTextMode] = useState(true);
+	const [pastedText, setPastedText] = useState('');
 
-  const [isLoading, setIsLoading] = useState(false);
-  const busyRef = useRef(false);
+	const [isLoading, setIsLoading] = useState(false);
+	const busyRef = useRef(false);
 
-  const effectiveLoading = isLoading || loadingFromParent;
+	const effectiveLoading = isLoading || loadingFromParent;
 
-  const SAMPLE_TEXT = `Sample MCQ source text:
+	const SAMPLE_TEXT = `Sample MCQ source text:
 1) The capital of France is Paris.
 2) Water boils at 100 degrees Celsius at sea level.`;
 
-  // ---- Helpers ----
-  const startLoading = () => {
-    setError(null);
-    setIsLoading(true);
-    busyRef.current = true;
-  };
-  const stopLoading = () => {
-    setIsLoading(false);
-    busyRef.current = false;
-  };
+	// ---- Helpers ----
+	const startLoading = () => {
+		setError(null);
+		setIsLoading(true);
+		busyRef.current = true;
+	};
+	const stopLoading = () => {
+		setIsLoading(false);
+		busyRef.current = false;
+	};
 
-  // ---- Handlers ----
-  const handleReconfigure = (e) => {
-    e?.preventDefault?.();
-    if (typeof onReconfigure === "function") {
-      onReconfigure();
-    }
-  };
+	// ---- Handlers ----
+	const handleReconfigure = (e) => {
+		e?.preventDefault?.();
+		if (typeof onReconfigure === 'function') {
+			onReconfigure();
+		}
+	};
 
-  const clearSelectedFile = () => {
-    setFileName("");
-    setFileSize(null);
-    setFileType("");
-    setError(null);
-  };
+	const clearSelectedFile = () => {
+		setFileName('');
+		setFileSize(null);
+		setFileType('');
+		setError(null);
+	};
 
-  const handleFileSelect = async (file) => {
-    if (busyRef.current) return;
-    setError(null);
+	const handleFileSelect = async (file) => {
+		if (busyRef.current) return;
+		setError(null);
 
-    try {
-      if (!file) return;
+		try {
+			if (!file) return;
 
-      setFileName(file.name || "uploaded-file");
-      setFileSize(file.size || null);
-      setFileType(file.type || "");
+			setFileName(file.name || 'uploaded-file');
+			setFileSize(file.size || null);
+			setFileType(file.type || '');
 
-      if (file.size && file.size > MAX_FILE_SIZE) {
-        setError(`File is too big (${formatBytes(file.size)}). Max allowed is ${formatBytes(MAX_FILE_SIZE)}.`);
-        clearSelectedFile();
-        return;
-      }
+			if (file.size && file.size > MAX_FILE_SIZE) {
+				setError(
+					`File is too big (${formatBytes(
+						file.size
+					)}). Max allowed is ${formatBytes(MAX_FILE_SIZE)}.`
+				);
+				clearSelectedFile();
+				return;
+			}
 
-      const mime = (file.type || "").toLowerCase();
-      const isSupported = SUPPORTED.some((s) => mime.includes(s)) || /\.(pdf|docx?|txt|html)$/i.test(file.name || "");
-      if (!isSupported) {
-        setError("Unsupported file type. Supported: PDF, DOCX, TXT, HTML.");
-        return;
-      }
+			const mime = (file.type || '').toLowerCase();
+			const isSupported =
+				SUPPORTED.some((s) => mime.includes(s)) ||
+				/\.(pdf|docx?|txt|html)$/i.test(file.name || '');
+			if (!isSupported) {
+				setError('Unsupported file type. Supported: PDF, DOCX, TXT, HTML.');
+				return;
+			}
 
-      if (!useAI) {
-        onFileUpload(file, false, null);
-        return;
-      }
+			if (!useAI) {
+				onFileUpload(file, false, null);
+				return;
+			}
 
-      const apiKey = localStorage.getItem("geminiApiKey");
-      if (!apiKey || apiKey.trim().length < 8) {
-        setError("Please configure your API key first (click Configure API).");
-        return;
-      }
+			const apiKey = localStorage.getItem('geminiApiKey');
+			if (!apiKey || apiKey.trim().length < 8) {
+				setError('Please configure your API key first (click Configure API).');
+				return;
+			}
 
-      startLoading();
-      const llmService = new LLMService(apiKey, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent");
-      const questions = await llmService.generateQuizQuestions(file, aiOptions);
+			startLoading();
+			const llmService = new LLMService(
+				apiKey,
+				'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+			);
+			const questions = await llmService.generateQuizQuestions(file, aiOptions);
 
-      onFileUpload(questions, true, aiOptions);
-    } catch (err) {
-      console.error("Error processing file:", err);
-      setError(err?.message || "Failed to process file.");
-    } finally {
-      stopLoading();
-    }
-  };
+			onFileUpload(questions, true, aiOptions);
+		} catch (err) {
+			console.error('Error processing file:', err);
+			setError(err?.message || 'Failed to process file.');
+		} finally {
+			stopLoading();
+		}
+	};
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) handleFileSelect(files[0]);
-  };
+	const handleDrop = (e) => {
+		e.preventDefault();
+		setDragOver(false);
+		const files = e.dataTransfer.files;
+		if (files && files.length > 0) handleFileSelect(files[0]);
+	};
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
+	const handleDragOver = (e) => {
+		e.preventDefault();
+		setDragOver(true);
+	};
 
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-  };
+	const handleDragLeave = (e) => {
+		e.preventDefault();
+		setDragOver(false);
+	};
+	const handleTextSubmit = async (textContent) => {
+		if (busyRef.current) return;
+		setError(null);
 
-  const handleTextSubmit = async (textContent) => {
-    if (busyRef.current) return;
-    setError(null);
+		try {
+			if (!textContent || !textContent.trim()) {
+				setError('Please paste some content first.');
+				return;
+			}
 
-    try {
-      if (!textContent || !textContent.trim()) {
-        setError("Please paste some content first.");
-        return;
-      }
+			// ✅ Word count check (at least 10 words)
+			const wordCount = textContent.trim().split(/\s+/).length;
+			if (wordCount < 10) {
+				setError(
+					'Please enter at least 10 words of text to generate questions.'
+				);
+				return;
+			}
 
-      const apiKey = localStorage.getItem("geminiApiKey");
-      if (!apiKey || apiKey.trim().length < 8) {
-        setError("Please configure your API key first (click Configure API).");
-        return;
-      }
+			const apiKey = localStorage.getItem('geminiApiKey');
+			if (!apiKey || apiKey.trim().length < 8) {
+				setError('Please configure your API key first (click Configure API).');
+				return;
+			}
 
-      startLoading();
-      const llmService = new LLMService(apiKey, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent");
-      const questions = await llmService.generateQuizQuestions(textContent, aiOptions);
+			startLoading();
+			const llmService = new LLMService(
+				apiKey,
+				'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+			);
 
-      onFileUpload(questions, true, aiOptions);
-    } catch (err) {
-      console.error("Error processing text:", err);
-      setError(err?.message || "Failed to process text.");
-    } finally {
-      stopLoading();
-      setPastedText("");
-      setShowTextMode(false);
-    }
-  };
+			const questions = await llmService.generateQuizQuestions(
+				textContent,
+				aiOptions
+			);
 
-  // ---- JSX ----
-return (
-  <div className="upload-container">
-    <ErrorMessage error={error} onDismiss={() => setError(null)} />
+			onFileUpload(questions, true, aiOptions);
+		} catch (err) {
+			console.error('Error processing text:', err);
+			setError(err?.message || 'Failed to process text.');
+		} finally {
+			stopLoading();
+			setPastedText('');
+			setShowTextMode(false);
+		}
+	};
 
-    {hasAI && (
-      <AIConfigPanel
-        useAI={useAI}
-        setUseAI={setUseAI}
-        aiOptions={aiOptions}
-        setAiOptions={setAiOptions}
-        effectiveLoading={effectiveLoading}
-        onReconfigure={handleReconfigure}
-        onSample={() => handleTextSubmit(SAMPLE_TEXT)}
-      />
-    )}
+	// ---- JSX ----
+	return (
+		<div className='upload-container'>
+			<ErrorMessage error={error} onDismiss={() => setError(null)} />
 
-    <Dropzone
-      dragOver={dragOver}
-      effectiveLoading={effectiveLoading}
-      fileName={fileName}
-      fileSize={fileSize}
-      fileType={fileType}
-      onClear={clearSelectedFile}
-      onFileClick={() => document.getElementById("file-input")?.click()}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-    />
+			{hasAI && (
+				<AIConfigPanel
+					useAI={useAI}
+					setUseAI={setUseAI}
+					aiOptions={aiOptions}
+					setAiOptions={setAiOptions}
+					effectiveLoading={effectiveLoading}
+					onReconfigure={handleReconfigure}
+					onSample={() => handleTextSubmit(SAMPLE_TEXT)}
+				/>
+			)}
 
-    {/* 🔹 Sample and Text Mode Buttons */}
-    <div style={{ marginTop: 12, textAlign: "center" }}>
-      <button
-        className="btn"
-        onClick={() => handleTextSubmit(SAMPLE_TEXT)}
-        disabled={effectiveLoading}
-      >
-        Try Sample Text
-      </button>
+			<Dropzone
+				dragOver={dragOver}
+				effectiveLoading={effectiveLoading}
+				fileName={fileName}
+				fileSize={fileSize}
+				fileType={fileType}
+				onClear={clearSelectedFile}
+				onFileClick={() => document.getElementById('file-input')?.click()}
+				onDrop={handleDrop}
+				onDragOver={handleDragOver}
+				onDragLeave={handleDragLeave}
+			/>
 
-      <button
-        className="btn btn-secondary"
-        onClick={() => setShowTextMode(true)}
-        disabled={effectiveLoading}
-        style={{ marginLeft: 8 }}
-      >
-        Paste Your Own Text
-      </button>
-    </div>
+			{/* 🔹 Sample and Text Mode Buttons */}
+			<div style={{ marginTop: 12, textAlign: 'center' }}>
+				<button
+					className='btn'
+					onClick={() => handleTextSubmit(SAMPLE_TEXT)}
+					disabled={effectiveLoading}
+				>
+					Try Sample Text
+				</button>
 
-    {/* 🔹 Hidden File Input (for triggering via Dropzone click) */}
-    <input
-      id="file-input"
-      type="file"
-      accept=".txt,.docx,.doc,.html,.pdf"
-      onChange={(e) => handleFileSelect(e.target.files[0])}
-      disabled={effectiveLoading}
-      style={{ display: "none" }} // Keep hidden if Dropzone handles the trigger
-    />
+				<button
+					className='btn btn-secondary'
+					onClick={() => setShowTextMode((prev) => !prev)} // 🔁 toggle mode
+					disabled={effectiveLoading}
+					style={{ marginLeft: 8 }}
+				>
+					{showTextMode ? 'Close Text Input' : 'Paste Your Own Text'}
+				</button>
+			</div>
 
-    {/* 🔹 Text Input Mode */}
-    {showTextMode && (
-      <TextModeInput
-        pastedText={pastedText}
-        setPastedText={setPastedText}
-        onSubmit={handleTextSubmit}
-        onCancel={() => {
-          setShowTextMode(false);
-          setPastedText("");
-        }}
-        effectiveLoading={effectiveLoading}
-      />
-    )}
-  </div>
-);
+			{/* 🔹 Hidden File Input (for triggering via Dropzone click) */}
+			<input
+				id='file-input'
+				type='file'
+				accept='.txt,.docx,.doc,.html,.pdf'
+				onChange={(e) => handleFileSelect(e.target.files[0])}
+				disabled={effectiveLoading}
+				style={{ display: 'none' }} // Keep hidden if Dropzone handles the trigger
+			/>
 
+			{/* 🔹 Text Input Mode */}
+			{showTextMode && (
+				<TextModeInput
+					pastedText={pastedText}
+					setPastedText={setPastedText}
+					onSubmit={handleTextSubmit}
+					onCancel={() => {
+						setShowTextMode(false);
+						setPastedText('');
+					}}
+					effectiveLoading={effectiveLoading}
+				/>
+			)}
+		</div>
+	);
 };
 
 export default FileUpload;
