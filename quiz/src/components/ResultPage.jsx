@@ -39,12 +39,20 @@ const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
 
 	const results = calculateResults();
 
-	// State to handle collapse/expand per question
-	const [expandedIndex, setExpandedIndex] = useState(null);
+	// Track which questions are expanded
+	const [expandedIndexes, setExpandedIndexes] = useState([]);
 
 	const toggleExpand = (index) => {
-		setExpandedIndex(expandedIndex === index ? null : index);
+		if (expandedIndexes.includes(index)) {
+			setExpandedIndexes(expandedIndexes.filter((i) => i !== index));
+		} else {
+			setExpandedIndexes([...expandedIndexes, index]);
+		}
 	};
+
+	// Expand/Collapse all
+	const expandAll = () => setExpandedIndexes(questions.map((_, i) => i));
+	const collapseAll = () => setExpandedIndexes([]);
 
 	return (
 		<div className='results-container'>
@@ -76,14 +84,21 @@ const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
 			</div>
 
 			<div className='review-section'>
-				<h3>Question Review</h3>
+				<div className='review-header'>
+					<h3>Question Review</h3>
+					<div className='review-actions'>
+						<button className='btn small' onClick={expandAll}>Expand All</button>
+						<button className='btn small secondary' onClick={collapseAll}>Collapse All</button>
+					</div>
+				</div>
+
 				{questions.map((question, index) => {
 					const userAnswerIndex = userAnswers[index];
 					const isCorrect =
 						userAnswerIndex !== null &&
 						userAnswerIndex === question.correctAnswer;
 
-					const isExpanded = expandedIndex === index;
+					const isExpanded = expandedIndexes.includes(index);
 
 					return (
 						<div key={index} className='review-question'>
