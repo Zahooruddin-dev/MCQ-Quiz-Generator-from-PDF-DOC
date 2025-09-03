@@ -1,5 +1,5 @@
 import { useState } from "react";
-import FileUpload from "./components/FileUpload";
+import FileUpload from "./components/FileUpload/FileUpload";
 import QuizEngine from "./components/QuizEngine";
 import ResultPage from "./components/ResultPage";
 import APIConfig from "./components/APIConfig";

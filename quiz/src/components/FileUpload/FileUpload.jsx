@@ -7,8 +7,35 @@ import TextModeInput from "./TextModeInput";
 import { MAX_FILE_SIZE, SUPPORTED } from "./utils";
 
 const FileUpload = ({ onFileUpload, hasAI, loading: loadingFromParent = false, onReconfigure }) => {
-  // states & logic (same as before)
-  // ...
+  const [error, setError] = useState(null);
+  const [useAI, setUseAI] = useState(hasAI);
+  const [aiOptions, setAiOptions] = useState({ numQuestions: 10, difficulty: "medium" });
+
+  const [fileName, setFileName] = useState("");
+  const [fileSize, setFileSize] = useState(null);
+  const [fileType, setFileType] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+
+  const [showTextMode, setShowTextMode] = useState(false);
+  const [pastedText, setPastedText] = useState("");
+
+  const [isLoading, setIsLoading] = useState(false);
+  const busyRef = useRef(false);
+
+  const effectiveLoading = isLoading || loadingFromParent;
+
+  const SAMPLE_TEXT = `Sample MCQ source text:
+1) The capital of France is Paris.
+2) Water boils at 100 degrees Celsius at sea level.`;
+
+  // ✅ FIX: Add this
+  const handleReconfigure = (e) => {
+    e?.preventDefault?.();
+    if (typeof onReconfigure === "function") {
+      onReconfigure();
+    }
+  };
+
   return (
     <div className="upload-container">
       <ErrorMessage error={error} onDismiss={() => setError(null)} />
@@ -24,7 +51,6 @@ const FileUpload = ({ onFileUpload, hasAI, loading: loadingFromParent = false, o
           onSample={() => handleTextSubmit(SAMPLE_TEXT)}
         />
       )}
-
       <Dropzone
         dragOver={dragOver}
         effectiveLoading={effectiveLoading}
