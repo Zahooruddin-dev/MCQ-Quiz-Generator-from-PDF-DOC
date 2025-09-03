@@ -4,6 +4,8 @@ import ErrorMessage from "./ErrorMessage";
 import AIConfigPanel from "./AIConfigPanel";
 import Dropzone from "./Dropzone";
 import TextModeInput from "./TextModeInput";
+import SampleTextButton from './SampleTextButton';
+import PasteTextMode from './PasteTextMode';
 import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from "./utils";
 
 const FileUpload = ({ onFileUpload, hasAI, loading: loadingFromParent = false, onReconfigure }) => {
@@ -16,7 +18,7 @@ const FileUpload = ({ onFileUpload, hasAI, loading: loadingFromParent = false, o
   const [fileType, setFileType] = useState("");
   const [dragOver, setDragOver] = useState(false);
 
-  const [showTextMode, setShowTextMode] = useState(false);
+  const [showTextMode, setShowTextMode] = useState(true);
   const [pastedText, setPastedText] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
@@ -151,57 +153,69 @@ const FileUpload = ({ onFileUpload, hasAI, loading: loadingFromParent = false, o
   };
 
   // ---- JSX ----
-  return (
-    <div className="upload-container">
-      <ErrorMessage error={error} onDismiss={() => setError(null)} />
+return (
+  <div className="upload-container">
+    <ErrorMessage error={error} onDismiss={() => setError(null)} />
 
-      {hasAI && (
-        <AIConfigPanel
-          useAI={useAI}
-          setUseAI={setUseAI}
-          aiOptions={aiOptions}
-          setAiOptions={setAiOptions}
-          effectiveLoading={effectiveLoading}
-          onReconfigure={handleReconfigure}
-          onSample={() => handleTextSubmit(SAMPLE_TEXT)}
-        />
-      )}
-
-      <Dropzone
-        dragOver={dragOver}
+    {hasAI && (
+      <AIConfigPanel
+        useAI={useAI}
+        setUseAI={setUseAI}
+        aiOptions={aiOptions}
+        setAiOptions={setAiOptions}
         effectiveLoading={effectiveLoading}
-        fileName={fileName}
-        fileSize={fileSize}
-        fileType={fileType}
-        onClear={clearSelectedFile}
-        onFileClick={() => document.getElementById("file-input")?.click()}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
+        onReconfigure={handleReconfigure}
+        onSample={() => handleTextSubmit(SAMPLE_TEXT)}
       />
+    )}
 
-      <input
-        id="file-input"
-        type="file"
-        accept=".txt,.docx,.doc,.html,.pdf"
-        onChange={(e) => handleFileSelect(e.target.files[0])}
+    <Dropzone
+      dragOver={dragOver}
+      effectiveLoading={effectiveLoading}
+      fileName={fileName}
+      fileSize={fileSize}
+      fileType={fileType}
+      onClear={clearSelectedFile}
+      onFileClick={() => document.getElementById("file-input")?.click()}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+    />
+
+    {/* 🔹 Sample Button Here */}
+    <div style={{ marginTop: 12, textAlign: "center" }}>
+      <button
+        className="btn"
+        onClick={() => handleTextSubmit(SAMPLE_TEXT)}
         disabled={effectiveLoading}
-      />
-
-      {showTextMode && (
-        <TextModeInput
-          pastedText={pastedText}
-          setPastedText={setPastedText}
-          onSubmit={handleTextSubmit}
-          onCancel={() => {
-            setShowTextMode(false);
-            setPastedText("");
-          }}
-          effectiveLoading={effectiveLoading}
-        />
-      )}
+      >
+        Try Sample Text
+      </button>
     </div>
-  );
+
+    <input
+      id="file-input"
+      type="file"
+      accept=".txt,.docx,.doc,.html,.pdf"
+      onChange={(e) => handleFileSelect(e.target.files[0])}
+      disabled={effectiveLoading}
+    />
+
+    {showTextMode && (
+      <TextModeInput
+        pastedText={pastedText}
+        setPastedText={setPastedText}
+        onSubmit={handleTextSubmit}
+        onCancel={() => {
+          setShowTextMode(false);
+          setPastedText("");
+        }}
+        effectiveLoading={effectiveLoading}
+      />
+    )}
+  </div>
+);
+
 };
 
 export default FileUpload;
