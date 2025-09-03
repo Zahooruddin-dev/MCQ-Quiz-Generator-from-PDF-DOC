@@ -50,9 +50,17 @@ const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
 		}
 	};
 
-	// Expand/Collapse all
-	const expandAll = () => setExpandedIndexes(questions.map((_, i) => i));
-	const collapseAll = () => setExpandedIndexes([]);
+	// Check if all are expanded
+	const allExpanded = expandedIndexes.length === questions.length;
+
+	// Toggle all
+	const toggleAll = () => {
+		if (allExpanded) {
+			setExpandedIndexes([]); // collapse all
+		} else {
+			setExpandedIndexes(questions.map((_, i) => i)); // expand all
+		}
+	};
 
 	return (
 		<div className='results-container'>
@@ -87,8 +95,9 @@ const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
 				<div className='review-header'>
 					<h3>Question Review</h3>
 					<div className='review-actions'>
-						<button className='btn small' onClick={expandAll}>Expand All</button>
-						<button className='btn small secondary' onClick={collapseAll}>Collapse All</button>
+						<button className='btn small' onClick={toggleAll}>
+							{allExpanded ? "Collapse All" : "Expand All"}
+						</button>
 					</div>
 				</div>
 
