@@ -1,16 +1,36 @@
 // src/components/UserInfo/UserInfo.jsx
 import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { db } from "../../firebaseConfig";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import "./UserInfo.css";
 
 const UserInfo = ({ user, onClose }) => {
   const { credits, isPremium } = useAuth();
+  const [requestSent, setRequestSent] = useState(false);
 
   if (!user) return null;
 
   const lastLogin = user.metadata?.lastSignInTime
     ? new Date(user.metadata.lastSignInTime).toLocaleString()
     : "Unknown";
+
+  const handleRequestPremium = async () => {
+    try {
+      await addDoc(collection(db, "premiumRequests"), {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName || "N/A",
+        createdAt: serverTimestamp(),
+        status: "pending", // ✅ for admin to review
+      });
+      setRequestSent(true);
+    } catch (err) {
+      console.error("Error requesting premium:", err);
+      alert("Failed to send request. Try again later.");
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -33,6 +53,18 @@ const UserInfo = ({ user, onClose }) => {
           <p><strong>Status:</strong> {isPremium ? "🌟 Premium User" : "Free User"}</p>
           <p><strong>Credits:</strong> {isPremium ? "∞" : credits}</p>
           <p><strong>Last Login:</strong> {lastLogin}</p>
+
+          {/* 🔹 Request Premium button */}
+          {!isPremium && !requestSent && (
+            <button className="btn small-btn" onClick={handleRequestPremium}>
+              Request Premium Upgrade
+            </button>
+          )}
+
+          {/* 🔹 Confirmation */}
+          {!isPremium && requestSent && (
+            <p className="success-msg">✅ Request sent! Waiting for admin approval.</p>
+          )}
 
           <button className="btn small-btn" onClick={onClose}>
             Close

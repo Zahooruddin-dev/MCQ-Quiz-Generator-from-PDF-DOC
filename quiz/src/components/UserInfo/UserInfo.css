@@ -36,3 +36,9 @@
 .user-info-card .btn {
   margin-top: 15px;
 }
+.success-msg {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: green;
+  font-weight: bold;
+}
