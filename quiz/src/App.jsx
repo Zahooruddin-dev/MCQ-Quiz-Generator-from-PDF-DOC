@@ -1,41 +1,49 @@
-import { useState } from 'react';
-import FileUpload from './components/FileUpload';
-import QuizEngine from './components/QuizEngine';
-import ResultPage from './components/ResultPage';
-import APIConfig from './components/APIConfig';
-import './App.css';
+import { useState } from "react";
+import FileUpload from "./components/FileUpload";
+import QuizEngine from "./components/QuizEngine";
+import ResultPage from "./components/ResultPage";
+import APIConfig from "./components/APIConfig";
+import "./App.css";
 
 const App = () => {
-	const [questions, setQuestions] = useState(null);
-	const [quizResults, setQuizResults] = useState(null);
-	const [showResults, setShowResults] = useState(false);
-	const [showApiConfig, setShowApiConfig] = useState(true);
-	const [apiKey, setApiKey] = useState(() =>
-		localStorage.getItem('geminiApiKey')
-	);
+  const [questions, setQuestions] = useState(null);
+  const [quizResults, setQuizResults] = useState(null);
+  const [showResults, setShowResults] = useState(false);
 
-	const handleConfigSave = (newApiKey, baseUrl) => {
-		setApiKey(newApiKey);
-		setShowApiConfig(false);
-	};
+  // Load saved API key from localStorage
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("geminiApiKey") || "");
+  const [baseUrl, setBaseUrl] = useState(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+  );
+  const [showApiConfig, setShowApiConfig] = useState(!apiKey); // if no key → show config
 
-	const handleFileUpload = (generatedQuestions) => {
-		setQuestions(generatedQuestions);
-	};
+  // 🔹 Called when user saves API key
+  const handleConfigSave = (newApiKey, newBaseUrl) => {
+    setApiKey(newApiKey);
+    setBaseUrl(newBaseUrl);
+    setShowApiConfig(false);
+  };
 
-	const handleQuizFinish = (results) => {
-		setQuizResults(results);
-		setShowResults(true);
-	};
+  // 🔹 After PDF is uploaded & questions are generated
+  const handleFileUpload = (generatedQuestions) => {
+    setQuestions(generatedQuestions);
+  };
 
-	const handleNewQuiz = () => {
-		setQuestions(null);
-		setQuizResults(null);
-		setShowResults(false);
-	};
-return (
-  <div className="app">
-    <div className="card">
+  // 🔹 When quiz is finished
+  const handleQuizFinish = (results) => {
+    setQuizResults(results);
+    setShowResults(true);
+  };
+
+  // 🔹 Restart quiz flow
+  const handleNewQuiz = () => {
+    setQuestions(null);
+    setQuizResults(null);
+    setShowResults(false);
+  };
+
+  return (
+    <div className="app">
       {showApiConfig ? (
         <APIConfig onConfigSave={handleConfigSave} />
       ) : !questions ? (
@@ -49,15 +57,18 @@ return (
           questions={questions}
           userAnswers={quizResults.answers}
           onNewQuiz={handleNewQuiz}
-          fileName={quizResults.fileName || 'Quiz'}
+          fileName={quizResults.fileName || "Quiz"}
         />
       ) : (
-        <QuizEngine questions={questions} onFinish={handleQuizFinish} />
+        <QuizEngine
+          questions={questions}
+          onFinish={handleQuizFinish}
+          apiKey={apiKey}
+          baseUrl={baseUrl}
+        />
       )}
     </div>
-  </div>
-);
-
+  );
 };
 
 export default App;
