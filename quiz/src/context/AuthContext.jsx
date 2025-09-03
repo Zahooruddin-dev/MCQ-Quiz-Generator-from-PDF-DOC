@@ -1,11 +1,11 @@
 // src/context/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "../firebaseConfig";
-import { 
+import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
-  onAuthStateChanged 
+  onAuthStateChanged,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
@@ -17,82 +17,84 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [credits, setCredits] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isPremium, setIsPremium] = useState(false);
 
-  // 👀 Watch for login/logout
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      try {
-        if (firebaseUser) {
-          setUser(firebaseUser);
+      if (firebaseUser) {
+        setUser(firebaseUser);
 
-          // 🔹 Load credits from Firestore with error handling
-          const userRef = doc(db, "users", firebaseUser.uid);
-          try {
-            const snap = await getDoc(userRef);
-            if (snap.exists()) {
-              setCredits(snap.data().credits);
-            } else {
-              // First time user → give free credits (e.g. 5)
-              await setDoc(userRef, { credits: 5 });
-              setCredits(5);
-            }
-          } catch (firestoreError) {
-            console.warn("Firestore operation failed, using default credits:", firestoreError);
-            setCredits(5); // Default fallback
+        const userRef = doc(db, "users", firebaseUser.uid);
+        const snap = await getDoc(userRef);
+
+        if (snap.exists()) {
+          const data = snap.data();
+
+          // check if credits need reset (24h later)
+          const now = Date.now();
+          const lastReset = data.lastReset || 0;
+          const oneDay = 24 * 60 * 60 * 1000;
+
+          if (now - lastReset >= oneDay && !data.isPremium) {
+            await updateDoc(userRef, {
+              credits: 5,
+              lastReset: now,
+            });
+            setCredits(5);
+          } else {
+            setCredits(data.credits || 0);
           }
+
+          setIsPremium(data.isPremium || false);
         } else {
-          setUser(null);
-          setCredits(0);
+          // First-time user → initialize schema
+          const newUser = {
+            credits: 5,
+            lastReset: Date.now(),
+            isPremium: false,
+            requestedPremium: false,
+          };
+          await setDoc(userRef, newUser);
+          setCredits(newUser.credits);
+          setIsPremium(newUser.isPremium);
         }
-      } catch (error) {
-        console.error("Auth state change error:", error);
-      } finally {
-        setLoading(false);
+      } else {
+        setUser(null);
+        setCredits(0);
+        setIsPremium(false);
       }
+      setLoading(false);
     });
 
     return unsubscribe;
   }, []);
 
-  // Google Login
+  // Login with Google
   const loginWithGoogle = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Google login failed:", error);
-      throw error;
-    }
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
   };
 
   // Logout
   const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Logout failed:", error);
-      throw error;
-    }
+    await signOut(auth);
   };
 
-  // Deduct credit (when quiz is generated)
+  // Deduct 1 credit
   const useCredit = async () => {
-    if (!user) return false;
+    if (!user || isPremium) return true; // premium users unlimited
     if (credits <= 0) return false;
 
-    try {
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, { credits: credits - 1 });
-      setCredits((c) => c - 1);
-      return true;
-    } catch (error) {
-      console.error("Failed to deduct credit:", error);
-      return false;
-    }
+    const userRef = doc(db, "users", user.uid);
+    await updateDoc(userRef, { credits: credits - 1 });
+    setCredits((c) => c - 1);
+    return true;
   };
 
   return (
-    <AuthContext.Provider value={{ user, credits, loginWithGoogle, logout, useCredit, loading }}>
+    <AuthContext.Provider
+      value={{ user, credits, isPremium, loginWithGoogle, logout, useCredit, loading }}
+    >
       {children}
     </AuthContext.Provider>
   );
