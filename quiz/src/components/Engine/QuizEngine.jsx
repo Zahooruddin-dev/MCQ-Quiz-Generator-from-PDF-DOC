@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import Context from './Context';
-import ProgressBar from './Engine/ProgressBar';
-import Question from './Engine/Question';
-import NavigationButtons from './Engine/NavigationButtons';
+import Context from '../Context';
+import ProgressBar from './ProgressBar';
+import Question from './Question';
+import NavigationButtons from './NavigationButtons';
 
 const QuizEngine = ({ questions, onFinish }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import APIKeyInput from './APIconfig/APIconfigComponent';
-import APIConfigButton from './APIconfig/APIConfigButton';
+import APIKeyInput from './APIconfigComponent';
+import APIConfigButton from './APIConfigButton';
 
 const APIConfig = ({ onConfigSave }) => {
   const [apiKey, setApiKey] = useState('');

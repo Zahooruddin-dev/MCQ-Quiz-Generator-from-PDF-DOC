@@ -1,8 +1,8 @@
 import { useState } from "react";
 import FileUpload from "./components/FileUpload/FileUpload";
-import QuizEngine from "./components/QuizEngine";
+import QuizEngine from "./components/Engine/QuizEngine";
 import ResultPage from "./components/ResultPage";
-import APIConfig from "./components/APIConfig";
+import APIConfig from "./components/APIconfig/APIConfig";
 import "./App.css";
 
 const App = () => {
