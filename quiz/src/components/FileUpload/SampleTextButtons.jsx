@@ -8,9 +8,9 @@ const SampleTextButtons = ({
 }) => {
   return (
     <div style={{ marginTop: 12, textAlign: 'center' }}>
-      <button className="btn" onClick={onSampleClick} disabled={effectiveLoading}>
+   {/*    <button className="btn" onClick={onSampleClick} disabled={effectiveLoading}>
         Try Sample Text
-      </button>
+      </button> */}
 
       <button
         className="btn btn-secondary"
