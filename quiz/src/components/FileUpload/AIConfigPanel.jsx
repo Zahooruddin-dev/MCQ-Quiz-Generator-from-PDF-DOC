@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 const AIConfigPanel = ({
   useAI,
   setUseAI,
@@ -9,10 +11,12 @@ const AIConfigPanel = ({
   const effectiveNumQuestions = useAI ? aiOptions.numQuestions : 10;
   const effectiveDifficulty = useAI ? aiOptions.difficulty : "easy";
 
-  // Optional: update aiOptions state so other parts of the app can read it safely
-  if (!useAI && (aiOptions.numQuestions !== 10 || aiOptions.difficulty !== "easy")) {
-    setAiOptions({ numQuestions: 10, difficulty: "easy" });
-  }
+  // ✅ Move state update to useEffect
+  useEffect(() => {
+    if (!useAI && (aiOptions.numQuestions !== 10 || aiOptions.difficulty !== "easy")) {
+      setAiOptions({ numQuestions: 10, difficulty: "easy" });
+    }
+  }, [useAI, aiOptions, setAiOptions]);
 
   return (
     <div className="ai-config-panel" aria-hidden={effectiveLoading}>
@@ -71,8 +75,6 @@ const AIConfigPanel = ({
           </div>
         </div>
       )}
-
-      {/* Use effectiveNumQuestions & effectiveDifficulty wherever you need downstream */}
     </div>
   );
 };

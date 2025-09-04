@@ -3,12 +3,12 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCfFSHZCK1xELA5tRT2ULndpmQsRH1jgSI",
-  authDomain: "quiz-gen-9e9f8.firebaseapp.com",
-  projectId: "quiz-gen-9e9f8",
-  storageBucket: "quiz-gen-9e9f8.firebasestorage.app",
-  messagingSenderId: "909967640983",
-  appId: "1:909967640983:web:18041848ae8561ccf49cd2"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);

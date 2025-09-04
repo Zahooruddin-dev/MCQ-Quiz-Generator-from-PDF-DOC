@@ -1,10 +1,10 @@
-// src/components/Layout/AppHeader.jsx
 import React from "react";
 import { useAuth } from "../../context/AuthContext";
 import "./AppHeader.css";
 
-const AppHeader = ({ onProfileClick }) => {
+const AppHeader = ({ onProfileClick, setShowApiConfig }) => {
   const { logout, credits, isPremium, user } = useAuth();
+  const ADMIN_EMAIL = "mizuka886@gmail.com";
 
   return (
     <header className="app-header">
@@ -19,6 +19,17 @@ const AppHeader = ({ onProfileClick }) => {
         <button className="btn small-btn" onClick={onProfileClick}>
           👤 Profile
         </button>
+
+        {/* Admin API Config */}
+        {user?.email === ADMIN_EMAIL && (
+          <button
+            className="btn small-btn"
+            onClick={() => setShowApiConfig(true)}
+          >
+            ⚙️ Configure API
+          </button>
+        )}
+
         <button className="btn small-btn" onClick={logout}>
           Logout
         </button>

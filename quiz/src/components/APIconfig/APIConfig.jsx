@@ -4,7 +4,7 @@ import APIConfigButton from "./APIConfigButton";
 import { db } from "../../firebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
 
-const APIConfig = ({ onConfigSave }) => {
+const APIConfig = ({ onConfigSave, onClose }) => {
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState(
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
@@ -17,7 +17,8 @@ const APIConfig = ({ onConfigSave }) => {
     try {
       await setDoc(doc(db, "settings", "apiKey"), { value: apiKey.trim() });
       onConfigSave(apiKey.trim(), baseUrl);
-      alert("API key saved for all users ✅");
+      alert("API key saved ✅");
+      onClose?.();
     } catch (err) {
       console.error("Failed to save API key:", err);
       alert("Failed to save API key");
@@ -32,9 +33,15 @@ const APIConfig = ({ onConfigSave }) => {
           <APIKeyInput apiKey={apiKey} setApiKey={setApiKey} />
           <APIConfigButton />
         </form>
+        {onClose && (
+          <button className="btn-close" onClick={onClose}>
+            ✖ Close
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
 export default APIConfig;
+

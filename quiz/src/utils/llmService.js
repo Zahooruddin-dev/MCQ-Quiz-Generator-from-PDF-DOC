@@ -48,7 +48,8 @@ function extractJson(text) {
 }
 
 export class LLMService {
-  constructor(apiKey, baseUrl) {
+   constructor(apiKey, baseUrl) {
+    if (!apiKey) throw new Error("API key is required");
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
   }

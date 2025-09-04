@@ -8,8 +8,9 @@ import AuthForm from "./components/Auth/AuthForm";
 import { useAuth } from "./context/AuthContext";
 import UserInfo from "./components/UserInfo/UserInfo";
 import AdminDashboard from "./components/Admin/AdminDashboard";
-import { db } from "./firebaseConfig";
+import AppHeader from "./components/Layout/AppHeader";
 import { doc, getDoc } from "firebase/firestore";
+import { db } from "./firebaseConfig";
 import "./App.css";
 
 const ADMIN_EMAIL = "mizuka886@gmail.com";
@@ -21,32 +22,32 @@ const App = () => {
   const [quizResults, setQuizResults] = useState(null);
   const [showResults, setShowResults] = useState(false);
 
-  const [apiKey, setApiKey] = useState("");
-  const [baseUrl, setBaseUrl] = useState(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-  );
+  const [apiKey, setApiKey] = useState(import.meta.env.VITE_DEFAULT_API_KEY);
+  const [baseUrl, setBaseUrl] = useState(import.meta.env.VITE_DEFAULT_BASE_URL);
   const [showApiConfig, setShowApiConfig] = useState(false);
 
+  // Fetch API key from Firestore if admin has set it
   useEffect(() => {
     const fetchApiKey = async () => {
       if (!user) return;
+
       try {
         const docSnap = await getDoc(doc(db, "settings", "apiKey"));
-        if (docSnap.exists()) setApiKey(docSnap.data().value);
-        else if (user.email === ADMIN_EMAIL) setShowApiConfig(true);
+        if (docSnap.exists()) {
+          const key = docSnap.data().value;
+          setApiKey(key);
+          localStorage.setItem("geminiApiKey", key); // ✅ Sync with localStorage
+        } else if (user.email === ADMIN_EMAIL) {
+          setShowApiConfig(true);
+        }
       } catch (err) {
         console.error("Failed to fetch API key:", err);
         if (user.email === ADMIN_EMAIL) setShowApiConfig(true);
       }
     };
+
     fetchApiKey();
   }, [user]);
-
-  const handleConfigSave = (newApiKey, newBaseUrl) => {
-    setApiKey(newApiKey);
-    setBaseUrl(newBaseUrl);
-    setShowApiConfig(false);
-  };
 
   const handleFileUpload = (generatedQuestions) => setQuestions(generatedQuestions);
   const handleQuizFinish = (results) => {
@@ -68,6 +69,11 @@ const App = () => {
           path="/"
           element={
             <div className="app">
+              <AppHeader
+                onProfileClick={() => setShowUserInfo(true)}
+                setShowApiConfig={setShowApiConfig}
+              />
+
               {showUserInfo && (
                 <UserInfo
                   user={user}
@@ -76,15 +82,27 @@ const App = () => {
                 />
               )}
 
-              {/* Admin API Config only */}
+              {/* Admin API Config */}
               {user.email === ADMIN_EMAIL && showApiConfig && (
-                <APIConfig onConfigSave={handleConfigSave} />
+                <APIConfig
+                  apiKey={apiKey}
+                  baseUrl={baseUrl}
+                  onConfigSave={(newApiKey, newBaseUrl) => {
+                    setApiKey(newApiKey);
+                    setBaseUrl(newBaseUrl);
+                    localStorage.setItem("geminiApiKey", newApiKey);
+                    setShowApiConfig(false);
+                  }}
+                  onClose={() => setShowApiConfig(false)}
+                />
               )}
 
               {/* FileUpload or Quiz */}
               {!questions ? (
                 <FileUpload
                   hasAI={!!apiKey}
+                  apiKey={apiKey}
+                  baseUrl={baseUrl}
                   onFileUpload={handleFileUpload}
                   onProfileClick={() => setShowUserInfo(true)}
                   onReconfigure={user.email === ADMIN_EMAIL ? () => setShowApiConfig(true) : undefined}
