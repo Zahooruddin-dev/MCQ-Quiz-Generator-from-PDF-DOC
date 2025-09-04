@@ -1,4 +1,19 @@
-const AIConfigPanel = ({ useAI, setUseAI, aiOptions, setAiOptions, effectiveLoading, onReconfigure, onSample }) => {
+const AIConfigPanel = ({
+  useAI,
+  setUseAI,
+  aiOptions,
+  setAiOptions,
+  effectiveLoading,
+}) => {
+  // Defaults when useAI is off
+  const effectiveNumQuestions = useAI ? aiOptions.numQuestions : 10;
+  const effectiveDifficulty = useAI ? aiOptions.difficulty : "easy";
+
+  // Optional: update aiOptions state so other parts of the app can read it safely
+  if (!useAI && (aiOptions.numQuestions !== 10 || aiOptions.difficulty !== "easy")) {
+    setAiOptions({ numQuestions: 10, difficulty: "easy" });
+  }
+
   return (
     <div className="ai-config-panel" aria-hidden={effectiveLoading}>
       <div className="panel-header">
@@ -16,7 +31,7 @@ const AIConfigPanel = ({ useAI, setUseAI, aiOptions, setAiOptions, effectiveLoad
           />
           <span className="slider" />
         </label>
-        <span className="toggle-label">Use AI Generation</span>
+        <span className="toggle-label">Use Custom Settings</span>
       </div>
 
       {useAI && (
@@ -43,7 +58,9 @@ const AIConfigPanel = ({ useAI, setUseAI, aiOptions, setAiOptions, effectiveLoad
             <label>🎚️ Difficulty</label>
             <select
               value={aiOptions.difficulty}
-              onChange={(e) => setAiOptions((prev) => ({ ...prev, difficulty: e.target.value }))}
+              onChange={(e) =>
+                setAiOptions((prev) => ({ ...prev, difficulty: e.target.value }))
+              }
               className="select-input"
               disabled={effectiveLoading}
             >
@@ -55,15 +72,9 @@ const AIConfigPanel = ({ useAI, setUseAI, aiOptions, setAiOptions, effectiveLoad
         </div>
       )}
 
-      <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-        <button onClick={onReconfigure} className="btn btn-secondary" disabled={effectiveLoading}>
-          🔐 Configure API
-        </button>
-{/*         <button onClick={onSample} className="btn" disabled={effectiveLoading}>
-          Try sample text
-        </button> */}
-      </div>
+      {/* Use effectiveNumQuestions & effectiveDifficulty wherever you need downstream */}
     </div>
   );
 };
+
 export default AIConfigPanel;

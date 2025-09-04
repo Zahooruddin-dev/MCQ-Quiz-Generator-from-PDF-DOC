@@ -1,4 +1,5 @@
-import React from 'react';
+// src/components/APIconfig/APIKeyInput.jsx
+import React from "react";
 
 const APIKeyInput = ({ apiKey, setApiKey }) => {
   return (
@@ -13,7 +14,7 @@ const APIKeyInput = ({ apiKey, setApiKey }) => {
         required
       />
       <small>
-        Get your API key from{' '}
+        Get your API key from{" "}
         <a
           href="https://aistudio.google.com/app/apikey"
           target="_blank"

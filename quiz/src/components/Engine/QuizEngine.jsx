@@ -4,11 +4,17 @@ import ProgressBar from './ProgressBar';
 import Question from './Question';
 import NavigationButtons from './NavigationButtons';
 
-const QuizEngine = ({ questions, onFinish }) => {
+const QuizEngine = ({ questions = [], onFinish }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [userAnswers, setUserAnswers] = useState(
     new Array(questions.length).fill(null)
   );
+
+  if (!questions.length) {
+    return <p className="error">No questions available. Please try again.</p>;
+  }
+
+  const currentQ = questions[currentQuestion];
 
   const handleAnswerSelect = (index) => {
     const newAnswers = [...userAnswers];
@@ -27,10 +33,10 @@ const QuizEngine = ({ questions, onFinish }) => {
   const handleFinish = () => {
     const unanswered = userAnswers.filter((a) => a === null).length;
     if (unanswered > 0) {
-      const confirm = window.confirm(
-        `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Are you sure?`
+      const confirmFinish = window.confirm(
+        `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Are you sure you want to finish?`
       );
-      if (!confirm) return;
+      if (!confirmFinish) return;
     }
 
     const results = {
@@ -38,10 +44,8 @@ const QuizEngine = ({ questions, onFinish }) => {
       fileName: 'Quiz',
       score:
         (userAnswers.filter(
-          (answer, index) => answer === questions[index].correctAnswer
-        ).length /
-          questions.length) *
-        100,
+          (answer, idx) => answer === questions[idx]?.correctAnswer
+        ).length / questions.length) * 100,
       totalQuestions: questions.length,
       answeredQuestions: questions.length - unanswered,
     };
@@ -67,17 +71,23 @@ const QuizEngine = ({ questions, onFinish }) => {
         </div>
       </div>
 
-      {questions[currentQuestion].context && (
+      {/* Render context safely */}
+      {currentQ?.context ? (
         <div className="quiz-context">
-          <Context context={questions[currentQuestion].context} />
+          <Context context={currentQ.context} />
         </div>
-      )}
+      ) : null}
 
-      <Question
-        questionData={questions[currentQuestion]}
-        selectedAnswer={userAnswers[currentQuestion]}
-        onSelectAnswer={handleAnswerSelect}
-      />
+      {/* Render question */}
+      {currentQ ? (
+        <Question
+          questionData={currentQ}
+          selectedAnswer={userAnswers[currentQuestion]}
+          onSelectAnswer={handleAnswerSelect}
+        />
+      ) : (
+        <p className="error">Question data missing.</p>
+      )}
 
       <NavigationButtons
         currentQuestion={currentQuestion}

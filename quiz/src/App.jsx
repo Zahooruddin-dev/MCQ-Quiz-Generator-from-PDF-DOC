@@ -1,5 +1,4 @@
-// src/App.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import FileUpload from "./components/FileUpload/FileUpload";
 import QuizEngine from "./components/Engine/QuizEngine";
@@ -8,26 +7,40 @@ import APIConfig from "./components/APIconfig/APIConfig";
 import AuthForm from "./components/Auth/AuthForm";
 import { useAuth } from "./context/AuthContext";
 import UserInfo from "./components/UserInfo/UserInfo";
-import AdminDashboard from "./components/Admin/AdminDashboard"; // ✅ new import
+import AdminDashboard from "./components/Admin/AdminDashboard";
+import { db } from "./firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
 import "./App.css";
 
-const ADMIN_EMAIL = "mizuka886@gmail.com"; // change to your admin email
+const ADMIN_EMAIL = "mizuka886@gmail.com";
 
 const App = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [showUserInfo, setShowUserInfo] = useState(false);
-
   const [questions, setQuestions] = useState(null);
   const [quizResults, setQuizResults] = useState(null);
   const [showResults, setShowResults] = useState(false);
 
-  const [apiKey, setApiKey] = useState(
-    () => localStorage.getItem("geminiApiKey") || ""
-  );
+  const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState(
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
   );
-  const [showApiConfig, setShowApiConfig] = useState(!apiKey);
+  const [showApiConfig, setShowApiConfig] = useState(false);
+
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      if (!user) return;
+      try {
+        const docSnap = await getDoc(doc(db, "settings", "apiKey"));
+        if (docSnap.exists()) setApiKey(docSnap.data().value);
+        else if (user.email === ADMIN_EMAIL) setShowApiConfig(true);
+      } catch (err) {
+        console.error("Failed to fetch API key:", err);
+        if (user.email === ADMIN_EMAIL) setShowApiConfig(true);
+      }
+    };
+    fetchApiKey();
+  }, [user]);
 
   const handleConfigSave = (newApiKey, newBaseUrl) => {
     setApiKey(newApiKey);
@@ -35,33 +48,22 @@ const App = () => {
     setShowApiConfig(false);
   };
 
-  const handleFileUpload = (generatedQuestions) => {
-    setQuestions(generatedQuestions);
-  };
-
+  const handleFileUpload = (generatedQuestions) => setQuestions(generatedQuestions);
   const handleQuizFinish = (results) => {
     setQuizResults(results);
     setShowResults(true);
   };
-
   const handleNewQuiz = () => {
     setQuestions(null);
     setQuizResults(null);
     setShowResults(false);
   };
 
-  if (!user) {
-    return (
-      <div className="app auth-wrapper">
-        <AuthForm />
-      </div>
-    );
-  }
+  if (!user) return <div className="app auth-wrapper"><AuthForm /></div>;
 
   return (
     <Router>
       <Routes>
-        {/* ✅ Main App */}
         <Route
           path="/"
           element={
@@ -74,21 +76,22 @@ const App = () => {
                 />
               )}
 
-              {showApiConfig ? (
+              {/* Admin API Config only */}
+              {user.email === ADMIN_EMAIL && showApiConfig && (
                 <APIConfig onConfigSave={handleConfigSave} />
-              ) : !questions ? (
+              )}
+
+              {/* FileUpload or Quiz */}
+              {!questions ? (
                 <FileUpload
                   hasAI={!!apiKey}
                   onFileUpload={handleFileUpload}
                   onProfileClick={() => setShowUserInfo(true)}
-                  onReconfigure={() => setShowApiConfig(true)}
+                  onReconfigure={user.email === ADMIN_EMAIL ? () => setShowApiConfig(true) : undefined}
                 />
               ) : (
                 <div className="quiz-wrapper">
-                  <button className="close-btn" onClick={handleNewQuiz}>
-                    ✖
-                  </button>
-
+                  <button className="close-btn" onClick={handleNewQuiz}>✖</button>
                   {showResults ? (
                     <ResultPage
                       questions={questions}
@@ -110,16 +113,9 @@ const App = () => {
           }
         />
 
-        {/* ✅ Admin Dashboard (protected) */}
         <Route
           path="/admin"
-          element={
-            user.email === ADMIN_EMAIL ? (
-              <AdminDashboard />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
+          element={user.email === ADMIN_EMAIL ? <AdminDashboard /> : <Navigate to="/" replace />}
         />
       </Routes>
     </Router>

@@ -1,9 +1,10 @@
-import React from 'react';
+// src/components/APIconfig/APIConfigButton.jsx
+import React from "react";
 
-const APIConfigButton = ({ onSubmit }) => {
+const APIConfigButton = () => {
   return (
     <button type="submit" className="btn">
-      Start Using AI Quiz Generator
+      Save & Start Using AI Quiz Generator
     </button>
   );
 };
