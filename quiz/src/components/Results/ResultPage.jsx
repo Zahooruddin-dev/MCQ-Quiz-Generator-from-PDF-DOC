@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ScoreDisplay from './ScoreDisplay';
 import StatsPanel from './StatsPanel';
 import ReviewQuestion from './ReviewQuestion';
+import './Results.css'; // We'll create this CSS file
 
 const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
   if (!questions || !userAnswers) {

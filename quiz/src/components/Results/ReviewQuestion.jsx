@@ -1,31 +1,61 @@
-const ReviewQuestion = ({ question, userAnswerIndex, isExpanded, toggleExpand, index }) => (
-  <div className="review-question">
-    <div className="review-question-header" onClick={() => toggleExpand(index)}>
-      <span>Question {index + 1}</span>
-      <span className={`status ${userAnswerIndex === question.correctAnswer ? 'correct' : 'incorrect'}`}>
-        {userAnswerIndex === null ? 'Unattempted' : userAnswerIndex === question.correctAnswer ? 'Correct' : 'Incorrect'}
-      </span>
-      <span className="toggle-icon">{isExpanded ? '▲' : '▼'}</span>
-    </div>
-
-    {isExpanded && (
-      <div className="review-body">
-        <div className="review-question-text">{question.question}</div>
-        <div className="review-options">
-          {question.options.map((option, optIndex) => {
-            let className = 'review-option';
-            if (optIndex === question.correctAnswer) className += ' correct-answer';
-            else if (userAnswerIndex === optIndex) className += ' user-answer';
-            return (
-              <div key={optIndex} className={className}>
-                {String.fromCharCode(97 + optIndex)}) {option}
-              </div>
-            );
-          })}
+const ReviewQuestion = ({ question, userAnswerIndex, isExpanded, toggleExpand, index }) => {
+  const isCorrect = userAnswerIndex === question.correctAnswer;
+  const isUnattempted = userAnswerIndex === null;
+  
+  return (
+    <div className={`review-question ${isCorrect ? 'correct' : isUnattempted ? 'unattempted' : 'incorrect'}`}>
+      <div className="review-question-header" onClick={() => toggleExpand(index)}>
+        <div className="question-number">
+          <span>Question {index + 1}</span>
+        </div>
+        <div className="question-status">
+          <span className={`status ${isCorrect ? 'correct' : isUnattempted ? 'unattempted' : 'incorrect'}`}>
+            {isUnattempted ? 'Unattempted' : isCorrect ? 'Correct' : 'Incorrect'}
+          </span>
+          <span className="toggle-icon">{isExpanded ? '▲' : '▼'}</span>
         </div>
       </div>
-    )}
-  </div>
-);
+
+      {isExpanded && (
+        <div className="review-body">
+          <div className="review-question-text">{question.question}</div>
+          
+          {question.context && (
+            <div className="question-context">
+              <strong>Context:</strong> {question.context}
+            </div>
+          )}
+          
+          <div className="review-options">
+            {question.options.map((option, optIndex) => {
+              const isUserAnswer = userAnswerIndex === optIndex;
+              const isCorrectAnswer = optIndex === question.correctAnswer;
+              
+              let className = 'review-option';
+              if (isCorrectAnswer) className += ' correct-answer';
+              if (isUserAnswer && !isCorrectAnswer) className += ' user-incorrect-answer';
+              if (isUserAnswer && isCorrectAnswer) className += ' user-correct-answer';
+              
+              return (
+                <div key={optIndex} className={className}>
+                  <span className="option-letter">{String.fromCharCode(97 + optIndex)})</span>
+                  <span className="option-text">{option}</span>
+                  {isCorrectAnswer && <span className="correct-indicator">✓ Correct Answer</span>}
+                  {isUserAnswer && !isCorrectAnswer && <span className="incorrect-indicator">✗ Your Answer</span>}
+                </div>
+              );
+            })}
+          </div>
+          
+          {question.explanation && (
+            <div className="explanation">
+              <strong>Explanation:</strong> {question.explanation}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default ReviewQuestion;
