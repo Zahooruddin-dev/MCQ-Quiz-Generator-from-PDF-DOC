@@ -11,10 +11,12 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import "./AdminDashboard.css";
 import { useNavigate } from "react-router-dom";
+
 const AdminDashboard = ({ onClose }) => {
   const { user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const adminEmail = "mizuka886@gmail.com";
 
@@ -68,23 +70,28 @@ const AdminDashboard = ({ onClose }) => {
     }
   };
 
-  const terminatePremium = async (uid) => {
+  const terminatePremium = async (uid, requestId) => {
     try {
+      // Reset user premium
       await updateDoc(doc(db, "users", uid), { isPremium: false, credits: 0 });
+
+      // Optional: reset previous request so user can resubmit
+      await updateDoc(doc(db, "premiumRequests", requestId), { status: "rejected" });
+
       fetchRequests();
+      alert("✅ Premium terminated. User can now resubmit a new request.");
     } catch (err) {
       console.error(err);
       alert("⚠️ Failed to terminate premium.");
     }
   };
-const navigate  = useNavigate();
 
   return (
     <div className="admin-dashboard card">
       <div className="dashboard-header">
         <h2>Admin Dashboard</h2>
-        <button className="btn close-btn" onClick={ () => navigate("/")}>
-          ❌ 
+        <button className="btn close-btn" onClick={() => navigate("/")}>
+          ❌
         </button>
       </div>
 
@@ -140,7 +147,7 @@ const navigate  = useNavigate();
                   {req.status === "approved" && (
                     <button
                       className="btn btn-secondary small"
-                      onClick={() => terminatePremium(req.uid)}
+                      onClick={() => terminatePremium(req.uid, req.id)}
                     >
                       Terminate
                     </button>

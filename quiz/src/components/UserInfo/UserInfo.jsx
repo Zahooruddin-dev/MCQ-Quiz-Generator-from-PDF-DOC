@@ -8,7 +8,7 @@ import "./UserInfo.css";
 
 const UserInfo = ({ user, onClose, isAdmin }) => {
   const { credits, isPremium, setCredits, setIsPremium } = useAuth();
-  const [requestStatus, setRequestStatus] = useState(null);
+  const [requestSent, setRequestSent] = useState(false);
   const navigate = useNavigate();
 
   if (!user) return null;
@@ -17,7 +17,7 @@ const UserInfo = ({ user, onClose, isAdmin }) => {
     ? new Date(user.metadata.lastSignInTime).toLocaleString()
     : "Unknown";
 
-  // Live snapshot for real-time updates
+  // Live snapshot for real-time premium updates
   useEffect(() => {
     const userRef = doc(db, "users", user.uid);
     const unsubscribe = onSnapshot(userRef, (snap) => {
@@ -27,20 +27,7 @@ const UserInfo = ({ user, onClose, isAdmin }) => {
         setIsPremium(data.isPremium);
       }
     });
-
-    const reqRef = doc(db, "premiumRequests", user.uid);
-    const unsubReq = onSnapshot(reqRef, (snap) => {
-      if (snap.exists()) {
-        setRequestStatus(snap.data().status);
-      } else {
-        setRequestStatus(null);
-      }
-    });
-
-    return () => {
-      unsubscribe();
-      unsubReq();
-    };
+    return unsubscribe;
   }, [user]);
 
   const handleRequestPremium = async () => {
@@ -50,9 +37,11 @@ const UserInfo = ({ user, onClose, isAdmin }) => {
 
       if (existing.exists() && existing.data().status === "pending") {
         alert("You already have a pending request.");
+        setRequestSent(true);
         return;
       }
 
+      // Overwrite or create new request
       await setDoc(
         requestRef,
         {
@@ -62,10 +51,10 @@ const UserInfo = ({ user, onClose, isAdmin }) => {
           createdAt: serverTimestamp(),
           status: "pending",
         },
-        { merge: true }
+        { merge: true } // merge ensures old requests are updated
       );
-
-      setRequestStatus("pending");
+      setRequestSent(true);
+      alert("✅ Premium request submitted successfully!");
     } catch (err) {
       console.error(err);
       alert("Failed to send request. Try again later.");
@@ -91,32 +80,30 @@ const UserInfo = ({ user, onClose, isAdmin }) => {
           <p><strong>Name:</strong> {user.displayName || "N/A"}</p>
           <p><strong>Email:</strong> {user.email}</p>
           <p><strong>Status:</strong> {isPremium ? "🌟 Premium User" : "Free User"}</p>
-          <p><strong>Credits:</strong> {isPremium ? 300 : credits}</p>
+          <p><strong>Credits:</strong> {isPremium ? "∞" : credits}</p>
           <p><strong>Last Login:</strong> {lastLogin}</p>
 
-          {!isPremium && requestStatus !== "pending" && (
+          {!isPremium && !requestSent && (
             <button className="btn small-btn" onClick={handleRequestPremium}>
               Request Premium Upgrade
             </button>
           )}
-
-          {requestStatus === "pending" && (
+          {!isPremium && requestSent && (
             <p className="success-msg">✅ Request sent! Waiting for admin approval.</p>
           )}
 
-          {requestStatus === "rejected" && !isPremium && (
-            <button className="btn small-btn" onClick={handleRequestPremium}>
-              Resubmit Premium Request
-            </button>
-          )}
-
           {isAdmin && (
-            <button className="btn small-btn admin-btn" onClick={() => navigate("/admin")}>
+            <button
+              className="btn small-btn admin-btn"
+              onClick={() => navigate("/admin")}
+            >
               Open Admin Dashboard
             </button>
           )}
 
-          <button className="btn close-btn" onClick={onClose}>❌</button>
+          <button className="btn close-btn" onClick={onClose}>
+            ❌
+          </button>
         </motion.div>
       </motion.div>
     </AnimatePresence>
