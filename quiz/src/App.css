@@ -75,7 +75,7 @@ body {
 }
 
 .card {
-	background: var(--color-card-bg);
+	background: rgb(244, 244, 244, .95);
 	padding: 2rem;
 	border-radius: 1.5rem;
 	box-shadow: 0 4px 12px var(--color-shadow);

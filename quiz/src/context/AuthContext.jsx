@@ -99,20 +99,23 @@ export const AuthProvider = ({ children }) => {
     return true;
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        credits,
-        isPremium,
-        isAdmin, // ✅ expose admin status
-        loginWithGoogle,
-        logout,
-        useCredit,
-        loading,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+return (
+  <AuthContext.Provider
+    value={{
+      user,
+      credits,
+      isPremium,
+      loading,
+      loginWithGoogle,
+      logout,
+      useCredit,
+      // Add these setters so components can update state
+      setCredits,
+      setIsPremium,
+    }}
+  >
+    {children}
+  </AuthContext.Provider>
+);
+
 };
