@@ -9,7 +9,20 @@ import {
   sendPasswordResetEmail,
   updateProfile,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+
+// 🔹 Firebase error mapping
+const getFriendlyError = (code) => {
+  const errors = {
+    "auth/email-already-in-use": "This email is already registered.",
+    "auth/invalid-email": "Please enter a valid email address.",
+    "auth/weak-password": "Password must be at least 6 characters.",
+    "auth/user-not-found": "No account found with this email.",
+    "auth/wrong-password": "Incorrect password.",
+    "auth/missing-password": "Please enter your password.",
+  };
+  return errors[code] || "Something went wrong. Please try again.";
+};
 
 const AuthForm = () => {
   const { loginWithGoogle } = useAuth();
@@ -22,6 +35,31 @@ const AuthForm = () => {
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // 🔹 Handle signup
+  const handleSignup = async () => {
+    const userCred = await createUserWithEmailAndPassword(auth, email, password);
+
+    // Update profile with username
+    await updateProfile(userCred.user, { displayName: username });
+
+    // Save user record in Firestore
+    await setDoc(doc(db, "users", userCred.user.uid), {
+      displayName: username,
+      email: email,
+      credits: 5,
+      createdAt: serverTimestamp(),
+    });
+
+    setSuccessMsg("Account created successfully!");
+  };
+
+  // 🔹 Handle login
+  const handleLogin = async () => {
+    await signInWithEmailAndPassword(auth, email, password);
+    setSuccessMsg("Logged in successfully!");
+  };
+
+  // 🔹 Wrapper for form submit
   const handleAuth = async (e) => {
     e.preventDefault();
     setError("");
@@ -30,32 +68,25 @@ const AuthForm = () => {
 
     try {
       if (isSignup) {
-        // 🔹 Signup
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCred.user, { displayName: username });
-        await setDoc(doc(db, "users", userCred.user.uid), { credits: 5 });
-        setSuccessMsg("Account created successfully!");
+        await handleSignup();
       } else {
-        // 🔹 Login
-        await signInWithEmailAndPassword(auth, email, password);
-        setSuccessMsg("Logged in successfully!");
+        await handleLogin();
       }
     } catch (err) {
-      setError(err.message);
+      setError(getFriendlyError(err.code));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
+  // 🔹 Forgot password
   const handleForgotPassword = async () => {
-    if (!email) {
-      setError("Please enter your email first.");
-      return;
-    }
+    if (!email) return setError("Please enter your email first.");
     try {
       await sendPasswordResetEmail(auth, email);
       setSuccessMsg("Password reset email sent.");
     } catch (err) {
-      setError(err.message);
+      setError(getFriendlyError(err.code));
     }
   };
 
@@ -96,6 +127,7 @@ const AuthForm = () => {
           <input
             type="password"
             value={password}
+            minLength={6}
             onChange={(e) => setPassword(e.target.value)}
             required
             placeholder="••••••••"
@@ -115,7 +147,12 @@ const AuthForm = () => {
 
       <div className="auth-divider">OR</div>
 
-      <button className="btn google-btn" onClick={loginWithGoogle}>
+      <button
+        type="button"
+        className="btn google-btn"
+        onClick={loginWithGoogle}
+        disabled={loading}
+      >
         Continue with Google
       </button>
 
