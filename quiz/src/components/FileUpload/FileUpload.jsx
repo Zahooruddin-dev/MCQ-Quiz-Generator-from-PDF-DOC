@@ -100,7 +100,6 @@ const FileUpload = ({
 
   return (
     <div className='upload-container'>
-      <AppHeader onProfileClick={onProfileClick} setShowApiConfig={onReconfigure} />
       <ErrorMessage error={error} onDismiss={() => setError(null)} />
 
       {hasAI && (

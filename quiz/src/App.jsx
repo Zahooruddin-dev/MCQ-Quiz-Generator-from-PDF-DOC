@@ -60,7 +60,13 @@ const App = () => {
     setShowResults(false);
   };
 
-  if (!user) return <div className="app auth-wrapper"><AuthForm /></div>;
+  if (!user) {
+    return (
+      <div className="app auth-wrapper">
+        <AuthForm />
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -69,7 +75,13 @@ const App = () => {
           path="/"
           element={
             <div className="app">
-          
+              {/* ✅ Always show AppHeader */}
+              <AppHeader
+                onProfileClick={() => setShowUserInfo(true)}
+                showApiConfig={showApiConfig}
+                setShowApiConfig={setShowApiConfig}
+              />
+
               {showUserInfo && (
                 <UserInfo
                   user={user}
@@ -78,7 +90,7 @@ const App = () => {
                 />
               )}
 
-              {/* Admin API Config */}
+              {/* ✅ Admin API Config toggleable */}
               {user.email === ADMIN_EMAIL && showApiConfig && (
                 <APIConfig
                   apiKey={apiKey}
@@ -89,6 +101,7 @@ const App = () => {
                     localStorage.setItem("geminiApiKey", newApiKey);
                     setShowApiConfig(false);
                   }}
+                  onClose={() => setShowApiConfig(false)}
                 />
               )}
 
@@ -100,11 +113,17 @@ const App = () => {
                   baseUrl={baseUrl}
                   onFileUpload={handleFileUpload}
                   onProfileClick={() => setShowUserInfo(true)}
-                  onReconfigure={user.email === ADMIN_EMAIL ? () => setShowApiConfig(true) : undefined}
+                  onReconfigure={
+                    user.email === ADMIN_EMAIL
+                      ? () => setShowApiConfig(true)
+                      : undefined
+                  }
                 />
               ) : (
                 <div className="quiz-wrapper">
-                  <button className="close-btn" onClick={handleNewQuiz}>✖</button>
+                  <button className="close-btn" onClick={handleNewQuiz}>
+                    ✖
+                  </button>
                   {showResults ? (
                     <ResultPage
                       questions={questions}
@@ -128,7 +147,13 @@ const App = () => {
 
         <Route
           path="/admin"
-          element={user.email === ADMIN_EMAIL ? <AdminDashboard /> : <Navigate to="/" replace />}
+          element={
+            user.email === ADMIN_EMAIL ? (
+              <AdminDashboard />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
         />
       </Routes>
     </Router>
