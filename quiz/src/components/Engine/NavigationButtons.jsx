@@ -1,27 +1,42 @@
+import './QuizEngine.css';
+
 const NavigationButtons = ({
   currentQuestion,
   totalQuestions,
   goToPrevQuestion,
   goToNextQuestion,
   handleFinish,
+  isSubmitting,
+  hasAnswer
 }) => {
+  const isFirstQuestion = currentQuestion === 0;
+  const isLastQuestion = currentQuestion === totalQuestions - 1;
+
   return (
-    <div className="navigation">
+    <div className="navigation-buttons">
       <button
-        className="btn btn-secondary"
         onClick={goToPrevQuestion}
-        disabled={currentQuestion === 0}
+        disabled={isFirstQuestion || isSubmitting}
+        className="nav-button prev-button"
       >
         Previous
       </button>
-
-      {currentQuestion < totalQuestions - 1 ? (
-        <button className="btn" onClick={goToNextQuestion}>
+      
+      {!isLastQuestion ? (
+        <button
+          onClick={goToNextQuestion}
+          disabled={isSubmitting}
+          className="nav-button next-button"
+        >
           Next
         </button>
       ) : (
-        <button className="btn" onClick={handleFinish}>
-          Finish Quiz
+        <button
+          onClick={handleFinish}
+          disabled={isSubmitting}
+          className="nav-button finish-button"
+        >
+          {isSubmitting ? 'Submitting...' : 'Finish Quiz'}
         </button>
       )}
     </div>

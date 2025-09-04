@@ -1,93 +1,128 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Context from '../Context';
 import ProgressBar from './ProgressBar';
 import Question from './Question';
 import NavigationButtons from './NavigationButtons';
+import './QuizEngine.css';
 
-const QuizEngine = ({ questions = [], onFinish }) => {
+const QuizEngine = ({ questions = [], onFinish, quizTitle = "Interactive Quiz" }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [userAnswers, setUserAnswers] = useState(
     new Array(questions.length).fill(null)
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Memoize derived values to prevent unnecessary recalculations
+  const answeredCount = useMemo(() => 
+    userAnswers.filter(a => a !== null).length, 
+    [userAnswers]
+  );
+
+  const progressPercentage = useMemo(() => 
+    (answeredCount / questions.length) * 100, 
+    [answeredCount, questions.length]
+  );
 
   if (!questions.length) {
-    return <p className="error">No questions available. Please try again.</p>;
+    return <div className="quiz-engine-error">No questions available. Please try again.</div>;
   }
 
   const currentQ = questions[currentQuestion];
 
-  const handleAnswerSelect = (index) => {
-    const newAnswers = [...userAnswers];
-    newAnswers[currentQuestion] = index;
-    setUserAnswers(newAnswers);
-  };
+  const handleAnswerSelect = useCallback((index) => {
+    setUserAnswers(prev => {
+      const newAnswers = [...prev];
+      newAnswers[currentQuestion] = index;
+      return newAnswers;
+    });
+  }, [currentQuestion]);
 
-  const goToNextQuestion = () => {
-    if (currentQuestion < questions.length - 1) setCurrentQuestion(currentQuestion + 1);
-  };
+  const goToNextQuestion = useCallback(() => {
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion(prev => prev + 1);
+    }
+  }, [currentQuestion, questions.length]);
 
-  const goToPrevQuestion = () => {
-    if (currentQuestion > 0) setCurrentQuestion(currentQuestion - 1);
-  };
+  const goToPrevQuestion = useCallback(() => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(prev => prev - 1);
+    }
+  }, [currentQuestion]);
 
-  const handleFinish = () => {
-    const unanswered = userAnswers.filter((a) => a === null).length;
+  const handleFinish = useCallback(async () => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    const unanswered = userAnswers.filter(a => a === null).length;
+    
     if (unanswered > 0) {
       const confirmFinish = window.confirm(
         `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Are you sure you want to finish?`
       );
-      if (!confirmFinish) return;
+      if (!confirmFinish) {
+        setIsSubmitting(false);
+        return;
+      }
     }
 
-    const results = {
-      answers: userAnswers,
-      fileName: 'Quiz',
-      score:
-        (userAnswers.filter(
-          (answer, idx) => answer === questions[idx]?.correctAnswer
-        ).length / questions.length) * 100,
-      totalQuestions: questions.length,
-      answeredQuestions: questions.length - unanswered,
-    };
+    try {
+      const score = userAnswers.reduce((total, answer, idx) => {
+        return total + (answer === questions[idx]?.correctAnswer ? 1 : 0);
+      }, 0);
+      
+      const results = {
+        answers: userAnswers,
+        score: (score / questions.length) * 100,
+        totalQuestions: questions.length,
+        answeredQuestions: questions.length - unanswered,
+        correctAnswers: score,
+        timestamp: new Date().toISOString(),
+      };
 
-    onFinish?.(results);
-  };
-
-  const calculateProgress = () => {
-    const answered = userAnswers.filter((a) => a !== null).length;
-    return (answered / questions.length) * 100;
-  };
+      await onFinish?.(results);
+    } catch (error) {
+      console.error("Error finishing quiz:", error);
+      alert("There was an error submitting your quiz. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [userAnswers, questions, onFinish, isSubmitting]);
 
   return (
-    <div className="quiz-container">
+    <div className="quiz-engine">
       <div className="quiz-header">
-        <h2>Interactive Quiz</h2>
-        <ProgressBar progress={calculateProgress()} />
-        <div className="quiz-info">
-          <span>
+        <h1>{quizTitle}</h1>
+        <div className="quiz-meta">
+          <span className="question-count">
             Question {currentQuestion + 1} of {questions.length}
           </span>
-          <span>{userAnswers.filter((a) => a !== null).length} answered</span>
+          <span className="answered-count">
+            {answeredCount} answered
+          </span>
         </div>
       </div>
 
-      {/* Render context safely */}
-      {currentQ?.context ? (
-        <div className="quiz-context">
-          <Context context={currentQ.context} />
-        </div>
-      ) : null}
+      <ProgressBar progress={progressPercentage} />
+      
+      <div className="quiz-content">
+        {/* Render context safely */}
+        {currentQ?.context && (
+          <div className="question-context">
+            <Context>{currentQ.context}</Context>
+          </div>
+        )}
 
-      {/* Render question */}
-      {currentQ ? (
-        <Question
-          questionData={currentQ}
-          selectedAnswer={userAnswers[currentQuestion]}
-          onSelectAnswer={handleAnswerSelect}
-        />
-      ) : (
-        <p className="error">Question data missing.</p>
-      )}
+        {/* Render question */}
+        {currentQ ? (
+          <Question
+            questionData={currentQ}
+            selectedAnswer={userAnswers[currentQuestion]}
+            onSelectAnswer={handleAnswerSelect}
+          />
+        ) : (
+          <div className="question-error">Question data missing.</div>
+        )}
+      </div>
 
       <NavigationButtons
         currentQuestion={currentQuestion}
@@ -95,6 +130,8 @@ const QuizEngine = ({ questions = [], onFinish }) => {
         goToPrevQuestion={goToPrevQuestion}
         goToNextQuestion={goToNextQuestion}
         handleFinish={handleFinish}
+        isSubmitting={isSubmitting}
+        hasAnswer={userAnswers[currentQuestion] !== null}
       />
     </div>
   );
