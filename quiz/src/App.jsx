@@ -8,7 +8,6 @@ import AuthForm from "./components/Auth/AuthForm";
 import { useAuth } from "./context/AuthContext";
 import UserInfo from "./components/UserInfo/UserInfo";
 import AdminDashboard from "./components/Admin/AdminDashboard";
-import AppHeader from "./components/Layout/AppHeader";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 import "./App.css";
@@ -69,11 +68,6 @@ const App = () => {
           path="/"
           element={
             <div className="app">
-              <AppHeader
-                onProfileClick={() => setShowUserInfo(true)}
-                setShowApiConfig={setShowApiConfig}
-              />
-
               {showUserInfo && (
                 <UserInfo
                   user={user}
@@ -82,7 +76,7 @@ const App = () => {
                 />
               )}
 
-              {/* Admin API Config */}
+              {/* Admin API Config only */}
               {user.email === ADMIN_EMAIL && showApiConfig && (
                 <APIConfig
                   apiKey={apiKey}
@@ -93,7 +87,6 @@ const App = () => {
                     localStorage.setItem("geminiApiKey", newApiKey);
                     setShowApiConfig(false);
                   }}
-                  onClose={() => setShowApiConfig(false)}
                 />
               )}
 
