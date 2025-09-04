@@ -52,70 +52,55 @@ const FileUpload = ({
         setError(`File is too big (${formatBytes(file.size)}). Max allowed is ${formatBytes(MAX_FILE_SIZE)}.`);
         clearSelectedFile(); return;
       }
-
       const mime = (file.type || '').toLowerCase();
-      const isSupported = SUPPORTED.some((s) => mime.includes(s)) || /\.(pdf|docx?|txt|html)$/i.test(file.name || '');
+      const isSupported = SUPPORTED.some(s => mime.includes(s)) || /\.(pdf|docx?|txt|html)$/i.test(file.name || '');
       if (!isSupported) { setError('Unsupported file type. Supported: PDF, DOCX, TXT, HTML.'); return; }
 
       if (!useAI) { onFileUpload(file, false, null); return; }
-      if (!apiKey || apiKey.trim().length < 8) { setError('Please configure your API key first (click Configure API).'); return; }
+
+      const effectiveApiKey = apiKey || localStorage.getItem("geminiApiKey");
+      if (!effectiveApiKey || effectiveApiKey.trim().length < 8) {
+        setError('Please configure your API key first (click Configure API).'); return;
+      }
 
       startLoading();
-      const llmService = new LLMService(apiKey, baseUrl);
+      const llmService = new LLMService(effectiveApiKey, baseUrl);
       const questions = await llmService.generateQuizQuestions(file, aiOptions);
       onFileUpload(questions, true, aiOptions);
 
-    } catch (err) {
-      console.error('Error processing file:', err);
-      setError(err?.message || 'Failed to process file.');
-    } finally { stopLoading(); }
+    } catch (err) { console.error('Error processing file:', err); setError(err?.message || 'Failed to process file.'); }
+    finally { stopLoading(); }
   };
 
-  const handleDrop = (e) => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files[0]); };
-  const handleDragOver = (e) => { e.preventDefault(); setDragOver(true); };
-  const handleDragLeave = (e) => { e.preventDefault(); setDragOver(false); };
+  const handleDrop = e => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files[0]); };
+  const handleDragOver = e => { e.preventDefault(); setDragOver(true); };
+  const handleDragLeave = e => { e.preventDefault(); setDragOver(false); };
 
-  // ----- Text input handling -----
-  const handleTextSubmit = async (textContent) => {
+  const handleTextSubmit = async textContent => {
     if (busyRef.current) return;
     setError(null);
-
     try {
-      if (!textContent || !textContent.trim()) {
-        setError('Please paste some content first.');
-        return;
-      }
-
+      if (!textContent?.trim()) { setError('Please paste some content first.'); return; }
       const wordCount = textContent.trim().split(/\s+/).length;
-      if (wordCount < 10) {
-        setError('Please enter at least 10 words of text to generate questions.');
-        return;
-      }
+      if (wordCount < 10) { setError('Please enter at least 10 words of text to generate questions.'); return; }
 
-      if (!apiKey || apiKey.trim().length < 8) {
-        setError('Please configure your API key first (click Configure API).');
-        return;
+      const effectiveApiKey = apiKey || localStorage.getItem("geminiApiKey");
+      if (!effectiveApiKey || effectiveApiKey.trim().length < 8) {
+        setError('Please configure your API key first (click Configure API).'); return;
       }
 
       startLoading();
-      const llmService = new LLMService(apiKey, baseUrl);
+      const llmService = new LLMService(effectiveApiKey, baseUrl);
       const questions = await llmService.generateQuizQuestions(textContent, aiOptions);
       onFileUpload(questions, true, aiOptions);
 
-    } catch (err) {
-      console.error('Error processing text:', err);
-      setError(err?.message || 'Failed to process text.');
-    } finally {
-      stopLoading();
-      setPastedText('');
-      setShowTextMode(false);
-    }
+    } catch (err) { console.error('Error processing text:', err); setError(err?.message || 'Failed to process text.'); }
+    finally { stopLoading(); setPastedText(''); setShowTextMode(false); }
   };
 
-  // ----- JSX -----
   return (
     <div className='upload-container'>
-      <AppHeader onProfileClick={onProfileClick} />
+      <AppHeader onProfileClick={onProfileClick} setShowApiConfig={onReconfigure} />
       <ErrorMessage error={error} onDismiss={() => setError(null)} />
 
       {hasAI && (
@@ -145,15 +130,12 @@ const FileUpload = ({
 
       <SampleTextButtons
         onSampleClick={() => handleTextSubmit(SAMPLE_TEXT)}
-        onToggleTextMode={() => setShowTextMode((prev) => !prev)}
+        onToggleTextMode={() => setShowTextMode(prev => !prev)}
         showTextMode={showTextMode}
         effectiveLoading={effectiveLoading}
       />
 
-      <HiddenFileInput
-        onFileSelect={handleFileSelect}
-        effectiveLoading={effectiveLoading}
-      />
+      <HiddenFileInput onFileSelect={handleFileSelect} effectiveLoading={effectiveLoading} />
 
       {showTextMode && (
         <TextModeInput

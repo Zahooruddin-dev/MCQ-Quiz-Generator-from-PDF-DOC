@@ -9,8 +9,9 @@ import { useAuth } from "./context/AuthContext";
 import UserInfo from "./components/UserInfo/UserInfo";
 import AdminDashboard from "./components/Admin/AdminDashboard";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "./firebaseConfig";
 import "./App.css";
+import { db } from "./firebaseConfig";
+import AppHeader from "./components/Layout/AppHeader";
 
 const ADMIN_EMAIL = "mizuka886@gmail.com";
 
@@ -35,7 +36,7 @@ const App = () => {
         if (docSnap.exists()) {
           const key = docSnap.data().value;
           setApiKey(key);
-          localStorage.setItem("geminiApiKey", key); // ✅ Sync with localStorage
+          localStorage.setItem("geminiApiKey", key);
         } else if (user.email === ADMIN_EMAIL) {
           setShowApiConfig(true);
         }
@@ -68,6 +69,7 @@ const App = () => {
           path="/"
           element={
             <div className="app">
+          
               {showUserInfo && (
                 <UserInfo
                   user={user}
@@ -76,7 +78,7 @@ const App = () => {
                 />
               )}
 
-              {/* Admin API Config only */}
+              {/* Admin API Config */}
               {user.email === ADMIN_EMAIL && showApiConfig && (
                 <APIConfig
                   apiKey={apiKey}

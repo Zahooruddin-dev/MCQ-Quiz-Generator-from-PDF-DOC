@@ -16,12 +16,9 @@ const AppHeader = ({ onProfileClick, setShowApiConfig }) => {
         </span>
       </div>
       <div className="header-actions">
-        <button className="btn small-btn" onClick={onProfileClick}>
-          👤 Profile
-        </button>
+        <button className="btn small-btn" onClick={onProfileClick}>👤 Profile</button>
 
-        {/* Admin API Config */}
-        {user?.email === ADMIN_EMAIL && (
+        {user?.email === ADMIN_EMAIL && setShowApiConfig && (
           <button
             className="btn small-btn"
             onClick={() => setShowApiConfig(true)}
@@ -30,9 +27,7 @@ const AppHeader = ({ onProfileClick, setShowApiConfig }) => {
           </button>
         )}
 
-        <button className="btn small-btn" onClick={logout}>
-          Logout
-        </button>
+        <button className="btn small-btn" onClick={logout}>Logout</button>
       </div>
     </header>
   );
