@@ -3,6 +3,7 @@ import Context from '../Context';
 import ProgressBar from './ProgressBar';
 import Question from './Question';
 import NavigationButtons from './NavigationButtons';
+import FinishConfirmation from './FinishConfirmation';
 import './QuizEngine.css';
 
 const QuizEngine = ({ questions = [], onFinish, quizTitle = "Interactive Quiz" }) => {
@@ -11,6 +12,7 @@ const QuizEngine = ({ questions = [], onFinish, quizTitle = "Interactive Quiz" }
     new Array(questions.length).fill(null)
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
 
   // Memoize derived values to prevent unnecessary recalculations
   const answeredCount = useMemo(() => 
@@ -21,6 +23,11 @@ const QuizEngine = ({ questions = [], onFinish, quizTitle = "Interactive Quiz" }
   const progressPercentage = useMemo(() => 
     (answeredCount / questions.length) * 100, 
     [answeredCount, questions.length]
+  );
+
+  const unansweredCount = useMemo(() => 
+    userAnswers.filter(a => a === null).length,
+    [userAnswers]
   );
 
   if (!questions.length) {
@@ -49,21 +56,19 @@ const QuizEngine = ({ questions = [], onFinish, quizTitle = "Interactive Quiz" }
     }
   }, [currentQuestion]);
 
-  const handleFinish = useCallback(async () => {
+  const handleFinishClick = useCallback(() => {
+    if (unansweredCount > 0) {
+      setShowFinishConfirm(true);
+    } else {
+      submitQuiz();
+    }
+  }, [unansweredCount]);
+
+  const submitQuiz = useCallback(async () => {
     if (isSubmitting) return;
     
     setIsSubmitting(true);
-    const unanswered = userAnswers.filter(a => a === null).length;
-    
-    if (unanswered > 0) {
-      const confirmFinish = window.confirm(
-        `You have ${unanswered} unanswered question${unanswered > 1 ? 's' : ''}. Are you sure you want to finish?`
-      );
-      if (!confirmFinish) {
-        setIsSubmitting(false);
-        return;
-      }
-    }
+    setShowFinishConfirm(false);
 
     try {
       const score = userAnswers.reduce((total, answer, idx) => {
@@ -74,7 +79,7 @@ const QuizEngine = ({ questions = [], onFinish, quizTitle = "Interactive Quiz" }
         answers: userAnswers,
         score: (score / questions.length) * 100,
         totalQuestions: questions.length,
-        answeredQuestions: questions.length - unanswered,
+        answeredQuestions: questions.length - unansweredCount,
         correctAnswers: score,
         timestamp: new Date().toISOString(),
       };
@@ -86,7 +91,11 @@ const QuizEngine = ({ questions = [], onFinish, quizTitle = "Interactive Quiz" }
     } finally {
       setIsSubmitting(false);
     }
-  }, [userAnswers, questions, onFinish, isSubmitting]);
+  }, [userAnswers, questions, onFinish, isSubmitting, unansweredCount]);
+
+  const cancelFinish = useCallback(() => {
+    setShowFinishConfirm(false);
+  }, []);
 
   return (
     <div className="quiz-engine">
@@ -129,10 +138,18 @@ const QuizEngine = ({ questions = [], onFinish, quizTitle = "Interactive Quiz" }
         totalQuestions={questions.length}
         goToPrevQuestion={goToPrevQuestion}
         goToNextQuestion={goToNextQuestion}
-        handleFinish={handleFinish}
+        handleFinish={handleFinishClick}
         isSubmitting={isSubmitting}
         hasAnswer={userAnswers[currentQuestion] !== null}
       />
+
+      {showFinishConfirm && (
+        <FinishConfirmation
+          unansweredCount={unansweredCount}
+          onConfirm={submitQuiz}
+          onCancel={cancelFinish}
+        />
+      )}
     </div>
   );
 };
