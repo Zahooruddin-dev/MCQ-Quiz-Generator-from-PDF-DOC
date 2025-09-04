@@ -7,7 +7,13 @@ import {
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 
 const AuthContext = createContext();
 
@@ -18,77 +24,91 @@ export const AuthProvider = ({ children }) => {
   const [credits, setCredits] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false); // ✅ new
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
+      try {
+        if (firebaseUser) {
+          setUser(firebaseUser);
 
-        // Get admin claim from Firebase token
-        const tokenResult = await firebaseUser.getIdTokenResult();
-        setIsAdmin(tokenResult.claims.admin === true); // ✅ detect admin
+          // 🔹 Check admin claim
+          const tokenResult = await firebaseUser.getIdTokenResult();
+          const isAdminClaim = tokenResult.claims.admin === true;
+          setIsAdmin(isAdminClaim);
 
-        const userRef = doc(db, "users", firebaseUser.uid);
-        const snap = await getDoc(userRef);
+          const userRef = doc(db, "users", firebaseUser.uid);
+          const snap = await getDoc(userRef);
 
-        if (snap.exists()) {
-          const data = snap.data();
+          if (snap.exists()) {
+            const data = snap.data();
 
-          // Reset credits daily for non-premium
-          const now = Date.now();
-          const lastReset = data.lastReset || 0;
-          const oneDay = 24 * 60 * 60 * 1000;
-
-          if (!tokenResult.claims.admin) { // admins don’t reset credits
-            if (now - lastReset >= oneDay && !data.isPremium) {
-              await updateDoc(userRef, { credits: 5, lastReset: now });
-              setCredits(5);
+            if (isAdminClaim) {
+              setCredits(3000);
+              setIsPremium(true); // treat admins as premium
             } else {
-              setCredits(data.credits || 0);
+              await handleCreditReset(userRef, data);
             }
-          } else {
-            // Admins always have 3000 credits
-            setCredits(3000);
-          }
 
-          setIsPremium(data.isPremium || false);
+            setIsPremium(data.isPremium || false);
+          } else {
+            // 🔹 First-time user → initialize in Firestore
+            const newUser = {
+              displayName: firebaseUser.displayName || "",
+              email: firebaseUser.email || "",
+              credits: isAdminClaim ? 3000 : 5,
+              lastReset: Date.now(),
+              isPremium: false,
+              requestedPremium: false,
+              createdAt: serverTimestamp(),
+            };
+            await setDoc(userRef, newUser);
+            setCredits(newUser.credits);
+            setIsPremium(newUser.isPremium);
+          }
         } else {
-          // First-time user → initialize
-          const newUser = {
-            credits: tokenResult.claims.admin ? 3000 : 5,
-            lastReset: Date.now(),
-            isPremium: false,
-            requestedPremium: false,
-          };
-          await setDoc(userRef, newUser);
-          setCredits(newUser.credits);
-          setIsPremium(newUser.isPremium);
+          // 🔹 No user logged in
+          setUser(null);
+          setCredits(0);
+          setIsPremium(false);
+          setIsAdmin(false);
         }
-      } else {
-        setUser(null);
-        setCredits(0);
-        setIsPremium(false);
-        setIsAdmin(false);
+      } catch (err) {
+        console.error("Auth state error:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return unsubscribe;
   }, []);
 
-  // Login with Google
+  // 🔹 Reset credits daily for non-premium
+  const handleCreditReset = async (userRef, data) => {
+    const now = Date.now();
+    const lastReset = data.lastReset || 0;
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    if (now - lastReset >= oneDay && !data.isPremium) {
+      await updateDoc(userRef, { credits: 5, lastReset: now });
+      setCredits(5);
+    } else {
+      setCredits(data.credits || 0);
+    }
+  };
+
+  // 🔹 Google login
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
   };
 
-  // Logout
+  // 🔹 Logout
   const logout = async () => {
     await signOut(auth);
   };
 
-  // Deduct 1 credit
+  // 🔹 Deduct 1 credit
   const useCredit = async () => {
     if (!user || isPremium || isAdmin) return true; // premium/admin unlimited
     if (credits <= 0) return false;
@@ -99,23 +119,23 @@ export const AuthProvider = ({ children }) => {
     return true;
   };
 
-return (
-  <AuthContext.Provider
-    value={{
-      user,
-      credits,
-      isPremium,
-      loading,
-      loginWithGoogle,
-      logout,
-      useCredit,
-      // Add these setters so components can update state
-      setCredits,
-      setIsPremium,
-    }}
-  >
-    {children}
-  </AuthContext.Provider>
-);
-
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        credits,
+        isPremium,
+        isAdmin,
+        loading,
+        loginWithGoogle,
+        logout,
+        useCredit,
+        // Expose setters in case components need manual updates
+        setCredits,
+        setIsPremium,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
