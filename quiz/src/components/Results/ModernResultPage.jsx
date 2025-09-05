@@ -44,17 +44,6 @@ const scaleIn = keyframes`
   }
 `;
 
-const slideInUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`;
-
 const rotate = keyframes`
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -205,26 +194,6 @@ const ModernResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
     }
   };
 
-  const getScoreColor = (score) => {
-    if (score >= 90) return 'success';
-    if (score >= 70) return 'warning';
-    return 'error';
-  };
-
-  const getScoreMessage = (score) => {
-    if (score >= 90) return 'Excellent! Outstanding performance!';
-    if (score >= 80) return 'Great job! Well done!';
-    if (score >= 70) return 'Good work! Keep it up!';
-    if (score >= 60) return 'Not bad! Room for improvement.';
-    return 'Keep practicing! You can do better!';
-  };
-
-  const getPerformanceIcon = (score) => {
-    if (score >= 90) return <Trophy size={32} />;
-    if (score >= 70) return <Award size={32} />;
-    return <Target size={32} />;
-  };
-
   return (
     <ResultsContainer maxWidth="lg">
       <Stack spacing={4}>
@@ -237,7 +206,11 @@ const ModernResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
                   Quiz Complete!
                 </Typography>
                 <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
-                  {getScoreMessage(results.score)}
+                  {results.score >= 90 ? 'Excellent! Outstanding performance!' :
+                   results.score >= 80 ? 'Great job! Well done!' :
+                   results.score >= 70 ? 'Good work! Keep it up!' :
+                   results.score >= 60 ? 'Not bad! Room for improvement.' :
+                   'Keep practicing! You can do better!'}
                 </Typography>
                 <Stack direction="row" spacing={2} justifyContent={{ xs: 'center', md: 'flex-start' }}>
                   <Chip 
@@ -278,208 +251,6 @@ const ModernResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
             </Stack>
           </CardContent>
         </HeroCard>
-
-        {/* Stats Grid */}
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3}>
-          <StatsCard sx={{ flex: 1 }}>
-            <CardContent sx={{ p: 3, textAlign: 'center' }}>
-              <Box
-                sx={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  mx: 'auto',
-                  mb: 2,
-                }}
-              >
-                <CheckCircle size={24} />
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: 'success.main', mb: 0.5 }}>
-                {results.correct}
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                Correct Answers
-              </Typography>
-            </CardContent>
-          </StatsCard>
-
-          <StatsCard sx={{ flex: 1 }}>
-            <CardContent sx={{ p: 3, textAlign: 'center' }}>
-              <Box
-                sx={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  mx: 'auto',
-                  mb: 2,
-                }}
-              >
-                <XCircle size={24} />
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: 'error.main', mb: 0.5 }}>
-                {results.wrong}
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                Wrong Answers
-              </Typography>
-            </CardContent>
-          </StatsCard>
-
-          <StatsCard sx={{ flex: 1 }}>
-            <CardContent sx={{ p: 3, textAlign: 'center' }}>
-              <Box
-                sx={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  mx: 'auto',
-                  mb: 2,
-                }}
-              >
-                <Clock size={24} />
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: 'warning.main', mb: 0.5 }}>
-                {results.unattempted}
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                Unattempted
-              </Typography>
-            </CardContent>
-          </StatsCard>
-
-          <StatsCard sx={{ flex: 1 }}>
-            <CardContent sx={{ p: 3, textAlign: 'center' }}>
-              <Box
-                sx={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  mx: 'auto',
-                  mb: 2,
-                }}
-              >
-                <TrendingUp size={24} />
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main', mb: 0.5 }}>
-                {results.accuracy}%
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                Accuracy Rate
-              </Typography>
-            </CardContent>
-          </StatsCard>
-        </Stack>
-
-        {/* Performance Breakdown */}
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent sx={{ p: 4 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-              <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                Performance Breakdown
-              </Typography>
-              <Stack direction="row" spacing={2}>
-                <Button
-                  variant="outlined"
-                  startIcon={<Share2 size={16} />}
-                  size="small"
-                >
-                  Share Results
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<Download size={16} />}
-                  size="small"
-                >
-                  Export
-                </Button>
-              </Stack>
-            </Stack>
-
-            <Stack spacing={3}>
-              <Box>
-                <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    Overall Progress
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {results.score}%
-                  </Typography>
-                </Stack>
-                <LinearProgress
-                  variant="determinate"
-                  value={results.score}
-                  sx={{
-                    height: 8,
-                    borderRadius: 4,
-                    '& .MuiLinearProgress-bar': {
-                      background: results.score >= 80 
-                        ? 'linear-gradient(90deg, #10B981 0%, #059669 100%)'
-                        : results.score >= 60
-                        ? 'linear-gradient(90deg, #F59E0B 0%, #D97706 100%)'
-                        : 'linear-gradient(90deg, #EF4444 0%, #DC2626 100%)',
-                    },
-                  }}
-                />
-              </Box>
-
-              <Stack direction="row" spacing={4}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                    Correct ({results.correct})
-                  </Typography>
-                  <LinearProgress
-                    variant="determinate"
-                    value={(results.correct / questions.length) * 100}
-                    color="success"
-                    sx={{ height: 6, borderRadius: 3 }}
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                    Wrong ({results.wrong})
-                  </Typography>
-                  <LinearProgress
-                    variant="determinate"
-                    value={(results.wrong / questions.length) * 100}
-                    color="error"
-                    sx={{ height: 6, borderRadius: 3 }}
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                    Unattempted ({results.unattempted})
-                  </Typography>
-                  <LinearProgress
-                    variant="determinate"
-                    value={(results.unattempted / questions.length) * 100}
-                    color="warning"
-                    sx={{ height: 6, borderRadius: 3 }}
-                  />
-                </Box>
-              </Stack>
-            </Stack>
-          </CardContent>
-        </Card>
 
         {/* Question Review */}
         <Card sx={{ borderRadius: 3 }}>
@@ -556,9 +327,17 @@ const ModernResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
                           <Divider sx={{ mb: 3 }} />
                           
                           {question.context && (
-                            <Paper sx={{ p: 2, mb: 3, background: 'grey.50' }}>
+                            <Paper sx={{ p: 2, mb: 2, background: 'grey.50' }}>
                               <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
                                 Context: {question.context}
+                              </Typography>
+                            </Paper>
+                          )}
+
+                          {question.explanation && (
+                            <Paper sx={{ p: 2, mb: 2, background: 'success.light', opacity: 0.9 }}>
+                              <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'green' }}>
+                                💡 Explanation: {question.explanation}
                               </Typography>
                             </Paper>
                           )}
