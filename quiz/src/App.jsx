@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider, CssBaseline } from '@mui/material/styles';
-import { Box, CircularProgress, Typography, Stack } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
+import { CssBaseline, Box, CircularProgress, Typography, Stack } from '@mui/material';
 import { styled } from '@mui/material/styles';
+
 
 // Import theme
 import theme from './theme';
