@@ -149,7 +149,45 @@ body {
   transform: translateY(-2px);
   box-shadow: var(--shadow-xl);
 }
+/* App Loading Styles */
+.app-loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: var(--primary-gradient);
+  color: white;
+}
 
+.app-loading p {
+  margin-top: 1rem;
+  font-size: 1.2rem;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top: 4px solid white;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Smooth transitions for auth state changes */
+.auth-wrapper {
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 /* ========== APP HEADER STYLES ========== */
 .app-header {
   display: flex;

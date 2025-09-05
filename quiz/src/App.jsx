@@ -16,15 +16,26 @@ import AppHeader from "./components/Layout/AppHeader";
 const ADMIN_EMAIL = "mizuka886@gmail.com";
 
 const App = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [showUserInfo, setShowUserInfo] = useState(false);
   const [questions, setQuestions] = useState(null);
   const [quizResults, setQuizResults] = useState(null);
   const [showResults, setShowResults] = useState(false);
+  const [appLoading, setAppLoading] = useState(true);
 
   const [apiKey, setApiKey] = useState(import.meta.env.VITE_DEFAULT_API_KEY);
   const [baseUrl, setBaseUrl] = useState(import.meta.env.VITE_DEFAULT_BASE_URL);
   const [showApiConfig, setShowApiConfig] = useState(false);
+
+  // Add a slight delay to prevent flash of login screen
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => {
+        setAppLoading(false);
+      }, 300); // Small delay to ensure smooth transition
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
 
   // Fetch API key from Firestore if admin has set it
   useEffect(() => {
@@ -59,6 +70,16 @@ const App = () => {
     setQuizResults(null);
     setShowResults(false);
   };
+
+  // Show loading screen while checking auth state
+  if (appLoading) {
+    return (
+      <div className="app-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
