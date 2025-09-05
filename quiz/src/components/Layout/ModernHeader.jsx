@@ -75,7 +75,7 @@ const StyledChip = styled(Chip)(({ theme }) => ({
   },
 }));
 
-const ModernHeader = ({ onProfileClick, onApiConfigClick, showApiConfig }) => {
+const ModernHeader = ({ onProfileClick, onApiConfigClick, showApiConfig,onLogoClick  }) => {
   const { user, logout, credits, isPremium } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
   const ADMIN_EMAIL = "mizuka886@gmail.com";
@@ -118,7 +118,7 @@ const ModernHeader = ({ onProfileClick, onApiConfigClick, showApiConfig }) => {
     <StyledAppBar position="sticky" elevation={0}>
       <Toolbar sx={{ px: { xs: 2, md: 4 } }}>
         {/* Logo Section */}
-        <LogoSection sx={{ flexGrow: 1 }}>
+        <LogoSection sx={{ flexGrow: 1 }}onClick={onLogoClick}>
           <LogoIcon>
             <Brain size={24} />
           </LogoIcon>
