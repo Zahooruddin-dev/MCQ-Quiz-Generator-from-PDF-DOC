@@ -1,4 +1,4 @@
-/* Results.css */
+/* Results.css - Fixed and Enhanced */
 .results-container {
   max-width: 800px;
   margin: 0 auto;
@@ -7,6 +7,7 @@
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-lg);
   color: var(--text-primary);
+  font-family: inherit;
 }
 
 .results-header {
@@ -20,6 +21,7 @@
   font-size: 2rem;
   margin-bottom: 10px;
   color: var(--text-primary);
+  font-weight: 700;
 }
 
 .results-header p {
@@ -43,6 +45,7 @@
 .review-header h3 {
   font-size: 1.5rem;
   color: var(--text-primary);
+  font-weight: 600;
 }
 
 .review-question {
@@ -51,6 +54,7 @@
   border-radius: var(--border-radius-sm);
   overflow: hidden;
   transition: var(--transition-smooth);
+  background: var(--card-bg);
 }
 
 .review-question.correct {
@@ -127,6 +131,7 @@
   margin-bottom: 15px;
   font-weight: 500;
   line-height: 1.5;
+  color: var(--text-primary);
 }
 
 .question-context {
@@ -137,6 +142,7 @@
   border-radius: var(--border-radius-sm);
   font-size: 0.9rem;
   color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .review-options {
@@ -154,6 +160,7 @@
   border-radius: var(--border-radius-sm);
   transition: var(--transition-fast);
   gap: 10px;
+  position: relative;
 }
 
 .review-option:hover {
@@ -168,6 +175,7 @@
 
 .option-text {
   flex: 1;
+  color: var(--text-primary);
 }
 
 .correct-indicator,
@@ -177,6 +185,7 @@
   padding: 3px 8px;
   border-radius: 12px;
   margin-left: 10px;
+  white-space: nowrap;
 }
 
 .correct-indicator {
@@ -211,6 +220,7 @@
   border-left: 3px solid var(--accent-secondary);
   font-size: 0.95rem;
   line-height: 1.5;
+  color: var(--text-primary);
 }
 
 .explanation strong {
@@ -224,6 +234,29 @@
   margin-top: 30px;
   padding-top: 20px;
   border-top: 1px solid var(--glass-border);
+}
+
+.btn {
+  display: inline-block;
+  padding: 10px 20px;
+  background: var(--accent-gradient);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  text-decoration: none;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn.small {
+  padding: 6px 12px;
+  font-size: 0.9rem;
 }
 
 /* Responsive adjustments */
@@ -253,5 +286,25 @@
   .incorrect-indicator {
     margin-left: 0;
     align-self: flex-start;
+  }
+  
+  .review-body {
+    padding: 15px;
+  }
+}
+
+/* Animation for smooth expanding */
+.review-body {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

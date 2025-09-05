@@ -2,7 +2,7 @@ import { useState } from 'react';
 import ScoreDisplay from './ScoreDisplay';
 import StatsPanel from './StatsPanel';
 import ReviewQuestion from './ReviewQuestion';
-import './Results.css'; // We'll create this CSS file
+import './Results.css';
 
 const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
   if (!questions || !userAnswers) {
@@ -19,7 +19,7 @@ const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
   const calculateResults = () => {
     let correct = 0, wrong = 0, unattempted = 0;
     userAnswers.forEach((answer, i) => {
-      if (answer === null) unattempted++;
+      if (answer === null || answer === undefined) unattempted++;
       else if (answer === questions[i].correctAnswer) correct++;
       else wrong++;
     });
@@ -64,7 +64,7 @@ const ResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
             question={q}
             userAnswerIndex={userAnswers[idx]}
             isExpanded={expandedIndexes.includes(idx)}
-            toggleExpand={toggleExpand}
+            toggleExpand={() => toggleExpand(idx)}
             index={idx}
           />
         ))}

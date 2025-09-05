@@ -1,10 +1,10 @@
 const ReviewQuestion = ({ question, userAnswerIndex, isExpanded, toggleExpand, index }) => {
   const isCorrect = userAnswerIndex === question.correctAnswer;
-  const isUnattempted = userAnswerIndex === null;
+  const isUnattempted = userAnswerIndex === null || userAnswerIndex === undefined;
   
   return (
     <div className={`review-question ${isCorrect ? 'correct' : isUnattempted ? 'unattempted' : 'incorrect'}`}>
-      <div className="review-question-header" onClick={() => toggleExpand(index)}>
+      <div className="review-question-header" onClick={toggleExpand}>
         <div className="question-number">
           <span>Question {index + 1}</span>
         </div>
@@ -20,7 +20,7 @@ const ReviewQuestion = ({ question, userAnswerIndex, isExpanded, toggleExpand, i
         <div className="review-body">
           <div className="review-question-text">{question.question}</div>
           
-          {question.context && (
+          {question.context && question.context !== 'Context not available' && (
             <div className="question-context">
               <strong>Context:</strong> {question.context}
             </div>
