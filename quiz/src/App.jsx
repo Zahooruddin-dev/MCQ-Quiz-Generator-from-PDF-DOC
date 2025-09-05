@@ -27,7 +27,7 @@ import ModernQuizEngine from './components/Engine/ModernQuizEngine';
 import ModernResultPage from './components/Results/ModernResultPage';
 import ModernAPIConfig from './components/APIconfig/ModernAPIConfig';
 import ModernAuthForm from './components/Auth/ModernAuthForm';
-import UserInfo from './components/UserInfo/UserInfo';
+import ModernUserProfile  from './components/UserInfo/ModernUserProfile';
 import ModernAdminDashboard from './components/Admin/ModernAdminDashboard';
 
 // Import context
@@ -192,6 +192,7 @@ const App = () => {
 						path='/'
 						element={
 							<AppContainer>
+
 								{/* Header - only show when not on landing page */}
 								{currentView !== 'landing' && (
 									<ModernHeader
@@ -205,7 +206,7 @@ const App = () => {
 								<MainContent>
 									{/* User Info Modal */}
 									{showUserInfo && (
-										<UserInfo
+										<ModernUserProfile 
 											user={user}
 											onClose={() => setShowUserInfo(false)}
 											isAdmin={user.email === ADMIN_EMAIL}
