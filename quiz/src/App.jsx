@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import FileUpload from "./components/FileUpload/FileUpload";
-import QuizEngine from "./components/Engine/QuizEngine";
-import ResultPage from "./components/Results/ResultPage";
+import ModernFileUpload from "./components/FileUpload/ModernFileUpload";
+import ModernQuizEngine from "./components/Engine/ModernQuizEngine";
+import ModernResultPage from "./components/Results/ModernResultPage";
 import APIConfig from "./components/APIconfig/APIConfig";
 import ModernAuthForm  from "./components/Auth/ModernAuthForm";
 import { useAuth } from "./context/AuthContext";
@@ -11,7 +11,7 @@ import AdminDashboard from "./components/Admin/AdminDashboard";
 import { doc, getDoc } from "firebase/firestore";
 import "./App.css";
 import { db } from "./firebaseConfig";
-import AppHeader from "./components/Layout/AppHeader";
+import ModernHeader from "./components/Layout/ModernHeader";
 
 const ADMIN_EMAIL = "mizuka886@gmail.com";
 
@@ -97,7 +97,7 @@ const App = () => {
           element={
             <div className="app">
               {/* ✅ Always show AppHeader */}
-              <AppHeader
+              <ModernHeader
                 onProfileClick={() => setShowUserInfo(true)}
                 showApiConfig={showApiConfig}
                 setShowApiConfig={setShowApiConfig}
@@ -128,7 +128,7 @@ const App = () => {
 
               {/* FileUpload or Quiz */}
               {!questions ? (
-                <FileUpload
+                <ModernFileUpload
                   hasAI={!!apiKey}
                   apiKey={apiKey}
                   baseUrl={baseUrl}
@@ -146,14 +146,14 @@ const App = () => {
                     ✖
                   </button>
                   {showResults ? (
-                    <ResultPage
+                    <ModernResultPage
                       questions={questions}
                       userAnswers={quizResults.answers}
                       onNewQuiz={handleNewQuiz}
                       fileName={quizResults.fileName || "Quiz"}
                     />
                   ) : (
-                    <QuizEngine
+                    <ModernQuizEngine
                       questions={questions}
                       onFinish={handleQuizFinish}
                       apiKey={apiKey}
