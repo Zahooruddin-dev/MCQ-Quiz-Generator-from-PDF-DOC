@@ -17,7 +17,7 @@ import ModernResultPage from "./components/Results/ModernResultPage";
 import ModernAPIConfig from "./components/APIconfig/ModernAPIConfig";
 import ModernAuthForm from "./components/Auth/ModernAuthForm";
 import UserInfo from "./components/UserInfo/UserInfo";
-import AdminDashboard from "./components/Admin/AdminDashboard";
+import ModernAdminDashboard from "./components/Admin/ModernAdminDashboard";
 
 // Import context
 import { useAuth } from "./context/AuthContext";
@@ -268,7 +268,7 @@ const App = () => {
             path="/admin"
             element={
               user.email === ADMIN_EMAIL ? (
-                <AdminDashboard />
+                <ModernAdminDashboard />
               ) : (
                 <Navigate to="/" replace />
               )
