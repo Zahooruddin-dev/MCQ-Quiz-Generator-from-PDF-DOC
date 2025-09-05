@@ -10,6 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.2",
+    "@mui/material": "^7.3.2",
+    "@mui/system": "^7.3.2",
     "@types/pdfjs-dist": "^2.10.377",
     "firebase": "^12.2.1",
     "framer-motion": "^12.23.12",

@@ -4,7 +4,7 @@ import FileUpload from "./components/FileUpload/FileUpload";
 import QuizEngine from "./components/Engine/QuizEngine";
 import ResultPage from "./components/Results/ResultPage";
 import APIConfig from "./components/APIconfig/APIConfig";
-import AuthForm from "./components/Auth/AuthForm";
+import ModernAuthForm  from "./components/Auth/ModernAuthForm";
 import { useAuth } from "./context/AuthContext";
 import UserInfo from "./components/UserInfo/UserInfo";
 import AdminDashboard from "./components/Admin/AdminDashboard";
@@ -84,7 +84,7 @@ const App = () => {
   if (!user) {
     return (
       <div className="app auth-wrapper">
-        <AuthForm />
+        <ModernAuthForm />
       </div>
     );
   }

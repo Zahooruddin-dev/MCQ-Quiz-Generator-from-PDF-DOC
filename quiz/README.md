@@ -8,7 +8,7 @@ This application extracts questions from uploaded documents, presents them in an
 
 ## ⚠️ License & Usage
 
-**Copyright © 2023 Muhammad Zahooruddin Nizamani. All Rights Reserved.**
+**Copyright © 2025 Muhammad Zahooruddin Nizamani. All Rights Reserved.**
 
 This software is proprietary and confidential. Unauthorized copying, distribution, or use of this software, via any medium, is strictly prohibited without prior written consent from the author.
 
