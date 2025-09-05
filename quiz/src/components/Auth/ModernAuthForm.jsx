@@ -362,6 +362,7 @@ const ModernAuthForm = () => {
                 <StyledTextField
                   fullWidth
                   label="Full Name"
+
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -381,6 +382,8 @@ const ModernAuthForm = () => {
                 type="email"
                 label="Email Address"
                 value={email}
+                  autoComplete="email"
+
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="you@example.com"
@@ -397,6 +400,8 @@ const ModernAuthForm = () => {
                 fullWidth
                 type={showPassword ? 'text' : 'password'}
                 label="Password"
+                  autoComplete={isSignup ? "new-password" : "current-password"}
+
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
