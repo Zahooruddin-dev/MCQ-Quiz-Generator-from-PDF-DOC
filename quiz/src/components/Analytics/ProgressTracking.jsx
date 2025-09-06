@@ -10,6 +10,7 @@ import {
   LinearProgress,
   Alert,
   AlertTitle,
+  Button,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -18,6 +19,7 @@ import {
   TimerOutlined as TimerIcon,
   WhatshotOutlined as StreakIcon,
   PollOutlined as QuizIcon,
+  OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 import { LineChart } from '@mui/x-charts/LineChart';
 import { useAuth } from '../../context/AuthContext';
@@ -29,6 +31,8 @@ import {
   where,
   getDocs,
   orderBy,
+  doc,
+  getDoc,
 } from 'firebase/firestore';
 
 const StatsCard = styled(Paper)(({ theme }) => ({
@@ -102,7 +106,31 @@ const ProgressTracking = ({
 
       setLoading(true);
       try {
-        // Fetch user's quiz history from Firebase
+        // First try to get data from user document (if it exists)
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          if (userData.quizzesTaken > 0) {
+            // Use data from user document if available
+            const progressData = {
+              totalQuizzes: userData.quizzesTaken || 0,
+              averageScore: userData.avgScore || 0,
+              totalTimeSpent: userData.totalTime || 0,
+              currentStreak: userData.streak || 0,
+              bestScore: userData.bestScore || 0,
+              completionRate: userData.completionRate || 0,
+              topicsStudied: userData.topicsStudied || 0,
+              weeklyProgress: userData.weeklyProgress || [],
+            };
+            setProgressData(progressData);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // If no user data or no quizzes taken, try to query quizzes collection
         const quizzesRef = collection(db, 'quizzes');
         const q = query(
           quizzesRef,
@@ -173,6 +201,8 @@ const ProgressTracking = ({
 
   // Helper functions
   const calculateWeeklyProgress = (quizzes) => {
+    if (!quizzes.length) return [];
+    
     // Implementation to group quizzes by week and calculate average scores
     const weeklyData = {};
 
@@ -299,8 +329,19 @@ const ProgressTracking = ({
       {indexError && (
         <Alert severity='warning' sx={{ mb: 2 }}>
           <AlertTitle>Index Required</AlertTitle>
-          Please create the required Firestore index by following the link in the console.
-          Progress data may be limited until the index is created.
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Please create the required Firestore index to view your full progress history.
+            This is a one-time setup that will enable advanced progress tracking features.
+          </Typography>
+          <Button
+            variant="outlined"
+            color="warning"
+            size="small"
+            endIcon={<OpenInNewIcon />}
+            onClick={() => window.open('https://console.firebase.google.com/v1/r/project/quiz-gen-9e9f8/firestore/indexes', '_blank')}
+          >
+            Create Index Now
+          </Button>
         </Alert>
       )}
 
@@ -315,7 +356,7 @@ const ProgressTracking = ({
         </Stack>
 
         {/* Progress Chart */}
-        {showCharts && !compact && (
+        {showCharts && !compact && progressData.weeklyProgress.length > 0 && (
           <Card>
             <CardContent sx={{ p: 3 }}>
               <Typography variant='h6' sx={{ fontWeight: 600, mb: 3 }}>
