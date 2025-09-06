@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import {
-	BrowserRouter as Router,
-	Routes,
-	Route,
-	Navigate,
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate
 } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import {
@@ -60,19 +61,18 @@ const MainContent = styled(Box)({
 });
 
 const App = () => {
-	const { user, loading } = useAuth();
-	const [currentView, setCurrentView] = useState('landing'); // landing, dashboard, upload, quiz, results
-	const [showUserInfo, setShowUserInfo] = useState(false);
-	const [questions, setQuestions] = useState(null);
-	const [quizResults, setQuizResults] = useState(null);
-	const [showResults, setShowResults] = useState(false);
-	const [appLoading, setAppLoading] = useState(true);
-
-	const [apiKey, setApiKey] = useState(import.meta.env.VITE_DEFAULT_API_KEY);
+  const { user, loading } = useAuth();
+  const [showUserInfo, setShowUserInfo] = useState(false);
+  const [questions, setQuestions] = useState(null);
+  const [quizResults, setQuizResults] = useState(null);
+  const [showResults, setShowResults] = useState(false);
+  const [appLoading, setAppLoading] = useState(true);
+  const [showApiConfig, setShowApiConfig] = useState(false);
+  
+  const [apiKey, setApiKey] = useState(import.meta.env.VITE_DEFAULT_API_KEY);
 	const [baseUrl, setBaseUrl] = useState(import.meta.env.VITE_DEFAULT_BASE_URL);
-	const [showApiConfig, setShowApiConfig] = useState(false);
 
-	// Add a slight delay to prevent flash of login screen
+  // Add a slight delay to prevent flash of login screen
 	useEffect(() => {
 		if (!loading) {
 			const timer = setTimeout(() => {
@@ -105,57 +105,17 @@ const App = () => {
 		fetchApiKey();
 	}, [user]);
 
-	// Set initial view based on user state
-	useEffect(() => {
-		if (user && currentView === 'landing') {
-			setCurrentView('dashboard');
-		}
-	}, [user, currentView]);
+  // Navigation handlers
+  const handleGetStarted = () => {
+    if (user) {
+      return <Navigate to="/dashboard" replace />;
+    }
+    return <Navigate to="/auth" replace />;
+  };
 
-	// Navigation handlers
-	const handleGetStarted = () => {
-		if (user) {
-			setCurrentView('dashboard');
-		} else {
-			setCurrentView('auth');
-		}
-	};
-
-	const handleCreateQuiz = () => setCurrentView('upload');
-	const handleViewResults = (quiz) => {
-		if (quiz) {
-			// Handle viewing specific quiz results
-			console.log('Viewing results for:', quiz);
-		}
-		setCurrentView('results');
-	};
-	const handleUploadFile = () => setCurrentView('upload');
-
-	const handleFileUpload = (generatedQuestions) => {
-		setQuestions(generatedQuestions);
-		setCurrentView('quiz');
-	};
-
-	const handleQuizFinish = (results) => {
-		setQuizResults(results);
-		setShowResults(true);
-		setCurrentView('results');
-	};
-
-	const handleNewQuiz = () => {
-		setQuestions(null);
-		setQuizResults(null);
-		setShowResults(false);
-		setCurrentView('dashboard');
-	};
-
-	const handleBackToDashboard = () => {
-		setCurrentView('dashboard');
-	};
-
-	// Show loading screen while checking auth state
-	if (appLoading) {
-		return (
+  // Show loading screen while checking auth state
+  if (appLoading) {
+    return (
 			<ThemeProvider theme={theme}>
 				<CssBaseline />
 				<LoadingContainer>
@@ -168,132 +128,170 @@ const App = () => {
 					</Typography>
 				</LoadingContainer>
 			</ThemeProvider>
-		);
-	}
+    );
+  }
 
-	// Show auth form if not authenticated
-	if (!user) {
-		return (
-			<ThemeProvider theme={theme}>
-				<CssBaseline />
-				<ModernAuthForm />
-			</ThemeProvider>
-		);
-	}
+  // Show auth form if not authenticated
+  if (!user) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <Routes>
+            <Route path="/" element={<LandingPage onGetStarted={handleGetStarted} />} />
+            <Route path="/auth" element={<ModernAuthForm />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </ThemeProvider>
+    );
+  }
 
-	// Main app content for authenticated users
-	return (
-		<ThemeProvider theme={theme}>
-			<CssBaseline />
-			<Router>
-				<Routes>
-					<Route
-						path='/'
-						element={
-							<AppContainer>
+  // Main app content for authenticated users
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Router>
+        <AppContainer>
+          <Routes>
+            <Route
+              path="/"
+              element={<LandingPage onGetStarted={handleGetStarted} />}
+            />
+            
+            <Route
+              path="/dashboard/*"
+              element={
+                <>
+                  <ModernHeader
+                    onProfileClick={() => setShowUserInfo(true)}
+                    onApiConfigClick={() => setShowApiConfig(true)}
+                    showApiConfig={showApiConfig}
+                  />
+                  <Dashboard
+                    onCreateQuiz={() => <Navigate to="/upload" replace />}
+                    onViewResults={(quiz) => <Navigate to={`/results/${quiz.id}`} replace />}
+                    onUploadFile={() => <Navigate to="/upload" replace />}
+                  />
+                </>
+              }
+            />
 
-								{/* Header - only show when not on landing page */}
-								{currentView !== 'landing' && (
-									<ModernHeader
-										onProfileClick={() => setShowUserInfo(true)}
-										onApiConfigClick={() => setShowApiConfig(true)}
-										showApiConfig={showApiConfig}
-										onLogoClick={() => setCurrentView('landing')} // 👈 resets to landing
-									/>
-								)}
+            <Route
+              path="/upload"
+              element={
+                <>
+                  <ModernHeader
+                    onProfileClick={() => setShowUserInfo(true)}
+                    onApiConfigClick={() => setShowApiConfig(true)}
+                    showApiConfig={showApiConfig}
+                  />
+                  <ModernFileUpload
+                    hasAI={!!apiKey}
+                    apiKey={apiKey}
+                    baseUrl={baseUrl}
+                    onFileUpload={(questions) => {
+                      setQuestions(questions);
+                      return <Navigate to="/quiz" replace />;
+                    }}
+                  />
+                </>
+              }
+            />
 
-								<MainContent>
-									{/* User Info Modal */}
-									{showUserInfo && (
-										<ModernUserProfile 
-											user={user}
-											onClose={() => setShowUserInfo(false)}
-											isAdmin={user.email === ADMIN_EMAIL}
-										/>
-									)}
+            <Route
+              path="/quiz"
+              element={
+                questions ? (
+                  <>
+                    <ModernHeader
+                      onProfileClick={() => setShowUserInfo(true)}
+                      onApiConfigClick={() => setShowApiConfig(true)}
+                      showApiConfig={showApiConfig}
+                    />
+                    <ModernQuizEngine
+                      questions={questions}
+                      onFinish={(results) => {
+                        setQuizResults(results);
+                        setShowResults(true);
+                        return <Navigate to="/results" replace />;
+                      }}
+                    />
+                  </>
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              }
+            />
 
-									{/* API Config Modal */}
-									{user.email === ADMIN_EMAIL && showApiConfig && (
-										<ModernAPIConfig
-											apiKey={apiKey}
-											baseUrl={baseUrl}
-											onConfigSave={(newApiKey, newBaseUrl) => {
-												setApiKey(newApiKey);
-												setBaseUrl(newBaseUrl);
-												localStorage.setItem('geminiApiKey', newApiKey);
-												setShowApiConfig(false);
-											}}
-											onClose={() => setShowApiConfig(false)}
-										/>
-									)}
+            <Route
+              path="/results"
+              element={
+                showResults && quizResults ? (
+                  <>
+                    <ModernHeader
+                      onProfileClick={() => setShowUserInfo(true)}
+                      onApiConfigClick={() => setShowApiConfig(true)}
+                      showApiConfig={showApiConfig}
+                    />
+                    <ModernResultPage
+                      questions={questions}
+                      userAnswers={quizResults.answers}
+                      onNewQuiz={() => {
+                        setQuestions(null);
+                        setQuizResults(null);
+                        setShowResults(false);
+                        return <Navigate to="/dashboard" replace />;
+                      }}
+                    />
+                  </>
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              }
+            />
 
-									{/* Main Content Based on Current View */}
-									{currentView === 'landing' && (
-										<LandingPage onGetStarted={handleGetStarted} />
-									)}
+            <Route
+              path="/admin"
+              element={
+                user.email === ADMIN_EMAIL ? (
+                  <ModernAdminDashboard />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              }
+            />
 
-									{currentView === 'dashboard' && (
-										<Dashboard
-											onCreateQuiz={handleCreateQuiz}
-											onViewResults={handleViewResults}
-											onUploadFile={handleUploadFile}
-										/>
-									)}
+            {/* Fallback route */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
 
-									{currentView === 'upload' && (
-										<ModernFileUpload
-											hasAI={!!apiKey}
-											apiKey={apiKey}
-											baseUrl={baseUrl}
-											onFileUpload={handleFileUpload}
-											onReconfigure={
-												user.email === ADMIN_EMAIL
-													? () => setShowApiConfig(true)
-													: undefined
-											}
-										/>
-									)}
+          {/* Modals */}
+          {showUserInfo && (
+            <ModernUserProfile
+              user={user}
+              onClose={() => setShowUserInfo(false)}
+              isAdmin={user.email === ADMIN_EMAIL}
+            />
+          )}
 
-									{currentView === 'quiz' && questions && (
-										<ModernQuizEngine
-											questions={questions}
-											onFinish={handleQuizFinish}
-											apiKey={apiKey}
-											baseUrl={baseUrl}
-										/>
-									)}
-
-									{currentView === 'results' && showResults && quizResults && (
-										<ModernResultPage
-											questions={questions}
-											userAnswers={quizResults.answers}
-											onNewQuiz={handleNewQuiz}
-											fileName={quizResults.fileName || 'Quiz'}
-										/>
-									)}
-								</MainContent>
-							</AppContainer>
-						}
-					/>
-
-					<Route
-						path='/admin'
-						element={
-							user.email === ADMIN_EMAIL ? (
-								<ModernAdminDashboard />
-							) : (
-								<Navigate to='/' replace />
-							)
-						}
-					/>
-
-					{/* Fallback route */}
-					<Route path='*' element={<Navigate to='/' replace />} />
-					<Route path='/test'></Route>
-				</Routes>
-			</Router>
-		</ThemeProvider>
-	);
+          {user.email === ADMIN_EMAIL && showApiConfig && (
+            <ModernAPIConfig
+              apiKey={apiKey}
+              baseUrl={baseUrl}
+              onConfigSave={(newApiKey, newBaseUrl) => {
+                setApiKey(newApiKey);
+                setBaseUrl(newBaseUrl);
+                localStorage.setItem('geminiApiKey', newApiKey);
+                setShowApiConfig(false);
+              }}
+              onClose={() => setShowApiConfig(false)}
+            />
+          )}
+        </AppContainer>
+      </Router>
+    </ThemeProvider>
+  );
 };
 
 export default App;

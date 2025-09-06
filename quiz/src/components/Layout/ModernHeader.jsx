@@ -28,6 +28,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   background: 'rgba(255, 255, 255, 0.95)',
@@ -75,7 +76,8 @@ const StyledChip = styled(Chip)(({ theme }) => ({
   },
 }));
 
-const ModernHeader = ({ onProfileClick, onApiConfigClick, showApiConfig,onLogoClick  }) => {
+const ModernHeader = ({ onProfileClick, onApiConfigClick, showApiConfig }) => {
+  const navigate = useNavigate();
   const { user, logout, credits, isPremium } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
   const ADMIN_EMAIL = "mizuka886@gmail.com";
@@ -104,6 +106,10 @@ const ModernHeader = ({ onProfileClick, onApiConfigClick, showApiConfig,onLogoCl
     handleMenuClose();
   };
 
+  const handleLogoClick = () => {
+    navigate('/dashboard');
+  };
+
   const getUserInitials = (name) => {
     if (!name) return 'U';
     return name
@@ -118,7 +124,7 @@ const ModernHeader = ({ onProfileClick, onApiConfigClick, showApiConfig,onLogoCl
     <StyledAppBar position="sticky" elevation={0}>
       <Toolbar sx={{ px: { xs: 2, md: 4 } }}>
         {/* Logo Section */}
-        <LogoSection sx={{ flexGrow: 1 }}onClick={onLogoClick}>
+        <LogoSection sx={{ flexGrow: 1 }} onClick={handleLogoClick}>
           <LogoIcon>
             <Brain size={24} />
           </LogoIcon>

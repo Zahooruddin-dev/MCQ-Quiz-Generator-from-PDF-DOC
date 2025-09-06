@@ -27,6 +27,8 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import ProgressTracking from '../Analytics/ProgressTracking';
 import RecentQuizzes from '../Analytics/RecentQuizzes';
+import { useNavigate } from 'react-router-dom';
+
 const WelcomeCard = styled(Card)(({ theme }) => ({
   background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
   color: 'white',
@@ -71,6 +73,7 @@ const RecentActivityCard = styled(Card)(({ theme }) => ({
 
 const Dashboard = ({ onCreateQuiz, onViewResults, onUploadFile }) => {
   const { user, credits, isPremium } = useAuth();
+  const navigate = useNavigate();
   const [showAnalytics, setShowAnalytics] = useState(false);
 
   const [recentQuizzes] = useState([
@@ -106,14 +109,14 @@ const Dashboard = ({ onCreateQuiz, onViewResults, onUploadFile }) => {
       description: 'Upload PDF, DOCX, or paste text to generate quiz',
       icon: <Upload size={32} />,
       color: 'primary',
-      action: onUploadFile,
+      action: () => navigate('/upload'),
     },
     {
       title: 'AI Quiz Generator',
       description: 'Let AI create questions from your content',
       icon: <Brain size={32} />,
       color: 'secondary',
-      action: onCreateQuiz,
+      action: () => navigate('/upload'),
     },
     {
       title: 'View Analytics',
