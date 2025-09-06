@@ -7,12 +7,20 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 // --- Firebase Imports for Dashboard Tracking ---
 import {
-	getFirestore,
-	doc,
-	setDoc,
-	getDoc,
-	updateDoc,
-	increment,
+ getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  increment,
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  limit,
+  getDocs,
+  deleteDoc,
+  getCountFromServer
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
