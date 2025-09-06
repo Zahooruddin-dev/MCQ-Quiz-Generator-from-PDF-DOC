@@ -210,43 +210,94 @@ export class LLMService {
 	}
 
 	// ===================== FIREBASE METHODS =====================
-	async saveQuizStats(quizData) {
-		try {
-			const auth = getAuth();
-			const user = auth.currentUser;
-			if (!user) throw new Error('No authenticated user');
-			const userRef = doc(db, 'users', user.uid);
-			const userSnap = await getDoc(userRef);
+  async saveQuizResults(quizData) {
+    try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      if (!user) {
+        console.error('No user authenticated');
+        return;
+      }
+      
+      // Add metadata to quiz data
+      const quizWithMetadata = {
+        ...quizData,
+        userId: user.uid,
+        completedAt: new Date(),
+      };
+      
+      // Add to quizzes collection
+      const quizRef = doc(collection(db, 'quizzes'));
+      await setDoc(quizRef, quizWithMetadata);
+      
+      // Update user stats
+      await this.updateUserStats(user.uid, quizData);
+      
+      console.log('Quiz results saved successfully');
+    } catch (error) {
+      console.error('Error saving quiz results:', error);
+    }
+  }
+  
+  async updateUserStats(userId, quizData) {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) {
+        // Create new user stats document
+        await setDoc(userRef, {
+          quizzesTaken: 1,
+          totalScore: quizData.score,
+          totalTime: quizData.timeTaken,
+          avgScore: quizData.score,
+          streak: quizData.score >= 70 ? 1 : 0,
+          bestScore: quizData.score,
+          lastActive: new Date(),
+          topicsStudied: quizData.topic ? [quizData.topic] : [],
+        });
+      } else {
+        // Update existing user stats
+        const currentData = userSnap.data();
+        const newQuizzesTaken = (currentData.quizzesTaken || 0) + 1;
+        const newTotalScore = (currentData.totalScore || 0) + quizData.score;
+        const newTotalTime = (currentData.totalTime || 0) + quizData.timeTaken;
+        const newAvgScore = newTotalScore / newQuizzesTaken;
+        
+        // Update streak
+        let newStreak = currentData.streak || 0;
+        if (quizData.score >= 70) {
+          newStreak += 1;
+        } else {
+          newStreak = 0;
+        }
+        
+        // Update best score
+        const newBestScore = Math.max(currentData.bestScore || 0, quizData.score);
+        
+        // Update topics studied
+        const topicsStudied = new Set(currentData.topicsStudied || []);
+        if (quizData.topic) {
+          topicsStudied.add(quizData.topic);
+        }
+        
+        await updateDoc(userRef, {
+          quizzesTaken: newQuizzesTaken,
+          totalScore: newTotalScore,
+          totalTime: newTotalTime,
+          avgScore: newAvgScore,
+          streak: newStreak,
+          bestScore: newBestScore,
+          lastActive: new Date(),
+          topicsStudied: Array.from(topicsStudied),
+        });
+      }
+    } catch (error) {
+      console.error('Error updating user stats:', error);
+    }
+  }
 
-			if (!userSnap.exists()) {
-				await setDoc(userRef, {
-					quizzesTaken: 1,
-					avgScore: quizData.score,
-					totalTime: quizData.timeTaken,
-					streak: 1,
-					lastActive: new Date(),
-					recentQuizzes: [quizData],
-				});
-			} else {
-				const data = userSnap.data();
-				const newQuizzesTaken = (data.quizzesTaken || 0) + 1;
-				const newAvgScore =
-					((data.avgScore || 0) * (newQuizzesTaken - 1) + quizData.score) /
-					newQuizzesTaken;
-				await updateDoc(userRef, {
-					quizzesTaken: increment(1),
-					avgScore: newAvgScore,
-					totalTime: increment(quizData.timeTaken),
-					streak: increment(1),
-					lastActive: new Date(),
-					recentQuizzes: [...(data.recentQuizzes || []).slice(-4), quizData],
-				});
-			}
-			console.log('✅ Quiz stats saved to Firestore');
-		} catch (error) {
-			console.error('❌ Failed to save quiz stats:', error);
-		}
-	}
 
 	async getDashboardData() {
 		try {
