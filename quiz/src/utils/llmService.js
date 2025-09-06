@@ -321,6 +321,69 @@ export class LLMService {
 			return null;
 		}
 	}
+	// Add this method to your LLMService class
+async saveChatMessage(message, isUserMessage = true) {
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      console.error('No user authenticated');
+      return;
+    }
+    
+    // Get user's chat collection reference
+    const userChatsRef = collection(db, 'users', user.uid, 'chats');
+    
+    // Add the new message
+    await addDoc(userChatsRef, {
+      message: message,
+      isUserMessage: isUserMessage,
+      timestamp: new Date(),
+    });
+    
+    // Get total chat count
+    const chatCount = await this.getChatCount(user.uid);
+    
+    // If more than 100 messages, delete the oldest ones
+    if (chatCount > 100) {
+      await this.trimChatHistory(user.uid, chatCount - 100);
+    }
+    
+    console.log('Chat message saved successfully');
+  } catch (error) {
+    console.error('Error saving chat message:', error);
+  }
+}
+
+async getChatCount(userId) {
+  try {
+    const userChatsRef = collection(db, 'users', userId, 'chats');
+    const snapshot = await getCountFromServer(userChatsRef);
+    return snapshot.data().count;
+  } catch (error) {
+    console.error('Error getting chat count:', error);
+    return 0;
+  }
+}
+
+async trimChatHistory(userId, countToDelete) {
+  try {
+    const userChatsRef = collection(db, 'users', userId, 'chats');
+    const q = query(userChatsRef, orderBy('timestamp', 'asc'), limit(countToDelete));
+    const snapshot = await getDocs(q);
+    
+    const deletePromises = [];
+    snapshot.forEach((doc) => {
+      deletePromises.push(deleteDoc(doc.ref));
+    });
+    
+    await Promise.all(deletePromises);
+    console.log(`Trimmed ${countToDelete} old chat messages`);
+  } catch (error) {
+    console.error('Error trimming chat history:', error);
+  }
+}
 	// ===================== END FIREBASE METHODS =====================
 
 	async readFileContent(file) {
