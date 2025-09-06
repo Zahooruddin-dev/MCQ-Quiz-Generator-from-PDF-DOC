@@ -12,27 +12,21 @@ import {
   Chip,
   LinearProgress,
   IconButton,
-  Paper,
-  Divider,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
   Upload,
   Brain,
   BarChart3,
-  Clock,
-  Target,
-  TrendingUp,
-  FileText,
   Zap,
   ArrowRight,
-  Plus,
   History,
   Award,
   Users,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
+import ProgressTracking from '../Analytics/ProgressTracking';
+import RecentQuizzes from '../Analytics/RecentQuizzes';
 const WelcomeCard = styled(Card)(({ theme }) => ({
   background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
   color: 'white',
@@ -68,20 +62,6 @@ const ActionCard = styled(Card)(({ theme }) => ({
   },
 }));
 
-const StatsCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
-  textAlign: 'center',
-  borderRadius: theme.shape.borderRadius * 2,
-  background: 'white',
-  border: '1px solid',
-  borderColor: theme.palette.grey[100],
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: theme.shadows[4],
-  },
-}));
-
 const RecentActivityCard = styled(Card)(({ theme }) => ({
   transition: 'all 0.2s ease',
   '&:hover': {
@@ -91,6 +71,8 @@ const RecentActivityCard = styled(Card)(({ theme }) => ({
 
 const Dashboard = ({ onCreateQuiz, onViewResults, onUploadFile }) => {
   const { user, credits, isPremium } = useAuth();
+  const [showAnalytics, setShowAnalytics] = useState(false);
+
   const [recentQuizzes] = useState([
     {
       id: 1,
@@ -138,7 +120,7 @@ const Dashboard = ({ onCreateQuiz, onViewResults, onUploadFile }) => {
       description: 'Check your performance and progress',
       icon: <BarChart3 size={32} />,
       color: 'success',
-      action: onViewResults,
+      action: () => setShowAnalytics(true),
     },
     {
       title: 'Quick Quiz',
@@ -147,13 +129,6 @@ const Dashboard = ({ onCreateQuiz, onViewResults, onUploadFile }) => {
       color: 'warning',
       action: () => console.log('Quick quiz'),
     },
-  ];
-
-  const stats = [
-    { label: 'Quizzes Taken', value: recentQuizzes.length, icon: <FileText size={24} />, color: 'primary' },
-    { label: 'Avg. Score', value: '85%', icon: <Target size={24} />, color: 'success' },
-    { label: 'Time Saved', value: '2.5h', icon: <Clock size={24} />, color: 'info' },
-    { label: 'Streak', value: '7 days', icon: <TrendingUp size={24} />, color: 'warning' },
   ];
 
   const getScoreColor = (score) => {
@@ -172,6 +147,29 @@ const Dashboard = ({ onCreateQuiz, onViewResults, onUploadFile }) => {
       .slice(0, 2);
   };
 
+  // 🔄 Analytics Mode
+  if (showAnalytics) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Stack spacing={3}>
+          <Button
+            variant="outlined"
+            onClick={() => setShowAnalytics(false)}
+            sx={{ alignSelf: 'flex-start' }}
+          >
+            ← Back to Dashboard
+          </Button>
+          <ProgressTracking
+            userId={user?.uid}
+            timePeriod="all_time"
+            showCharts={true}
+          />
+        </Stack>
+      </Container>
+    );
+  }
+
+  // 🏠 Default Dashboard Mode
   return (
     <Box sx={{ py: 4 }}>
       <Container maxWidth="lg">
@@ -313,61 +311,16 @@ const Dashboard = ({ onCreateQuiz, onViewResults, onUploadFile }) => {
             </Grid>
           </Box>
 
-          {/* Stats Overview */}
-          <Box>
-            <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
-              Your Progress
-            </Typography>
-            <Grid container spacing={3}>
-              {stats.map((stat, index) => (
-                <Grid item xs={6} md={3} key={index}>
-                  <StatsCard elevation={0}>
-                    <Stack spacing={2} alignItems="center">
-                      <Box
-                        sx={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: '50%',
-                          background: `${stat.color === 'primary' ? '#6366F1' :
-                            stat.color === 'success' ? '#10B981' :
-                            stat.color === 'info' ? '#3B82F6' :
-                            stat.color === 'warning' ? '#F59E0B' : '#6366F1'}15`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: stat.color === 'primary' ? '#6366F1' :
-                            stat.color === 'success' ? '#10B981' :
-                            stat.color === 'info' ? '#3B82F6' :
-                            stat.color === 'warning' ? '#F59E0B' : '#6366F1',
-                        }}
-                      >
-                        {stat.icon}
-                      </Box>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'text.primary' }}>
-                          {stat.value}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                          {stat.label}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </StatsCard>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-
+          {/* Progress Tracking */}
+{/*           <ProgressTracking userId={user?.uid} timePeriod="all_time" showCharts={true} compact={false} />
+ */}
           {/* Recent Activity */}
           <Box>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
               <Typography variant="h5" sx={{ fontWeight: 600 }}>
                 Recent Quizzes
               </Typography>
-              <Button
-                endIcon={<History size={16} />}
-                sx={{ color: 'text.secondary' }}
-              >
+              <Button endIcon={<History size={16} />} sx={{ color: 'text.secondary' }}>
                 View All
               </Button>
             </Stack>

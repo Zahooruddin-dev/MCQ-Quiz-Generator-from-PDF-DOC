@@ -17,7 +17,6 @@ import { styled } from '@mui/material/styles';
 
 // Import theme
 import theme from './theme';
-
 // Import components
 import LandingPage from './components/Landing/LandingPage';
 import ModernHeader from './components/Layout/ModernHeader';
@@ -290,6 +289,7 @@ const App = () => {
 
 					{/* Fallback route */}
 					<Route path='*' element={<Navigate to='/' replace />} />
+					<Route path='/test'></Route>
 				</Routes>
 			</Router>
 		</ThemeProvider>
