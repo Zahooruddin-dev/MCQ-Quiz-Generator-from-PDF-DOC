@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { Stack, Box, Typography } from "@mui/material";
+import { Stack, Box, Typography, CircularProgress, Backdrop } from "@mui/material";
 import {
   QuizContainer,
   QuizCard,
@@ -41,6 +41,7 @@ const ModernQuizEngine = ({
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(timeLimit);
   const [startTime] = useState(Date.now()); // Track when quiz started
+  const [submitStatus, setSubmitStatus] = useState(null); // 'processing', 'saving', 'complete'
 
   const answeredCount = useMemo(
     () => userAnswers.filter((a) => a !== null).length,
@@ -86,7 +87,7 @@ const ModernQuizEngine = ({
     }
   }, [unansweredCount]);
 
-  // Firebase save functions
+  // Firebase save functions - now async background operations
   const saveQuizToFirestore = async (quizData) => {
     try {
       const auth = getAuth();
@@ -94,10 +95,10 @@ const ModernQuizEngine = ({
 
       if (!user) {
         console.error('No user authenticated');
-        return;
+        return false;
       }
 
-      console.log('Saving quiz data to Firestore:', quizData);
+      console.log('Saving quiz data to Firestore in background...');
 
       // Add metadata to quiz data
       const quizWithMetadata = {
@@ -116,10 +117,10 @@ const ModernQuizEngine = ({
       // Update user stats
       await updateUserStats(user.uid, quizData);
 
-      console.log('✅ Quiz results saved successfully');
+      console.log('✅ Quiz results saved successfully in background');
       return true;
     } catch (error) {
-      console.error('❌ Error saving quiz results:', error);
+      console.error('❌ Error saving quiz results in background:', error);
       return false;
     }
   };
@@ -131,7 +132,7 @@ const ModernQuizEngine = ({
 
       if (!userSnap.exists()) {
         // Create new user stats document
-        console.log('Creating new user stats document');
+        console.log('Creating new user stats document in background');
         await setDoc(userRef, {
           quizzesTaken: 1,
           totalScore: quizData.score,
@@ -145,7 +146,7 @@ const ModernQuizEngine = ({
         });
       } else {
         // Update existing user stats
-        console.log('Updating existing user stats');
+        console.log('Updating existing user stats in background');
         const currentData = userSnap.data();
         const newQuizzesTaken = (currentData.quizzesTaken || 0) + 1;
         const newTotalScore = (currentData.totalScore || 0) + quizData.score;
@@ -185,9 +186,9 @@ const ModernQuizEngine = ({
         });
       }
 
-      console.log('✅ User stats updated successfully');
+      console.log('✅ User stats updated successfully in background');
     } catch (error) {
-      console.error('❌ Error updating user stats:', error);
+      console.error('❌ Error updating user stats in background:', error);
     }
   };
 
@@ -195,9 +196,11 @@ const ModernQuizEngine = ({
     if (isSubmitting) return;
 
     setIsSubmitting(true);
+    setSubmitStatus('processing');
     setShowFinishConfirm(false);
 
     try {
+      // Calculate results immediately
       const score = userAnswers.reduce(
         (total, answer, idx) =>
           total + (answer === questions[idx]?.correctAnswer ? 1 : 0),
@@ -215,25 +218,36 @@ const ModernQuizEngine = ({
         correctAnswers: score,
         timestamp: new Date().toISOString(),
         timeSpent: timeLimit ? timeLimit - timeRemaining : null,
-        timeTaken: timeTaken, // Add this for Firestore
+        timeTaken: timeTaken,
         topic: topic,
         difficulty: difficulty,
         quizTitle: quizTitle,
       };
 
-      // Save to Firestore first
-      const saveSuccess = await saveQuizToFirestore(results);
-      
-      if (!saveSuccess) {
-        console.warn('Failed to save to Firestore, but continuing...');
-      }
+      // Show brief processing animation
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Call the original onFinish callback
+      // Show the results immediately to the user
+      setSubmitStatus('saving');
       await onFinish?.(results);
+
+      // Save to Firestore in the background (non-blocking)
+      saveQuizToFirestore(results).then(success => {
+        setSubmitStatus('complete');
+        if (success) {
+          console.log('Background save completed successfully');
+        } else {
+          console.warn('Background save failed, but user already saw results');
+        }
+      }).catch(error => {
+        console.error('Background save error:', error);
+        setSubmitStatus('complete');
+      });
 
     } catch (error) {
       console.error("Error finishing quiz:", error);
-      alert("There was an error submitting your quiz. Please try again.");
+      alert("There was an error processing your quiz. Please try again.");
+      setSubmitStatus(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -273,51 +287,83 @@ const ModernQuizEngine = ({
   const currentQ = questions[currentQuestion];
 
   return (
-    <QuizContainer maxWidth="md">
-      <Stack spacing={4}>
-        <QuizHeader
-          quizTitle={quizTitle}
-          currentQuestion={currentQuestion}
-          totalQuestions={questions.length}
-          answeredCount={answeredCount}
-          showTimer={showTimer}
-          timeRemaining={timeRemaining}
-        />
-
-        <QuizProgress
-          progressPercentage={progressPercentage}
-          answeredCount={answeredCount}
-        />
-
-        <QuizCard>
-          <QuizContent
-            currentQ={currentQ}
-            currentQuestion={currentQuestion}
-            userAnswers={userAnswers}
-            handleAnswerSelect={handleAnswerSelect}
-          />
-
-          <QuizNavigation
+    <>
+      <QuizContainer maxWidth="md">
+        <Stack spacing={4}>
+          <QuizHeader
+            quizTitle={quizTitle}
             currentQuestion={currentQuestion}
             totalQuestions={questions.length}
-            userAnswers={userAnswers}
-            setCurrentQuestion={setCurrentQuestion}
-            goToPrevQuestion={goToPrevQuestion}
-            goToNextQuestion={goToNextQuestion}
-            handleFinishClick={handleFinishClick}
+            answeredCount={answeredCount}
+            showTimer={showTimer}
+            timeRemaining={timeRemaining}
+          />
+
+          <QuizProgress
+            progressPercentage={progressPercentage}
+            answeredCount={answeredCount}
+          />
+
+          <QuizCard>
+            <QuizContent
+              currentQ={currentQ}
+              currentQuestion={currentQuestion}
+              userAnswers={userAnswers}
+              handleAnswerSelect={handleAnswerSelect}
+            />
+
+            <QuizNavigation
+              currentQuestion={currentQuestion}
+              totalQuestions={questions.length}
+              userAnswers={userAnswers}
+              setCurrentQuestion={setCurrentQuestion}
+              goToPrevQuestion={goToPrevQuestion}
+              goToNextQuestion={goToNextQuestion}
+              handleFinishClick={handleFinishClick}
+              isSubmitting={isSubmitting}
+            />
+          </QuizCard>
+
+          <FinishDialog
+            open={showFinishConfirm}
+            unansweredCount={unansweredCount}
+            cancelFinish={cancelFinish}
+            submitQuiz={submitQuiz}
             isSubmitting={isSubmitting}
           />
-        </QuizCard>
+        </Stack>
+      </QuizContainer>
 
-        <FinishDialog
-          open={showFinishConfirm}
-          unansweredCount={unansweredCount}
-          cancelFinish={cancelFinish}
-          submitQuiz={submitQuiz}
-          isSubmitting={isSubmitting}
-        />
-      </Stack>
-    </QuizContainer>
+      {/* Loading Backdrop */}
+      <Backdrop
+        sx={{ 
+          color: '#fff', 
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          backdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)'
+        }}
+        open={isSubmitting}
+      >
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress 
+            color="primary" 
+            size={60}
+            thickness={4}
+            sx={{ mb: 3 }}
+          />
+          <Typography variant="h6" sx={{ mb: 1, fontWeight: 500 }}>
+            {submitStatus === 'processing' && 'Processing your answers...'}
+            {submitStatus === 'saving' && 'Calculating results...'}
+            {submitStatus === 'complete' && 'Complete!'}
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.8, maxWidth: 300 }}>
+            {submitStatus === 'processing' && 'Please wait while we review your responses'}
+            {submitStatus === 'saving' && 'Almost done, preparing your score...'}
+            {submitStatus === 'complete' && 'Your results are ready!'}
+          </Typography>
+        </Box>
+      </Backdrop>
+    </>
   );
 };
 
