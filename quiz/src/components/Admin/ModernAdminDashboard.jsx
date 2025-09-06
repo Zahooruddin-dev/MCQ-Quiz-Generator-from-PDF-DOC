@@ -274,7 +274,7 @@ const ModernAdminDashboard = () => {
               <Button
                 variant="outlined"
                 startIcon={<ArrowLeft size={16} />}
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/dashboard')}
                 sx={{
                   borderColor: 'rgba(255, 255, 255, 0.5)',
                   color: 'white',

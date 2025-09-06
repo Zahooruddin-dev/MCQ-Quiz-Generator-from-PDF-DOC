@@ -60,6 +60,83 @@ const MainContent = styled(Box)({
 	flexDirection: 'column',
 });
 
+// Component wrappers that have access to navigate
+const FileUploadWrapper = ({ questions, setQuestions, apiKey, baseUrl }) => {
+  const navigate = useNavigate();
+  
+  const handleFileUpload = (uploadedQuestions, isAI, options) => {
+    console.log('File upload successful:', { uploadedQuestions, isAI, options });
+    setQuestions(uploadedQuestions);
+    navigate('/quiz');
+  };
+
+  return (
+    <ModernFileUpload
+      hasAI={!!apiKey}
+      apiKey={apiKey}
+      baseUrl={baseUrl}
+      onFileUpload={handleFileUpload}
+    />
+  );
+};
+
+const QuizEngineWrapper = ({ questions, setQuizResults, setShowResults }) => {
+  const navigate = useNavigate();
+  
+  const handleQuizFinish = (results) => {
+    console.log('Quiz finished:', results);
+    setQuizResults(results);
+    setShowResults(true);
+    navigate('/results');
+  };
+
+  if (!questions) {
+    navigate('/dashboard');
+    return null;
+  }
+
+  return (
+    <ModernQuizEngine
+      questions={questions}
+      onFinish={handleQuizFinish}
+    />
+  );
+};
+
+const ResultPageWrapper = ({ questions, quizResults, showResults, resetQuiz }) => {
+  const navigate = useNavigate();
+  
+  const handleNewQuiz = () => {
+    resetQuiz();
+    navigate('/dashboard');
+  };
+
+  if (!showResults || !quizResults) {
+    navigate('/dashboard');
+    return null;
+  }
+
+  return (
+    <ModernResultPage
+      questions={questions}
+      userAnswers={quizResults.answers}
+      onNewQuiz={handleNewQuiz}
+    />
+  );
+};
+
+const DashboardWrapper = () => {
+  const navigate = useNavigate();
+  
+  return (
+    <Dashboard
+      onCreateQuiz={() => navigate('/upload')}
+      onViewResults={(quiz) => navigate(`/results/${quiz.id}`)}
+      onUploadFile={() => navigate('/upload')}
+    />
+  );
+};
+
 const App = () => {
   const { user, loading } = useAuth();
   const [showUserInfo, setShowUserInfo] = useState(false);
@@ -71,6 +148,13 @@ const App = () => {
   
   const [apiKey, setApiKey] = useState(import.meta.env.VITE_DEFAULT_API_KEY);
 	const [baseUrl, setBaseUrl] = useState(import.meta.env.VITE_DEFAULT_BASE_URL);
+
+  // Reset quiz function
+  const resetQuiz = () => {
+    setQuestions(null);
+    setQuizResults(null);
+    setShowResults(false);
+  };
 
   // Add a slight delay to prevent flash of login screen
 	useEffect(() => {
@@ -105,14 +189,6 @@ const App = () => {
 		fetchApiKey();
 	}, [user]);
 
-  // Navigation handlers
-  const handleGetStarted = () => {
-    if (user) {
-      return <Navigate to="/dashboard" replace />;
-    }
-    return <Navigate to="/auth" replace />;
-  };
-
   // Show loading screen while checking auth state
   if (appLoading) {
     return (
@@ -138,7 +214,7 @@ const App = () => {
         <CssBaseline />
         <Router>
           <Routes>
-            <Route path="/" element={<LandingPage onGetStarted={handleGetStarted} />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<ModernAuthForm />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -156,11 +232,11 @@ const App = () => {
           <Routes>
             <Route
               path="/"
-              element={<LandingPage onGetStarted={handleGetStarted} />}
+              element={<Navigate to="/dashboard" replace />}
             />
             
             <Route
-              path="/dashboard/*"
+              path="/dashboard"
               element={
                 <>
                   <ModernHeader
@@ -168,11 +244,7 @@ const App = () => {
                     onApiConfigClick={() => setShowApiConfig(true)}
                     showApiConfig={showApiConfig}
                   />
-                  <Dashboard
-                    onCreateQuiz={() => <Navigate to="/upload" replace />}
-                    onViewResults={(quiz) => <Navigate to={`/results/${quiz.id}`} replace />}
-                    onUploadFile={() => <Navigate to="/upload" replace />}
-                  />
+                  <DashboardWrapper />
                 </>
               }
             />
@@ -186,14 +258,11 @@ const App = () => {
                     onApiConfigClick={() => setShowApiConfig(true)}
                     showApiConfig={showApiConfig}
                   />
-                  <ModernFileUpload
-                    hasAI={!!apiKey}
+                  <FileUploadWrapper
+                    questions={questions}
+                    setQuestions={setQuestions}
                     apiKey={apiKey}
                     baseUrl={baseUrl}
-                    onFileUpload={(questions) => {
-                      setQuestions(questions);
-                      return <Navigate to="/quiz" replace />;
-                    }}
                   />
                 </>
               }
@@ -202,52 +271,37 @@ const App = () => {
             <Route
               path="/quiz"
               element={
-                questions ? (
-                  <>
-                    <ModernHeader
-                      onProfileClick={() => setShowUserInfo(true)}
-                      onApiConfigClick={() => setShowApiConfig(true)}
-                      showApiConfig={showApiConfig}
-                    />
-                    <ModernQuizEngine
-                      questions={questions}
-                      onFinish={(results) => {
-                        setQuizResults(results);
-                        setShowResults(true);
-                        return <Navigate to="/results" replace />;
-                      }}
-                    />
-                  </>
-                ) : (
-                  <Navigate to="/dashboard" replace />
-                )
+                <>
+                  <ModernHeader
+                    onProfileClick={() => setShowUserInfo(true)}
+                    onApiConfigClick={() => setShowApiConfig(true)}
+                    showApiConfig={showApiConfig}
+                  />
+                  <QuizEngineWrapper
+                    questions={questions}
+                    setQuizResults={setQuizResults}
+                    setShowResults={setShowResults}
+                  />
+                </>
               }
             />
 
             <Route
               path="/results"
               element={
-                showResults && quizResults ? (
-                  <>
-                    <ModernHeader
-                      onProfileClick={() => setShowUserInfo(true)}
-                      onApiConfigClick={() => setShowApiConfig(true)}
-                      showApiConfig={showApiConfig}
-                    />
-                    <ModernResultPage
-                      questions={questions}
-                      userAnswers={quizResults.answers}
-                      onNewQuiz={() => {
-                        setQuestions(null);
-                        setQuizResults(null);
-                        setShowResults(false);
-                        return <Navigate to="/dashboard" replace />;
-                      }}
-                    />
-                  </>
-                ) : (
-                  <Navigate to="/dashboard" replace />
-                )
+                <>
+                  <ModernHeader
+                    onProfileClick={() => setShowUserInfo(true)}
+                    onApiConfigClick={() => setShowApiConfig(true)}
+                    showApiConfig={showApiConfig}
+                  />
+                  <ResultPageWrapper
+                    questions={questions}
+                    quizResults={quizResults}
+                    showResults={showResults}
+                    resetQuiz={resetQuiz}
+                  />
+                </>
               }
             />
 

@@ -191,6 +191,8 @@ const ModernFileUpload = ({
   const [pastedText, setPastedText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  // Store the actual file object for processing
+  const [selectedFile, setSelectedFile] = useState(null);
   const busyRef = useRef(false);
   const fileInputRef = useRef(null);
   
@@ -225,6 +227,7 @@ const ModernFileUpload = ({
     setFileName('');
     setFileSize(null);
     setFileType('');
+    setSelectedFile(null); // Clear the file object
     setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -249,30 +252,12 @@ const ModernFileUpload = ({
     return interval;
   };
 
-  const handleFileSelect = async (file) => {
+  const processFile = async (file) => {
     if (busyRef.current) return;
     setError(null);
     
     try {
       if (!file) return;
-      
-      setFileName(file.name || 'uploaded-file');
-      setFileSize(file.size || null);
-      setFileType(file.type || '');
-      
-      if (file.size && file.size > MAX_FILE_SIZE) {
-        setError(`File is too large (${formatBytes(file.size)}). Maximum allowed size is ${formatBytes(MAX_FILE_SIZE)}.`);
-        clearSelectedFile();
-        return;
-      }
-      
-      const mime = (file.type || '').toLowerCase();
-      const isSupported = SUPPORTED.some(s => mime.includes(s)) || /\.(pdf|docx?|txt|html)$/i.test(file.name || '');
-      
-      if (!isSupported) {
-        setError('Unsupported file type. Please upload PDF, DOCX, TXT, or HTML files.');
-        return;
-      }
 
       if (!useAI) {
         onFileUpload(file, false, null);
@@ -310,6 +295,65 @@ const ModernFileUpload = ({
     }
   };
 
+  const handleFileSelect = async (file) => {
+    if (busyRef.current) return;
+    setError(null);
+    
+    try {
+      if (!file) return;
+      
+      // Store file info for display
+      setFileName(file.name || 'uploaded-file');
+      setFileSize(file.size || null);
+      setFileType(file.type || '');
+      setSelectedFile(file); // Store the actual file object
+      
+      if (file.size && file.size > MAX_FILE_SIZE) {
+        setError(`File is too large (${formatBytes(file.size)}). Maximum allowed size is ${formatBytes(MAX_FILE_SIZE)}.`);
+        clearSelectedFile();
+        return;
+      }
+      
+      const mime = (file.type || '').toLowerCase();
+      const isSupported = SUPPORTED.some(s => mime.includes(s)) || /\.(pdf|docx?|txt|html)$/i.test(file.name || '');
+      
+      if (!isSupported) {
+        setError('Unsupported file type. Please upload PDF, DOCX, TXT, or HTML files.');
+        clearSelectedFile();
+        return;
+      }
+
+      // If AI is disabled, process immediately
+      if (!useAI) {
+        await processFile(file);
+      }
+      // Otherwise, just store the file and let user click "Generate Quiz"
+
+    } catch (err) {
+      console.error('Error selecting file:', err);
+      setError(err?.message || 'Failed to select file. Please try again.');
+    }
+  };
+
+  // Function to handle the "Generate Quiz" button click
+const handleGenerateQuiz = async () => {
+  console.log('Starting quiz generation...');
+  console.log('Selected file:', selectedFile);
+  console.log('API Key exists:', !!apiKey);
+  console.log('Base URL:', baseUrl);
+  
+  if (!selectedFile) {
+    setError('No file selected. Please upload a file first.');
+    return;
+  }
+  
+  try {
+    await processFile(selectedFile);
+  } catch (error) {
+    console.error('Quiz generation failed:', error);
+    setError(error.message);
+  }
+};
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
@@ -598,6 +642,7 @@ const ModernFileUpload = ({
                         clearSelectedFile();
                       }}
                       size="small"
+                      disabled={effectiveLoading}
                     >
                       Remove
                     </Button>
@@ -606,9 +651,10 @@ const ModernFileUpload = ({
                       startIcon={<Play size={16} />}
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Process the file
+                        handleGenerateQuiz(); // Now this actually calls the function
                       }}
                       size="small"
+                      disabled={effectiveLoading || !selectedFile}
                     >
                       Generate Quiz
                     </Button>
