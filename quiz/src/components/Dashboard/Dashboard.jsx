@@ -24,8 +24,8 @@ import { useNavigate } from 'react-router-dom';
 import ProgressTracking from '../Analytics/ProgressTracking';
 import { WelcomeCard } from './StyledCards';
 import QuickActions from './QuickActions';
-import RecentQuizzes from './RecentQuizzes';
 import AnalyticsDashboard from '../Analytics/AnalyticsDashboard';
+import RecentQuizzes from '../Analytics/RecentQuizzes';
 
 const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 	const { user, credits, isPremium } = useAuth();
@@ -235,10 +235,7 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 					/>
 
 					{/* Recent Quizzes */}
-					<RecentQuizzes
-						recentQuizzes={recentQuizzes}
-						onViewResults={onViewResults}
-					/>
+					<RecentQuizzes />
 				</Stack>
 			</Container>
 		</Box>
