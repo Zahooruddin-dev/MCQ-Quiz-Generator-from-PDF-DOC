@@ -25,7 +25,7 @@ import ProgressTracking from '../ProgressTracking/ProgressTracking';
 import { WelcomeCard } from './StyledCards';
 import QuickActions from './QuickActions';
 import AnalyticsDashboard from '../Analytics/AnalyticsDashboard';
-import RecentQuizzes from '../Analytics/RecentQuizzes';
+import RecentQuizzes from '../RecentQuizzes/RecentQuizzes';
 
 const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 	const { user, credits, isPremium } = useAuth();
