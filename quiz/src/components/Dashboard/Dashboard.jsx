@@ -219,14 +219,14 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 		},
 		{
 			title: 'View Analytics',
-			description: 'Check your performance and progress',
+			description: 'Check your performance, progress, and insights',
 			icon: <BarChart3 size={32} />,
 			color: 'success',
 			action: () => setShowAnalytics(true),
 		},
 		{
-			title: 'Quick Quiz',
-			description: 'Start a practice quiz immediately',
+			title: 'Coming Soon: Quick Quiz',
+			description: 'Start a practice quiz immediately very soon',
 			icon: <Zap size={32} />,
 			color: 'warning',
 			action: handleQuickQuiz,
