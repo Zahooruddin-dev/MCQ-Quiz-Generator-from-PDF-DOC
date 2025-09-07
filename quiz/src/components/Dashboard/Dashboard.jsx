@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import ProgressTracking from '../Analytics/ProgressTracking';
+import ProgressTracking from '../ProgressTracking/ProgressTracking';
 import { WelcomeCard } from './StyledCards';
 import QuickActions from './QuickActions';
 import AnalyticsDashboard from '../Analytics/AnalyticsDashboard';
