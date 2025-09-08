@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
 	Box,
 	Container,
@@ -11,7 +11,6 @@ import {
 	Alert,
 	LinearProgress,
 	IconButton,
-	Paper,
 	Divider,
 	Switch,
 	FormControlLabel,
@@ -51,11 +50,6 @@ const bounce = keyframes`
   40%, 43% { transform: translate3d(0, -8px, 0); }
   70% { transform: translate3d(0, -4px, 0); }
   90% { transform: translate3d(0, -2px, 0); }
-`;
-
-const shimmer = keyframes`
-  0% { background-position: -200px 0; }
-  100% { background-position: calc(200px + 100%) 0; }
 `;
 
 // Styled Components
@@ -200,7 +194,7 @@ const ModernFileUpload = ({
 
 	const effectiveLoading = isLoading || loadingFromParent;
 
-	const SAMPLE_TEXT = `Sample content for quiz generation:
+	const SAMPLE_TEXT = useMemo(() => `Sample content for quiz generation:
 
 1. JavaScript is a high-level, interpreted programming language that conforms to the ECMAScript specification.
 
@@ -210,22 +204,22 @@ const ModernFileUpload = ({
 
 4. Asynchronous programming in JavaScript can be handled using callbacks, promises, and async/await syntax.
 
-5. CSS Grid and Flexbox are powerful layout systems for creating responsive web designs.`;
+5. CSS Grid and Flexbox are powerful layout systems for creating responsive web designs.`, []);
 
-	const startLoading = () => {
+	const startLoading = useCallback(() => {
 		setError(null);
 		setIsLoading(true);
 		busyRef.current = true;
 		setUploadProgress(0);
-	};
+	}, []);
 
-	const stopLoading = () => {
+	const stopLoading = useCallback(() => {
 		setIsLoading(false);
 		busyRef.current = false;
 		setUploadProgress(0);
-	};
+	}, []);
 
-	const clearSelectedFile = () => {
+	const clearSelectedFile = useCallback(() => {
 		setFileName('');
 		setFileSize(null);
 		setFileType('');
@@ -234,14 +228,14 @@ const ModernFileUpload = ({
 		if (fileInputRef.current) {
 			fileInputRef.current.value = '';
 		}
-	};
+	}, []);
 
-	const handleReconfigure = (e) => {
+	const handleReconfigure = useCallback((e) => {
 		e?.preventDefault?.();
 		if (typeof onReconfigure === 'function') onReconfigure();
-	};
+	}, [onReconfigure]);
 
-	const simulateProgress = () => {
+	const simulateProgress = useCallback(() => {
 		const interval = setInterval(() => {
 			setUploadProgress((prev) => {
 				if (prev >= 90) {
@@ -252,9 +246,9 @@ const ModernFileUpload = ({
 			});
 		}, 200);
 		return interval;
-	};
+	}, []);
 
-	const processFile = async (file) => {
+	const processFile = useCallback(async (file) => {
 		if (busyRef.current) return;
 		setError(null);
 
@@ -298,9 +292,9 @@ const ModernFileUpload = ({
 			setError(err?.message || 'Failed to process file. Please try again.');
 			stopLoading();
 		}
-	};
+	}, [useAI, apiKey, baseUrl, aiOptions, onFileUpload, startLoading, stopLoading, simulateProgress]);
 
-	const handleFileSelect = async (file) => {
+	const handleFileSelect = useCallback(async (file) => {
 		if (busyRef.current) return;
 		setError(null);
 
@@ -345,15 +339,10 @@ const ModernFileUpload = ({
 			console.error('Error selecting file:', err);
 			setError(err?.message || 'Failed to select file. Please try again.');
 		}
-	};
+	}, [useAI, processFile, clearSelectedFile]);
 
 	// Function to handle the "Generate Quiz" button click
-	const handleGenerateQuiz = async () => {
-		console.log('Starting quiz generation...');
-		console.log('Selected file:', selectedFile);
-		console.log('API Key exists:', !!apiKey);
-		console.log('Base URL:', baseUrl);
-
+	const handleGenerateQuiz = useCallback(async () => {
 		if (!selectedFile) {
 			setError('No file selected. Please upload a file first.');
 			return;
@@ -365,26 +354,27 @@ const ModernFileUpload = ({
 			console.error('Quiz generation failed:', error);
 			setError(error.message);
 		}
-	};
-	const handleDrop = (e) => {
+	}, [selectedFile, processFile]);
+
+	const handleDrop = useCallback((e) => {
 		e.preventDefault();
 		setDragOver(false);
 		if (e.dataTransfer.files.length) {
 			handleFileSelect(e.dataTransfer.files[0]);
 		}
-	};
+	}, [handleFileSelect]);
 
-	const handleDragOver = (e) => {
+	const handleDragOver = useCallback((e) => {
 		e.preventDefault();
 		setDragOver(true);
-	};
+	}, []);
 
-	const handleDragLeave = (e) => {
+	const handleDragLeave = useCallback((e) => {
 		e.preventDefault();
 		setDragOver(false);
-	};
+	}, []);
 
-	const handleTextSubmit = async (textContent) => {
+	const handleTextSubmit = useCallback(async (textContent) => {
 		if (busyRef.current) return;
 		setError(null);
 
@@ -437,15 +427,15 @@ const ModernFileUpload = ({
 			setPastedText('');
 			setShowTextMode(false);
 		}
-	};
+	}, [apiKey, baseUrl, aiOptions, onFileUpload, startLoading, stopLoading, simulateProgress]);
 
-	const getFileIcon = (type) => {
+	const getFileIcon = useCallback((type) => {
 		if (type.includes('pdf')) return <FileType size={40} />;
 		if (type.includes('word') || type.includes('document'))
 			return <FileText size={40} />;
 		if (type.includes('text')) return <Type size={40} />;
 		return <File size={40} />;
-	};
+	}, []);
 
 	return (
 		<UploadContainer maxWidth='md'>
@@ -703,7 +693,7 @@ const ModernFileUpload = ({
 											startIcon={<Play size={16} />}
 											onClick={(e) => {
 												e.stopPropagation();
-												handleGenerateQuiz(); // Now this actually calls the function
+												handleGenerateQuiz();
 											}}
 											size='small'
 											disabled={effectiveLoading || !selectedFile}
@@ -838,4 +828,4 @@ const ModernFileUpload = ({
 	);
 };
 
-export default ModernFileUpload;
+export default React.memo(ModernFileUpload);
