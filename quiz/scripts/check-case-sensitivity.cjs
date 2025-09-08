@@ -1,29 +1,50 @@
-// scripts/check-case-sensitivity.js
+// scripts/check-case-sensitivity.cjs
 const fs = require('fs');
 const path = require('path');
 
-function checkCaseSensitivity(baseDir) {
-  const files = fs.readdirSync(baseDir);
-
-  files.forEach((file) => {
-    const fullPath = path.join(baseDir, file);
-    const stat = fs.statSync(fullPath);
-
-    if (stat.isDirectory()) {
-      checkCaseSensitivity(fullPath);
-    } else {
-      const actual = fs.readdirSync(path.dirname(fullPath)).find(
-        (f) => f.toLowerCase() === file.toLowerCase()
-      );
-      if (actual && actual !== file) {
-        console.error(
-          `⚠️ Case mismatch detected: "${file}" vs "${actual}" in ${baseDir}`
-        );
-        process.exit(1);
-      }
+function checkCaseSensitivity(dir) {
+  const issues = [];
+  
+  function scanDirectory(currentPath) {
+    try {
+      const items = fs.readdirSync(currentPath);
+      const lowerCaseMap = new Map();
+      
+      items.forEach(item => {
+        const lowerCase = item.toLowerCase();
+        if (lowerCaseMap.has(lowerCase)) {
+          issues.push({
+            path: currentPath,
+            conflicting: [lowerCaseMap.get(lowerCase), item]
+          });
+        } else {
+          lowerCaseMap.set(lowerCase, item);
+        }
+        
+        const fullPath = path.join(currentPath, item);
+        if (fs.statSync(fullPath).isDirectory() && 
+            !item.startsWith('.') && 
+            item !== 'node_modules') {
+          scanDirectory(fullPath);
+        }
+      });
+    } catch (error) {
+      console.warn(`Warning: Could not scan directory ${currentPath}: ${error.message}`);
     }
-  });
+  }
+  
+  scanDirectory(dir);
+  
+  if (issues.length > 0) {
+    console.error('❌ Case sensitivity issues found:');
+    issues.forEach(issue => {
+      console.error(`  ${issue.path}: ${issue.conflicting.join(' vs ')}`);
+    });
+    process.exit(1);
+  } else {
+    console.log('✅ No case sensitivity issues found');
+  }
 }
 
-// Run on src folder
-checkCaseSensitivity(path.join(__dirname, '..', 'src'));
+// Check src directory
+checkCaseSensitivity('./src');
