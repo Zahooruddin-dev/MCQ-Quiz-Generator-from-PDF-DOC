@@ -1,94 +1,74 @@
-// src/App.jsx
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
   useNavigate,
-} from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
-import {
-  CssBaseline,
-  Box,
-  CircularProgress,
-  Typography,
-} from '@mui/material';
-import { styled } from '@mui/material/styles';
+} from "react-router-dom";
+import { ThemeProvider } from "@mui/material/styles";
+import { CssBaseline, Box, CircularProgress, Typography } from "@mui/material";
+import { styled } from "@mui/material/styles";
 
 // Import theme
-import theme from './theme';
+import theme from "./theme";
+import LazyWrapper from "./components/LazyWrapper";
 
 // Lazy load heavy components
-const LandingPage = lazy(() => import('./components/Landing/LandingPage'));
-const ModernHeader = lazy(() => import('./components/Layout/ModernHeader'));
-const Dashboard = lazy(() => import('./components/Dashboard/Dashboard'));
+const LandingPage = lazy(() => import("./components/Landing/LandingPage"));
+const ModernHeader = lazy(() => import("./components/Layout/ModernHeader"));
+const Dashboard = lazy(() => import("./components/Dashboard/Dashboard"));
 const ModernFileUpload = lazy(() =>
-  import('./components/FileUpload/ModernFileUpload')
+  import("./components/FileUpload/ModernFileUpload")
 );
 const ModernQuizEngine = lazy(() =>
-  import('./components/Engine/ModernQuizEngine')
+  import("./components/Engine/ModernQuizEngine")
 );
 const ModernResultPage = lazy(() =>
-  import('./components/Results/ModernResultPage')
+  import("./components/Results/ModernResultPage")
 );
 const ModernAPIConfig = lazy(() =>
-  import('./components/APIconfig/ModernAPIConfig')
+  import("./components/APIconfig/ModernAPIConfig")
 );
 const ModernAuthForm = lazy(() =>
-  import('./components/Auth/ModernAuthForm')
+  import("./components/Auth/ModernAuthForm")
 );
 const ModernUserProfile = lazy(() =>
-  import('./components/UserInfo/ModernUserProfile')
+  import("./components/UserInfo/ModernUserProfile")
 );
 const ModernAdminDashboard = lazy(() =>
-  import('./components/Admin/ModernAdminDashboard')
+  import("./components/Admin/ModernAdminDashboard")
 );
 
-import { useAuth } from './context/AuthContext';
-import ShareQuizModal from './components/ShareQuizModal/ShareQuizModal';
+import { useAuth } from "./context/AuthContext";
+import ShareQuizModal from "./components/ShareQuizModal/ShareQuizModal";
 
 // Lazy load Firebase functions
 const getFirebaseDoc = () =>
-  import('firebase/firestore').then((m) => ({
+  import("firebase/firestore").then((m) => ({
     doc: m.doc,
     getDoc: m.getDoc,
   }));
-const getFirebaseDb = () =>
-  import('./firebaseConfig').then((m) => m.db);
+const getFirebaseDb = () => import("./firebaseConfig").then((m) => m.db);
 
-const ADMIN_EMAIL = 'mizuka886@gmail.com';
+const ADMIN_EMAIL = "mizuka886@gmail.com";
 
 // Styled Components
 const LoadingContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '100vh',
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  minHeight: "100vh",
   background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-  color: 'white',
+  color: "white",
 }));
 
 const AppContainer = styled(Box)({
-  minHeight: '100vh',
-  display: 'flex',
-  flexDirection: 'column',
+  minHeight: "100vh",
+  display: "flex",
+  flexDirection: "column",
 });
-
-// Loading fallback
-const PageLoading = () => (
-  <Box
-    sx={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '400px',
-    }}
-  >
-    <CircularProgress />
-  </Box>
-);
 
 // Wrappers
 const FileUploadWrapper = ({ questions, setQuestions, apiKey, baseUrl }) => {
@@ -96,7 +76,7 @@ const FileUploadWrapper = ({ questions, setQuestions, apiKey, baseUrl }) => {
 
   const handleFileUpload = (uploadedQuestions) => {
     setQuestions(uploadedQuestions);
-    navigate('/quiz');
+    navigate("/quiz");
   };
 
   return (
@@ -115,29 +95,32 @@ const QuizEngineWrapper = ({ questions, setQuizResults, setShowResults }) => {
   const handleQuizFinish = (results) => {
     setQuizResults(results);
     setShowResults(true);
-    navigate('/results');
+    navigate("/results");
   };
 
   if (!questions) {
-    navigate('/dashboard');
+    navigate("/dashboard");
     return null;
   }
 
-  return (
-    <ModernQuizEngine questions={questions} onFinish={handleQuizFinish} />
-  );
+  return <ModernQuizEngine questions={questions} onFinish={handleQuizFinish} />;
 };
 
-const ResultPageWrapper = ({ questions, quizResults, showResults, resetQuiz }) => {
+const ResultPageWrapper = ({
+  questions,
+  quizResults,
+  showResults,
+  resetQuiz,
+}) => {
   const navigate = useNavigate();
 
   const handleNewQuiz = () => {
     resetQuiz();
-    navigate('/dashboard');
+    navigate("/dashboard");
   };
 
   if (!showResults || !quizResults) {
-    navigate('/dashboard');
+    navigate("/dashboard");
     return null;
   }
 
@@ -155,9 +138,9 @@ const DashboardWrapper = () => {
 
   return (
     <Dashboard
-      onCreateQuiz={() => navigate('/upload')}
+      onCreateQuiz={() => navigate("/upload")}
       onViewResults={(quiz) => navigate(`/results/${quiz.id}`)}
-      onUploadFile={() => navigate('/upload')}
+      onUploadFile={() => navigate("/upload")}
     />
   );
 };
@@ -173,7 +156,7 @@ const App = () => {
 
   const [apiKey, setApiKey] = useState(() => {
     return (
-      localStorage.getItem('geminiApiKey') ||
+      localStorage.getItem("geminiApiKey") ||
       import.meta.env.VITE_DEFAULT_API_KEY
     );
   });
@@ -185,7 +168,7 @@ const App = () => {
     setShowResults(false);
   };
 
-  // Fetch API key (skip if we already have it)
+  // Fetch API key
   useEffect(() => {
     if (!user || apiKey) return;
 
@@ -193,17 +176,17 @@ const App = () => {
       try {
         const { doc, getDoc } = await getFirebaseDoc();
         const db = await getFirebaseDb();
-        const docSnap = await getDoc(doc(db, 'settings', 'apiKey'));
+        const docSnap = await getDoc(doc(db, "settings", "apiKey"));
 
         if (docSnap.exists()) {
           const key = docSnap.data().value;
           setApiKey(key);
-          localStorage.setItem('geminiApiKey', key);
+          localStorage.setItem("geminiApiKey", key);
         } else if (user.email === ADMIN_EMAIL && !apiKey) {
           setShowApiConfig(true);
         }
       } catch (err) {
-        console.error('Failed to fetch API key:', err);
+        console.error("Failed to fetch API key:", err);
         if (user.email === ADMIN_EMAIL && !apiKey) {
           setShowApiConfig(true);
         }
@@ -223,7 +206,7 @@ const App = () => {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <LoadingContainer>
-          <CircularProgress size={40} sx={{ color: 'white', mb: 2 }} />
+          <CircularProgress size={40} sx={{ color: "white", mb: 2 }} />
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             Loading QuizAI...
           </Typography>
@@ -238,25 +221,25 @@ const App = () => {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <Router>
-          <Suspense fallback={<PageLoading />}>
+          <LazyWrapper>
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/auth" element={<ModernAuthForm />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-          </Suspense>
+          </LazyWrapper>
         </Router>
       </ThemeProvider>
     );
   }
 
-  // Logged in → app routes only
+  // Logged in → app routes
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
         <AppContainer>
-          <Suspense fallback={<PageLoading />}>
+          <LazyWrapper>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
@@ -345,33 +328,29 @@ const App = () => {
 
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
-          </Suspense>
+          </LazyWrapper>
 
           {/* Modals */}
           {showUserInfo && (
-            <Suspense fallback={null}>
-              <ModernUserProfile
-                user={user}
-                onClose={() => setShowUserInfo(false)}
-                isAdmin={user.email === ADMIN_EMAIL}
-              />
-            </Suspense>
+            <ModernUserProfile
+              user={user}
+              onClose={() => setShowUserInfo(false)}
+              isAdmin={user.email === ADMIN_EMAIL}
+            />
           )}
 
           {user.email === ADMIN_EMAIL && showApiConfig && (
-            <Suspense fallback={null}>
-              <ModernAPIConfig
-                apiKey={apiKey}
-                baseUrl={baseUrl}
-                onConfigSave={(newApiKey, newBaseUrl) => {
-                  setApiKey(newApiKey);
-                  setBaseUrl(newBaseUrl);
-                  localStorage.setItem('geminiApiKey', newApiKey);
-                  setShowApiConfig(false);
-                }}
-                onClose={() => setShowApiConfig(false)}
-              />
-            </Suspense>
+            <ModernAPIConfig
+              apiKey={apiKey}
+              baseUrl={baseUrl}
+              onConfigSave={(newApiKey, newBaseUrl) => {
+                setApiKey(newApiKey);
+                setBaseUrl(newBaseUrl);
+                localStorage.setItem("geminiApiKey", newApiKey);
+                setShowApiConfig(false);
+              }}
+              onClose={() => setShowApiConfig(false)}
+            />
           )}
         </AppContainer>
       </Router>
