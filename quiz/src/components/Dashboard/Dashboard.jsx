@@ -209,7 +209,7 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 	);
 	const handleQuickQuiz = useCallback(() => console.log('Quick quiz'), []);
 
-	// Memoize quick actions array
+	// Update quickActions array to add Recent Quizzes action
 	const quickActions = useMemo(
 		() => [
 			{
@@ -240,8 +240,15 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 				color: 'warning',
 				action: () => setShowProgress(true),
 			},
+			{
+				title: 'Recent Quizzes',
+				description: 'View and retake your recent quiz attempts',
+				icon: <History size={32} />,
+				color: 'info',
+				action: onViewResults,
+			},
 		],
-		[handleUploadNavigation, handleQuickQuiz]
+		[handleUploadNavigation, setShowAnalytics, setShowProgress, onViewResults]
 	);
 
 	// Memoize user ID for child components
