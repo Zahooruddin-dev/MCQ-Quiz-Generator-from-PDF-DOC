@@ -1,9 +1,3 @@
-/*               ${question.context ? `<div class="context">Context: ${question.context}</div>` : ''}
-The following line has been removed for now but will be worked for future if the feature
-is deemed justified
-*/
-
-
 import React, { useState } from 'react';
 import {
   Button,
@@ -155,6 +149,7 @@ const DownloadQuizButton = ({
               <div class="question-header">
                 ${index + 1}. ${question.question}
               </div>
+              ${question.context ? `<div class="context">Context: ${question.context}</div>` : ''}
               <div class="options">
                 ${question.options?.map((option, optionIndex) => 
                   `<div class="option">
@@ -460,18 +455,227 @@ const DownloadQuizButton = ({
     handleMenuClose();
     
     try {
-      generateQuizSheet('pdf');
-      setTimeout(() => {
-        generateAnswerKey('pdf');
-      }, 2000);
-      
-      showSnackbar('PDF files generated! Quiz sheet and answer key ready for download.');
+      generateCombinedPDF();
+      showSnackbar('PDF generated! Quiz sheet with answer key ready for download.');
     } catch (error) {
       console.error('PDF generation failed:', error);
-      showSnackbar('Failed to generate PDF files', 'error');
+      showSnackbar('Failed to generate PDF file', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Generate Combined PDF (Quiz + Answer Key)
+  const generateCombinedPDF = () => {
+    const quizTitle = quizData?.title || 'Quiz Sheet';
+    const date = new Date().toLocaleDateString();
+    
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>${quizTitle} - Complete</title>
+        <style>
+          @media print { 
+            @page { margin: 1in; }
+            .page-break { page-break-before: always; }
+          }
+          body { 
+            font-family: 'Times New Roman', serif; 
+            line-height: 1.8; 
+            color: #000; 
+            max-width: 100%; 
+            margin: 0; 
+            padding: 20px;
+          }
+          .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #000;
+            padding-bottom: 15px;
+          }
+          .title { 
+            font-size: 24px; 
+            font-weight: bold; 
+            margin-bottom: 10px;
+            text-transform: uppercase;
+          }
+          .answer-key-title {
+            color: #d32f2f;
+          }
+          .info { 
+            font-size: 14px; 
+            margin: 5px 0;
+          }
+          .instructions {
+            background: #f5f5f5;
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+          }
+          .question { 
+            margin: 25px 0; 
+            page-break-inside: avoid;
+            clear: both;
+          }
+          .question-header { 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+            font-size: 16px;
+          }
+          .options { 
+            margin-left: 20px;
+            line-height: 2;
+          }
+          .option { 
+            margin: 8px 0;
+            display: block;
+          }
+          .answer-line {
+            margin-top: 15px;
+            border-bottom: 1px solid #000;
+            min-height: 20px;
+          }
+          .answer-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px solid #000;
+          }
+          .answer-item {
+            text-align: center;
+            font-weight: bold;
+            padding: 8px;
+            border: 1px solid #ccc;
+          }
+          .detailed-answers {
+            margin-top: 30px;
+          }
+          .question-answer { 
+            margin: 15px 0; 
+            padding: 10px;
+            border-left: 4px solid #4caf50;
+            background: #f8f9fa;
+          }
+          .question-text { 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+          }
+          .correct-answer { 
+            color: #2e7d32; 
+            font-weight: bold;
+          }
+          .explanation { 
+            margin-top: 8px; 
+            font-style: italic; 
+            color: #666;
+          }
+          .footer { 
+            margin-top: 40px; 
+            text-align: center; 
+            font-size: 12px;
+            border-top: 1px solid #ccc;
+            padding-top: 15px;
+          }
+          .warning {
+            color: #d32f2f;
+            font-weight: bold;
+          }
+        </style>
+      </head>
+      <body>
+        <!-- QUIZ SHEET SECTION -->
+        <div class="header">
+          <div class="title">${quizTitle}</div>
+          <div class="info">Date: ${date}</div>
+          <div class="info">Total Questions: ${questions.length}</div>
+          <div class="info">Name: _________________________ Class: _________</div>
+        </div>
+        
+        <div class="instructions">
+          <strong>Instructions:</strong>
+          <ul>
+            <li>Read each question carefully</li>
+            <li>Choose the best answer for each multiple choice question</li>
+            <li>Mark your answer clearly</li>
+            <li>Use the answer line provided for each question</li>
+          </ul>
+        </div>
+        
+        ${questions.map((question, index) => `
+          <div class="question">
+            <div class="question-header">
+              ${index + 1}. ${question.question}
+            </div>
+            <div class="options">
+              ${question.options?.map((option, optionIndex) => 
+                `<div class="option">
+                  ${String.fromCharCode(65 + optionIndex)}. ${option}
+                </div>`
+              ).join('') || ''}
+            </div>
+            <div class="answer-line">
+              <strong>Answer: _______</strong>
+            </div>
+          </div>
+        `).join('')}
+        
+        <!-- ANSWER KEY SECTION -->
+        <div class="page-break">
+          <div class="header">
+            <div class="title answer-key-title">${quizTitle} - Answer Key</div>
+            <div class="info">Date: ${date}</div>
+            <div class="info">Total Questions: ${questions.length}</div>
+            <div class="info warning">⚠️ TEACHER'S ANSWER KEY - DO NOT DISTRIBUTE TO STUDENTS ⚠️</div>
+          </div>
+          
+          <div class="answer-grid">
+            ${questions.map((question, index) => `
+              <div class="answer-item">
+                ${index + 1}. ${String.fromCharCode(65 + question.correctAnswer)}
+              </div>
+            `).join('')}
+          </div>
+          
+          <div class="detailed-answers">
+            <h3>Detailed Answers & Explanations</h3>
+            ${questions.map((question, index) => `
+              <div class="question-answer">
+                <div class="question-text">
+                  ${index + 1}. ${question.question}
+                </div>
+                <div class="correct-answer">
+                  Correct Answer: ${String.fromCharCode(65 + question.correctAnswer)}. ${question.options[question.correctAnswer]}
+                </div>
+                ${question.explanation ? `
+                  <div class="explanation">
+                    Explanation: ${question.explanation}
+                  </div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+          
+          <div class="footer warning">
+            ⚠️ TEACHER'S ANSWER KEY - DO NOT DISTRIBUTE TO STUDENTS ⚠️<br>
+            Generated on ${new Date().toLocaleString()}
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
   };
 
   const handleTXTDownload = () => {
