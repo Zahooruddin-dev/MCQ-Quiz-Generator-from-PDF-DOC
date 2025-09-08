@@ -32,6 +32,7 @@ const ModernAdminDashboard = lazy(() => import('./components/Admin/ModernAdminDa
 
 // Import context
 import { useAuth } from './context/AuthContext';
+import ShareQuizModal from './components/ShareQuizModal/ShareQuizModal';
 
 // Lazy load Firebase functions to avoid blocking main thread
 const getFirebaseDoc = () => import('firebase/firestore').then(module => ({ doc: module.doc, getDoc: module.getDoc }));
@@ -256,6 +257,10 @@ const App = () => {
                   </>
                 }
               />
+              <Route
+              path='/shared'
+              element={<ShareQuizModal />}
+              ></Route>
 
               <Route
                 path="/upload"
