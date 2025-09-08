@@ -1,4 +1,3 @@
-// src/components/ProtectedRoute.jsx
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -15,7 +14,7 @@ const ProtectedRoute = ({ children }) => {
     return (
       <div className="p-4 text-center">
         <h2 className="text-xl font-bold">Out of Credits</h2>
-        <p>You’ve used your 5 free quizzes for today.</p>
+        <p>You've used your 5 free quizzes for today.</p>
         <p>Come back in 24h or upgrade to Premium.</p>
       </div>
     );
