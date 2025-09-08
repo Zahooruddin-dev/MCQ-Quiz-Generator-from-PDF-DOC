@@ -2,6 +2,23 @@ import React from "react";
 import { Grid, CardContent, Typography, Stack, Box } from "@mui/material";
 import { ActionCard } from "./StyledCards";
 
+const getActionColor = (color) => {
+  switch (color) {
+    case "primary":
+      return "#6366F1";
+    case "secondary":
+      return "#8B5CF6";
+    case "success":
+      return "#10B981";
+    case "warning":
+      return "#F59E0B";
+    case "info":
+      return "#0EA5E9";
+    default:
+      return "#3B82F6";
+  }
+};
+
 const QuickActions = ({ quickActions }) => {
   return (
     <Box>
@@ -20,28 +37,11 @@ const QuickActions = ({ quickActions }) => {
                       width: 64,
                       height: 64,
                       borderRadius: 2,
-                      background: `${action.color === "primary"
-                        ? "#6366F1"
-                        : action.color === "secondary"
-                        ? "#8B5CF6"
-                        : action.color === "success"
-                        ? "#10B981"
-                        : action.color === "warning"
-                        ? "#F59E0B"
-                        : "#3B82F6"}15`,
+                      background: `${getActionColor(action.color)}15`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      color:
-                        action.color === "primary"
-                          ? "#6366F1"
-                          : action.color === "secondary"
-                          ? "#8B5CF6"
-                          : action.color === "success"
-                          ? "#10B981"
-                          : action.color === "warning"
-                          ? "#F59E0B"
-                          : "#3B82F6",
+                      color: getActionColor(action.color),
                       transition: "all 0.3s ease",
                     }}
                   >

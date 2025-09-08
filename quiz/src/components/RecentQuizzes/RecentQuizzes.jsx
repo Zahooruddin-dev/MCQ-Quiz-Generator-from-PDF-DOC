@@ -191,7 +191,8 @@ const RecentQuizzes = ({
   limit = 5, 
   onQuizClick, 
   onViewAll, 
-  showFilters = true 
+  showFilters = true,
+  isFullPage = false // Add this prop
 }) => {
   const { user } = useAuth();
   const [quizzes, setQuizzes] = useState([]);
@@ -342,11 +343,11 @@ const RecentQuizzes = ({
         <Stack direction="row" spacing={2} alignItems="center">
           <HistoryIcon color="primary" />
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
-            Recent Quizzes
+            {isFullPage ? 'Quiz History' : 'Recent Quizzes'}
           </Typography>
         </Stack>
         
-        {onViewAll && quizzes.length > 0 && (
+        {!isFullPage && onViewAll && quizzes.length > 0 && (
           <Button
             endIcon={<ArrowRightIcon />}
             onClick={handleViewAll}

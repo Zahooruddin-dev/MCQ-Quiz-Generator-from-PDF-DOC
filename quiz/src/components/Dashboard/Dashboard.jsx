@@ -182,6 +182,7 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 	const navigate = useNavigate();
 	const [showAnalytics, setShowAnalytics] = useState(false);
 	const [showProgress, setShowProgress] = useState(false);
+	const [showRecentQuizzes, setShowRecentQuizzes] = useState(false); // Add this line
 
 	// Memoize user initials function
 	const getUserInitials = useCallback((name) => {
@@ -209,7 +210,7 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 	);
 	const handleQuickQuiz = useCallback(() => console.log('Quick quiz'), []);
 
-	// Update quickActions array to add Recent Quizzes action
+	// Memoize the quick actions
 	const quickActions = useMemo(
 		() => [
 			{
@@ -245,10 +246,10 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 				description: 'View and retake your recent quiz attempts',
 				icon: <History size={32} />,
 				color: 'info',
-				action: onViewResults,
+				action: () => setShowRecentQuizzes(true), // Update this line
 			},
 		],
-		[handleUploadNavigation, setShowAnalytics, setShowProgress, onViewResults]
+		[handleUploadNavigation]
 	);
 
 	// Memoize user ID for child components
@@ -271,6 +272,27 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 			/>
 		);
 	}
+	if (showRecentQuizzes) {
+		// Add this condition
+		return (
+			<Container maxWidth='lg' sx={{ py: 4 }}>
+				<Stack spacing={3}>
+					<Button
+						variant='outlined'
+						onClick={() => setShowRecentQuizzes(false)}
+						sx={{ alignSelf: 'flex-start' }}
+					>
+						← Back to Dashboard
+					</Button>
+					<RecentQuizzes
+						limit={10}
+						showFilters={true}
+						onQuizClick={onViewResults}
+					/>
+				</Stack>
+			</Container>
+		);
+	}
 	// Default Dashboard Mode
 	return (
 		<Box sx={{ py: 4 }}>
@@ -288,7 +310,6 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 					{/* Quick Actions - Memoized */}
 					<QuickActions quickActions={quickActions} />
 
-				
 					{/* Recent Quizzes - Memoized with stable key */}
 					<RecentQuizzes key='recent-quizzes-stable' />
 				</Stack>
