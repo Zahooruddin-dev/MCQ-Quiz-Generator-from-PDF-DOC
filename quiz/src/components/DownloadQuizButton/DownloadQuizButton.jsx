@@ -1,3 +1,9 @@
+/*               ${question.context ? `<div class="context">Context: ${question.context}</div>` : ''}
+The following line has been removed for now but will be worked for future if the feature
+is deemed justified
+*/
+
+
 import React, { useState } from 'react';
 import {
   Button,
@@ -149,7 +155,6 @@ const DownloadQuizButton = ({
               <div class="question-header">
                 ${index + 1}. ${question.question}
               </div>
-              ${question.context ? `<div class="context">Context: ${question.context}</div>` : ''}
               <div class="options">
                 ${question.options?.map((option, optionIndex) => 
                   `<div class="option">
@@ -401,8 +406,7 @@ const DownloadQuizButton = ({
           question.options[0] || '',
           question.options[1] || '',
           question.options[2] || '',
-          question.options[3] || '',
-          question.context || ''
+          question.options[3] || ''
         ])
       ];
       
