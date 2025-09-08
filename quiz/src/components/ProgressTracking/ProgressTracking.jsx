@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography, Container, Button } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUpOutlined';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebaseConfig';
@@ -11,7 +11,7 @@ import LoadingSkeleton from './LoadingSkeleton';
 import Alerts from './Alerts';
 import { getEmptyProgressData, calculateProgressFromQuizzes, generateMockWeeklyProgress } from './helpers';
 
-const ProgressTracking = ({ timePeriod = 'all_time', showCharts = true, compact = false }) => {
+const ProgressTracking = ({ userId, onBack, timePeriod = 'all_time', showCharts = true, compact = false }) => {
   const { user } = useAuth();
   const [progressData, setProgressData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -75,7 +75,7 @@ const ProgressTracking = ({ timePeriod = 'all_time', showCharts = true, compact 
   if (loading) return <LoadingSkeleton showCharts={showCharts} />;
 
   return (
-    <Box>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
       <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
         <TrendingUpIcon color="primary" />
         <Typography variant="h5" sx={{ fontWeight: 600 }}>Your Progress</Typography>
@@ -83,12 +83,20 @@ const ProgressTracking = ({ timePeriod = 'all_time', showCharts = true, compact 
 
       <Alerts indexError={indexError} dataSource={dataSource} />
 
+      <Button
+        variant="outlined"
+        onClick={onBack}
+        sx={{ alignSelf: 'flex-start', mb: 3 }}
+      >
+        ← Back to Dashboard
+      </Button>
+
       <Stack spacing={3}>
         <StatsGrid data={progressData} />
         {showCharts && !compact && progressData.weeklyProgress.length > 0 && <ProgressChart data={progressData.weeklyProgress} />}
         <CompletionCard data={progressData} />
       </Stack>
-    </Box>
+    </Container>
   );
 };
 

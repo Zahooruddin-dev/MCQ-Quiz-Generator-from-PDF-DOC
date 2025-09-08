@@ -14,6 +14,7 @@ import {
 	Award,
 	Users,
 	ArrowRight,
+	History,
 	Upload,
 	Brain,
 	BarChart3,
@@ -53,112 +54,108 @@ const RECENT_QUIZZES_DATA = [
 ];
 
 // Memoized WelcomeSection component
-const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz, getUserInitials }) => (
-	<WelcomeCard>
-		<CardContent sx={{ p: 4 }}>
-			<Grid container spacing={4} alignItems='center'>
-				<Grid item xs={12} md={8}>
-					<Stack spacing={2}>
-						<Stack direction='row' spacing={2} alignItems='center'>
-							<Avatar
-								sx={{
-									width: 64,
-									height: 64,
-									background: 'rgba(255, 255, 255, 0.2)',
-									backdropFilter: 'blur(10px)',
-									border: '2px solid rgba(255, 255, 255, 0.3)',
-									fontWeight: 600,
-									fontSize: '1.5rem',
-								}}
-							>
-								{getUserInitials(user?.displayName)}
-							</Avatar>
-							<Box>
-								<Typography
-									variant='h4'
-									sx={{ fontWeight: 700, mb: 0.5 }}
+const WelcomeSection = React.memo(
+	({ user, credits, isPremium, onCreateQuiz, getUserInitials }) => (
+		<WelcomeCard>
+			<CardContent sx={{ p: 4 }}>
+				<Grid container spacing={4} alignItems='center'>
+					<Grid item xs={12} md={8}>
+						<Stack spacing={2}>
+							<Stack direction='row' spacing={2} alignItems='center'>
+								<Avatar
+									sx={{
+										width: 64,
+										height: 64,
+										background: 'rgba(255, 255, 255, 0.2)',
+										backdropFilter: 'blur(10px)',
+										border: '2px solid rgba(255, 255, 255, 0.3)',
+										fontWeight: 600,
+										fontSize: '1.5rem',
+									}}
 								>
-									Welcome back,{' '}
-									{user?.displayName?.split(' ')[0] || 'User'}!
-								</Typography>
-								<Typography variant='body1' sx={{ opacity: 0.9 }}>
-									Ready to create some amazing quizzes today?
-								</Typography>
-							</Box>
-						</Stack>
+									{getUserInitials(user?.displayName)}
+								</Avatar>
+								<Box>
+									<Typography variant='h4' sx={{ fontWeight: 700, mb: 0.5 }}>
+										Welcome back, {user?.displayName?.split(' ')[0] || 'User'}!
+									</Typography>
+									<Typography variant='body1' sx={{ opacity: 0.9 }}>
+										Ready to create some amazing quizzes today?
+									</Typography>
+								</Box>
+							</Stack>
 
-						<Stack direction='row' spacing={2} sx={{ mt: 2 }}>
-							<Chip
-								icon={
-									isPremium ? <Award size={16} /> : <Users size={16} />
-								}
-								label={
-									isPremium
-										? 'Premium Member'
-										: `${credits} Credits Available`
-								}
+							<Stack direction='row' spacing={2} sx={{ mt: 2 }}>
+								<Chip
+									icon={isPremium ? <Award size={16} /> : <Users size={16} />}
+									label={
+										isPremium
+											? 'Premium Member'
+											: `${credits} Credits Available`
+									}
+									sx={{
+										background: 'rgba(255, 255, 255, 0.2)',
+										color: 'white',
+										backdropFilter: 'blur(10px)',
+										border: '1px solid rgba(255, 255, 255, 0.3)',
+										fontWeight: 600,
+									}}
+								/>
+								<Chip
+									label='7 Day Streak 🔥'
+									sx={{
+										background: 'rgba(255, 215, 0, 0.2)',
+										color: 'white',
+										backdropFilter: 'blur(10px)',
+										border: '1px solid rgba(255, 215, 0, 0.3)',
+										fontWeight: 600,
+									}}
+								/>
+							</Stack>
+						</Stack>
+					</Grid>
+
+					<Grid item xs={12} md={4}>
+						<Stack
+							spacing={2}
+							alignItems={{ xs: 'flex-start', md: 'flex-end' }}
+						>
+							<Button
+								variant='contained'
+								size='large'
+								endIcon={<ArrowRight />}
+								onClick={onCreateQuiz}
 								sx={{
 									background: 'rgba(255, 255, 255, 0.2)',
-									color: 'white',
 									backdropFilter: 'blur(10px)',
 									border: '1px solid rgba(255, 255, 255, 0.3)',
-									fontWeight: 600,
-								}}
-							/>
-							<Chip
-								label='7 Day Streak 🔥'
-								sx={{
-									background: 'rgba(255, 215, 0, 0.2)',
 									color: 'white',
-									backdropFilter: 'blur(10px)',
-									border: '1px solid rgba(255, 215, 0, 0.3)',
 									fontWeight: 600,
+									'&:hover': {
+										background: 'rgba(255, 255, 255, 0.3)',
+										transform: 'translateY(-2px)',
+									},
 								}}
-							/>
+							>
+								Create New Quiz
+							</Button>
+
+							<Typography
+								variant='body2'
+								sx={{
+									opacity: 0.8,
+									textAlign: { xs: 'left', md: 'right' },
+								}}
+							>
+								Last quiz: 2 days ago
+							</Typography>
 						</Stack>
-					</Stack>
+					</Grid>
 				</Grid>
-
-				<Grid item xs={12} md={4}>
-					<Stack
-						spacing={2}
-						alignItems={{ xs: 'flex-start', md: 'flex-end' }}
-					>
-						<Button
-							variant='contained'
-							size='large'
-							endIcon={<ArrowRight />}
-							onClick={onCreateQuiz}
-							sx={{
-								background: 'rgba(255, 255, 255, 0.2)',
-								backdropFilter: 'blur(10px)',
-								border: '1px solid rgba(255, 255, 255, 0.3)',
-								color: 'white',
-								fontWeight: 600,
-								'&:hover': {
-									background: 'rgba(255, 255, 255, 0.3)',
-									transform: 'translateY(-2px)',
-								},
-							}}
-						>
-							Create New Quiz
-						</Button>
-
-						<Typography
-							variant='body2'
-							sx={{
-								opacity: 0.8,
-								textAlign: { xs: 'left', md: 'right' },
-							}}
-						>
-							Last quiz: 2 days ago
-						</Typography>
-					</Stack>
-				</Grid>
-			</Grid>
-		</CardContent>
-	</WelcomeCard>
-));
+			</CardContent>
+		</WelcomeCard>
+	)
+);
 
 WelcomeSection.displayName = 'WelcomeSection';
 
@@ -184,6 +181,7 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 	const { user, credits, isPremium } = useAuth();
 	const navigate = useNavigate();
 	const [showAnalytics, setShowAnalytics] = useState(false);
+	const [showProgress, setShowProgress] = useState(false);
 
 	// Memoize user initials function
 	const getUserInitials = useCallback((name) => {
@@ -197,41 +195,54 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 	}, []);
 
 	// Memoize navigation handlers
-	const handleUploadNavigation = useCallback(() => navigate('/upload'), [navigate]);
-	const handleAnalyticsToggle = useCallback(() => setShowAnalytics(prev => !prev), []);
+	const handleUploadNavigation = useCallback(
+		() => navigate('/upload'),
+		[navigate]
+	);
+	const handleAnalyticsToggle = useCallback(
+		() => setShowAnalytics((prev) => !prev),
+		[]
+	);
+	const handleProgressToggle = useCallback(
+		() => setShowProgress((prev) => !prev),
+		[]
+	);
 	const handleQuickQuiz = useCallback(() => console.log('Quick quiz'), []);
 
 	// Memoize quick actions array
-	const quickActions = useMemo(() => [
-		{
-			title: 'Upload Document',
-			description: 'Upload PDF, DOCX, or paste text to generate quiz',
-			icon: <Upload size={32} />,
-			color: 'primary',
-			action: handleUploadNavigation,
-		},
-		{
-			title: 'AI Quiz Generator',
-			description: 'Let AI create questions from your content',
-			icon: <Brain size={32} />,
-			color: 'secondary',
-			action: handleUploadNavigation,
-		},
-		{
-			title: 'View Analytics',
-			description: 'Check your performance, progress, and insights',
-			icon: <BarChart3 size={32} />,
-			color: 'success',
-			action: () => setShowAnalytics(true),
-		},
-		{
-			title: 'Coming Soon: Quick Quiz',
-			description: 'Start a practice quiz immediately very soon',
-			icon: <Zap size={32} />,
-			color: 'warning',
-			action: handleQuickQuiz,
-		},
-	], [handleUploadNavigation, handleQuickQuiz]);
+	const quickActions = useMemo(
+		() => [
+			{
+				title: 'Upload Document',
+				description: 'Upload PDF, DOCX, or paste text to generate quiz',
+				icon: <Upload size={32} />,
+				color: 'primary',
+				action: handleUploadNavigation,
+			},
+			{
+				title: 'AI Quiz Generator',
+				description: 'Let AI create questions from your content',
+				icon: <Brain size={32} />,
+				color: 'secondary',
+				action: handleUploadNavigation,
+			},
+			{
+				title: 'View Analytics',
+				description: 'Check your performance, and insights',
+				icon: <BarChart3 size={32} />,
+				color: 'success',
+				action: () => setShowAnalytics(true),
+			},
+			{
+				title: 'Your Progress',
+				description: 'See your progress, average score, streak and time spent',
+				icon: <Zap size={32} />,
+				color: 'warning',
+				action: () => setShowProgress(true),
+			},
+		],
+		[handleUploadNavigation, handleQuickQuiz]
+	);
 
 	// Memoize user ID for child components
 	const userId = useMemo(() => user?.uid, [user?.uid]);
@@ -239,13 +250,20 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 	// Analytics Mode
 	if (showAnalytics) {
 		return (
-			<AnalyticsView 
-				userId={userId} 
-				onBack={() => setShowAnalytics(false)} 
+			<AnalyticsView userId={userId} onBack={() => setShowAnalytics(false)} />
+		);
+	}
+	if (showProgress) {
+		return (
+			<ProgressTracking
+				userId={userId}
+				onBack={() => setShowProgress(false)}
+				timePeriod='all_time'
+				showCharts
+				key={`progress-${userId}`}
 			/>
 		);
 	}
-
 	// Default Dashboard Mode
 	return (
 		<Box sx={{ py: 4 }}>
@@ -262,19 +280,10 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 
 					{/* Quick Actions - Memoized */}
 					<QuickActions quickActions={quickActions} />
-					
-					{/* Progress Tracking - Only render when userId exists */}
-					{userId && (
-						<ProgressTracking
-							userId={userId}
-							timePeriod='all_time'
-							showCharts
-							key={`progress-${userId}`} // Stable key to prevent unnecessary remounts
-						/>
-					)}
 
+				
 					{/* Recent Quizzes - Memoized with stable key */}
-					<RecentQuizzes key="recent-quizzes-stable" />
+					<RecentQuizzes key='recent-quizzes-stable' />
 				</Stack>
 			</Container>
 		</Box>
