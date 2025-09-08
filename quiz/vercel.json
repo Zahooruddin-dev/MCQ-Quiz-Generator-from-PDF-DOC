@@ -3,7 +3,6 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "installCommand": "npm ci --legacy-peer-deps",
-  "nodeVersion": "18.x",
   "env": {
     "CI": "false",
     "NODE_ENV": "production",
