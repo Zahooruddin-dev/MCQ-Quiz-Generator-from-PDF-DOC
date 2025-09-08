@@ -309,9 +309,6 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 
 					{/* Quick Actions - Memoized */}
 					<QuickActions quickActions={quickActions} />
-
-					{/* Recent Quizzes - Memoized with stable key */}
-					<RecentQuizzes key='recent-quizzes-stable' />
 				</Stack>
 			</Container>
 		</Box>
