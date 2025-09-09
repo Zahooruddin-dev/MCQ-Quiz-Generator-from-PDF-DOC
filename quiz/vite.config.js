@@ -17,16 +17,21 @@ export default defineConfig({
     sourcemap: false,
     chunkSizeWarningLimit: 1000,
     // Use Vite's default esbuild minifier (no terser needed)
-    minify: true,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
+    },
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          mui: ['@mui/material', '@mui/icons-material', '@mui/system'],
-          firebase: ['firebase/auth', 'firebase/firestore'],
-          router: ['react-router-dom'],
-        },
-      },
+          mui: ['@mui/material'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+        }
+      }
     },
   },
   optimizeDeps: {
