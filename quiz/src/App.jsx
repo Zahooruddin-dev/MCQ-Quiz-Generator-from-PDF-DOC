@@ -1,10 +1,11 @@
-// src/App.jsx
+// src/App.jsx - Optimized with safe route-based code splitting
 import { useState, useEffect, lazy, Suspense } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
+  useNavigate,
 } from "react-router-dom";
 import { ThemeProvider } from "@mui/material/styles";
 import { CssBaseline, Box, Typography } from "@mui/material";
@@ -12,8 +13,9 @@ import { styled } from "@mui/material/styles";
 
 import theme from "./theme";
 import { useAuth } from "./context/AuthContext";
+import ShareQuizModal from "./components/ShareQuizModal/ShareQuizModal";
 
-// Loader Component
+// Loader
 const OptimizedLoader = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -49,163 +51,25 @@ const LoadingFallback = ({ text = "Loading..." }) => (
   </OptimizedLoader>
 );
 
-// Route-based Lazy Loading - Only load when route is accessed
-const LandingPage = lazy(() => 
-  import("./components/Landing/LandingPage").then(module => ({
-    default: module.default
-  }))
-);
+// Route-based lazy imports - Only load when needed
+const LandingPage = lazy(() => import("./components/Landing/LandingPage"));
+const ModernAuthForm = lazy(() => import("./components/Auth/ModernAuthForm"));
 
-const AuthPage = lazy(() => 
-  import("./components/Auth/ModernAuthForm").then(module => ({
-    default: module.default
-  }))
-);
+// Main app components - loaded together for performance
+const ModernHeader = lazy(() => import("./components/Layout/ModernHeader"));
+const Dashboard = lazy(() => import("./components/Dashboard/Dashboard"));
 
-// Dashboard Route with its dependencies
-const DashboardRoute = lazy(() => 
-  Promise.all([
-    import("./components/Layout/ModernHeader"),
-    import("./components/Dashboard/Dashboard")
-  ]).then(([headerModule, dashboardModule]) => ({
-    default: ({ 
-      onProfileClick, 
-      onApiConfigClick, 
-      showApiConfig,
-      onCreateQuiz,
-      onViewResults,
-      onUploadFile 
-    }) => (
-      <>
-        <headerModule.default
-          onProfileClick={onProfileClick}
-          onApiConfigClick={onApiConfigClick}
-          showApiConfig={showApiConfig}
-        />
-        <dashboardModule.default
-          onCreateQuiz={onCreateQuiz}
-          onViewResults={onViewResults}
-          onUploadFile={onUploadFile}
-        />
-      </>
-    )
-  }))
-);
+// Feature-specific components
+const ModernFileUpload = lazy(() => import("./components/FileUpload/ModernFileUpload"));
+const ModernQuizEngine = lazy(() => import("./components/Engine/ModernQuizEngine"));
+const ModernResultPage = lazy(() => import("./components/Results/ModernResultPage"));
 
-// Upload Route with its dependencies
-const UploadRoute = lazy(() => 
-  Promise.all([
-    import("./components/Layout/ModernHeader"),
-    import("./components/FileUpload/ModernFileUpload")
-  ]).then(([headerModule, uploadModule]) => ({
-    default: ({ 
-      onProfileClick, 
-      onApiConfigClick, 
-      showApiConfig,
-      hasAI,
-      apiKey,
-      baseUrl,
-      onFileUpload 
-    }) => (
-      <>
-        <headerModule.default
-          onProfileClick={onProfileClick}
-          onApiConfigClick={onApiConfigClick}
-          showApiConfig={showApiConfig}
-        />
-        <uploadModule.default
-          hasAI={hasAI}
-          apiKey={apiKey}
-          baseUrl={baseUrl}
-          onFileUpload={onFileUpload}
-        />
-      </>
-    )
-  }))
-);
+// Admin and settings
+const ModernAPIConfig = lazy(() => import("./components/APIconfig/ModernAPIConfig"));
+const ModernUserProfile = lazy(() => import("./components/UserInfo/ModernUserProfile"));
+const ModernAdminDashboard = lazy(() => import("./components/Admin/ModernAdminDashboard"));
 
-// Quiz Route with its dependencies
-const QuizRoute = lazy(() => 
-  Promise.all([
-    import("./components/Layout/ModernHeader"),
-    import("./components/Engine/ModernQuizEngine")
-  ]).then(([headerModule, quizModule]) => ({
-    default: ({ 
-      onProfileClick, 
-      onApiConfigClick, 
-      showApiConfig,
-      questions,
-      onFinish 
-    }) => (
-      <>
-        <headerModule.default
-          onProfileClick={onProfileClick}
-          onApiConfigClick={onApiConfigClick}
-          showApiConfig={showApiConfig}
-        />
-        <quizModule.default
-          questions={questions}
-          onFinish={onFinish}
-        />
-      </>
-    )
-  }))
-);
-
-// Results Route with its dependencies
-const ResultsRoute = lazy(() => 
-  Promise.all([
-    import("./components/Layout/ModernHeader"),
-    import("./components/Results/ModernResultPage")
-  ]).then(([headerModule, resultsModule]) => ({
-    default: ({ 
-      onProfileClick, 
-      onApiConfigClick, 
-      showApiConfig,
-      questions,
-      userAnswers,
-      onNewQuiz 
-    }) => (
-      <>
-        <headerModule.default
-          onProfileClick={onProfileClick}
-          onApiConfigClick={onApiConfigClick}
-          showApiConfig={showApiConfig}
-        />
-        <resultsModule.default
-          questions={questions}
-          userAnswers={userAnswers}
-          onNewQuiz={onNewQuiz}
-        />
-      </>
-    )
-  }))
-);
-
-// Admin Route
-const AdminRoute = lazy(() => 
-  import("./components/Admin/ModernAdminDashboard").then(module => ({
-    default: module.default
-  }))
-);
-
-// Shared Quiz Route
-const SharedQuizRoute = lazy(() => 
-  import("./components/ShareQuizModal/ShareQuizModal").then(module => ({
-    default: module.default
-  }))
-);
-
-// Modal Components - Lazy loaded only when needed
-const UserProfileModal = lazy(() => 
-  import("./components/UserInfo/ModernUserProfile")
-);
-
-const ApiConfigModal = lazy(() => 
-  import("./components/APIconfig/ModernAPIConfig")
-);
-
-// Firebase utilities
+// Optimized Firebase operations
 let firebaseCache = null;
 const getFirebase = async () => {
   if (firebaseCache) return firebaseCache;
@@ -232,7 +96,97 @@ const AppContainer = styled(Box)({
   flexDirection: "column",
 });
 
-// Main App Component
+// Wrapper components for better code splitting
+const FileUploadWrapper = ({ questions, setQuestions, apiKey, baseUrl }) => {
+  const navigate = useNavigate();
+
+  const handleFileUpload = (uploadedQuestions) => {
+    setQuestions(uploadedQuestions);
+    navigate("/quiz");
+  };
+
+  return (
+    <Suspense fallback={<LoadingFallback text="Loading Upload..." />}>
+      <ModernFileUpload
+        hasAI={!!apiKey}
+        apiKey={apiKey}
+        baseUrl={baseUrl}
+        onFileUpload={handleFileUpload}
+      />
+    </Suspense>
+  );
+};
+
+const QuizEngineWrapper = ({ questions, setQuizResults, setShowResults }) => {
+  const navigate = useNavigate();
+
+  const handleQuizFinish = (results) => {
+    setQuizResults(results);
+    setShowResults(true);
+    navigate("/results");
+  };
+
+  if (!questions) {
+    navigate("/dashboard");
+    return null;
+  }
+
+  return (
+    <Suspense fallback={<LoadingFallback text="Loading Quiz..." />}>
+      <ModernQuizEngine questions={questions} onFinish={handleQuizFinish} />
+    </Suspense>
+  );
+};
+
+const ResultPageWrapper = ({ questions, quizResults, showResults, resetQuiz }) => {
+  const navigate = useNavigate();
+
+  const handleNewQuiz = () => {
+    resetQuiz();
+    navigate("/dashboard");
+  };
+
+  if (!showResults || !quizResults) {
+    navigate("/dashboard");
+    return null;
+  }
+
+  return (
+    <Suspense fallback={<LoadingFallback text="Loading Results..." />}>
+      <ModernResultPage
+        questions={questions}
+        userAnswers={quizResults.answers}
+        onNewQuiz={handleNewQuiz}
+      />
+    </Suspense>
+  );
+};
+
+const DashboardWrapper = () => {
+  const navigate = useNavigate();
+
+  return (
+    <Suspense fallback={<LoadingFallback text="Loading Dashboard..." />}>
+      <Dashboard
+        onCreateQuiz={() => navigate("/upload")}
+        onViewResults={(quiz) => navigate(`/results/${quiz.id}`)}
+        onUploadFile={() => navigate("/upload")}
+      />
+    </Suspense>
+  );
+};
+
+const HeaderWrapper = ({ onProfileClick, onApiConfigClick, showApiConfig }) => (
+  <Suspense fallback={null}>
+    <ModernHeader
+      onProfileClick={onProfileClick}
+      onApiConfigClick={onApiConfigClick}
+      showApiConfig={showApiConfig}
+    />
+  </Suspense>
+);
+
+// Main App
 const App = () => {
   const { user, loading } = useAuth();
   const [showUserInfo, setShowUserInfo] = useState(false);
@@ -258,24 +212,7 @@ const App = () => {
     setShowResults(false);
   };
 
-  // Route handlers
-  const handleFileUpload = (uploadedQuestions) => {
-    setQuestions(uploadedQuestions);
-    window.location.href = "/quiz";
-  };
-
-  const handleQuizFinish = (results) => {
-    setQuizResults(results);
-    setShowResults(true);
-    window.location.href = "/results";
-  };
-
-  const handleNewQuiz = () => {
-    resetQuiz();
-    window.location.href = "/dashboard";
-  };
-
-  // Fetch API Key
+  // Optimized API Key fetching with error handling
   useEffect(() => {
     if (!user || apiKey) return;
 
@@ -324,37 +261,25 @@ const App = () => {
     );
   }
 
-  // Not logged in - Public routes
+  // Not logged in - Public routes with lazy loading
   if (!user) {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <Router>
-          <Routes>
-            <Route 
-              path="/" 
-              element={
-                <Suspense fallback={<LoadingFallback text="Loading..." />}>
-                  <LandingPage />
-                </Suspense>
-              } 
-            />
-            <Route 
-              path="/auth" 
-              element={
-                <Suspense fallback={<LoadingFallback text="Loading Auth..." />}>
-                  <AuthPage />
-                </Suspense>
-              } 
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/auth" element={<ModernAuthForm />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
         </Router>
       </ThemeProvider>
     );
   }
 
-  // Logged in - Protected routes with route-based splitting
+  // Logged in - Protected routes with optimized loading
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -366,24 +291,22 @@ const App = () => {
             <Route
               path="/dashboard"
               element={
-                <Suspense fallback={<LoadingFallback text="Loading Dashboard..." />}>
-                  <DashboardRoute
+                <>
+                  <HeaderWrapper
                     onProfileClick={() => setShowUserInfo(true)}
                     onApiConfigClick={() => setShowApiConfig(true)}
                     showApiConfig={showApiConfig}
-                    onCreateQuiz={() => window.location.href = "/upload"}
-                    onViewResults={(quiz) => window.location.href = `/results/${quiz.id}`}
-                    onUploadFile={() => window.location.href = "/upload"}
                   />
-                </Suspense>
+                  <DashboardWrapper />
+                </>
               }
             />
 
             <Route
               path="/shared"
               element={
-                <Suspense fallback={<LoadingFallback text="Loading Shared Quiz..." />}>
-                  <SharedQuizRoute />
+                <Suspense fallback={<LoadingFallback />}>
+                  <ShareQuizModal />
                 </Suspense>
               }
             />
@@ -391,56 +314,56 @@ const App = () => {
             <Route
               path="/upload"
               element={
-                <Suspense fallback={<LoadingFallback text="Loading Upload..." />}>
-                  <UploadRoute
+                <>
+                  <HeaderWrapper
                     onProfileClick={() => setShowUserInfo(true)}
                     onApiConfigClick={() => setShowApiConfig(true)}
                     showApiConfig={showApiConfig}
-                    hasAI={!!apiKey}
+                  />
+                  <FileUploadWrapper
+                    questions={questions}
+                    setQuestions={setQuestions}
                     apiKey={apiKey}
                     baseUrl={baseUrl}
-                    onFileUpload={handleFileUpload}
                   />
-                </Suspense>
+                </>
               }
             />
 
             <Route
               path="/quiz"
               element={
-                questions ? (
-                  <Suspense fallback={<LoadingFallback text="Loading Quiz..." />}>
-                    <QuizRoute
-                      onProfileClick={() => setShowUserInfo(true)}
-                      onApiConfigClick={() => setShowApiConfig(true)}
-                      showApiConfig={showApiConfig}
-                      questions={questions}
-                      onFinish={handleQuizFinish}
-                    />
-                  </Suspense>
-                ) : (
-                  <Navigate to="/dashboard" replace />
-                )
+                <>
+                  <HeaderWrapper
+                    onProfileClick={() => setShowUserInfo(true)}
+                    onApiConfigClick={() => setShowApiConfig(true)}
+                    showApiConfig={showApiConfig}
+                  />
+                  <QuizEngineWrapper
+                    questions={questions}
+                    setQuizResults={setQuizResults}
+                    setShowResults={setShowResults}
+                  />
+                </>
               }
             />
 
             <Route
               path="/results"
               element={
-                showResults && quizResults ? (
-                  <Suspense fallback={<LoadingFallback text="Loading Results..." />}>
-                    <ResultsRoute
-                      onProfileClick={() => setShowUserInfo(true)}
-                      onApiConfigClick={() => setShowApiConfig(true)}
-                      showApiConfig={showApiConfig}
-                      questions={questions}
-                      userAnswers={quizResults.answers}
-                      onNewQuiz={handleNewQuiz}
-                    />
-                  </Suspense>
-                ) : (
-                  <Navigate to="/dashboard" replace />
-                )
+                <>
+                  <HeaderWrapper
+                    onProfileClick={() => setShowUserInfo(true)}
+                    onApiConfigClick={() => setShowApiConfig(true)}
+                    showApiConfig={showApiConfig}
+                  />
+                  <ResultPageWrapper
+                    questions={questions}
+                    quizResults={quizResults}
+                    showResults={showResults}
+                    resetQuiz={resetQuiz}
+                  />
+                </>
               }
             />
 
@@ -449,7 +372,7 @@ const App = () => {
               element={
                 user.email === ADMIN_EMAIL ? (
                   <Suspense fallback={<LoadingFallback text="Loading Admin..." />}>
-                    <AdminRoute />
+                    <ModernAdminDashboard />
                   </Suspense>
                 ) : (
                   <Navigate to="/dashboard" replace />
@@ -460,10 +383,10 @@ const App = () => {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
 
-          {/* Modals - Only loaded when needed */}
+          {/* Modals - Lazy loaded only when shown */}
           {showUserInfo && (
             <Suspense fallback={null}>
-              <UserProfileModal
+              <ModernUserProfile
                 user={user}
                 onClose={() => setShowUserInfo(false)}
                 isAdmin={user.email === ADMIN_EMAIL}
@@ -473,7 +396,7 @@ const App = () => {
 
           {user.email === ADMIN_EMAIL && showApiConfig && (
             <Suspense fallback={null}>
-              <ApiConfigModal
+              <ModernAPIConfig
                 apiKey={apiKey}
                 baseUrl={baseUrl}
                 onConfigSave={(newApiKey, newBaseUrl) => {

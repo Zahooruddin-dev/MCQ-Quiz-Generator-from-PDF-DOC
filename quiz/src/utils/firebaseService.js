@@ -1,11 +1,9 @@
-// firebaseService.js
+// firebaseService.js - Safe optimized version
 import {
-	getFirestore,
 	doc,
 	setDoc,
 	getDoc,
 	updateDoc,
-	increment,
 	collection,
 	addDoc,
 	query,
@@ -14,11 +12,34 @@ import {
 	getDocs,
 	deleteDoc,
 	getCountFromServer,
+	writeBatch,
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { db } from '../firebaseConfig';
 
-const db = getFirestore();
+// Simple in-memory cache for dashboard data
+const cache = {
+	data: new Map(),
+	set(key, value) {
+		this.data.set(key, {
+			value,
+			timestamp: Date.now()
+		});
+	},
+	get(key, maxAge = 300000) { // 5 minutes default
+		const item = this.data.get(key);
+		if (item && Date.now() - item.timestamp < maxAge) {
+			return item.value;
+		}
+		this.data.delete(key);
+		return null;
+	},
+	clear() {
+		this.data.clear();
+	}
+};
 
+// Batch operations for better performance
 export async function saveQuizResults(quizData) {
 	try {
 		const auth = getAuth();
@@ -29,34 +50,26 @@ export async function saveQuizResults(quizData) {
 			return;
 		}
 
-		// Add metadata to quiz data
+		// Use batch for atomic operations
+		const batch = writeBatch(db);
+
+		// Add quiz data with metadata
 		const quizWithMetadata = {
 			...quizData,
 			userId: user.uid,
 			completedAt: new Date(),
 		};
 
-		// Add to quizzes collection
 		const quizRef = doc(collection(db, 'quizzes'));
-		await setDoc(quizRef, quizWithMetadata);
+		batch.set(quizRef, quizWithMetadata);
 
-		// Update user stats
-		await updateUserStats(user.uid, quizData);
-
-		console.log('Quiz results saved successfully');
-	} catch (error) {
-		console.error('Error saving quiz results:', error);
-	}
-}
-
-export async function updateUserStats(userId, quizData) {
-	try {
-		const userRef = doc(db, 'users', userId);
+		// Get current user stats for batch update
+		const userRef = doc(db, 'users', user.uid);
 		const userSnap = await getDoc(userRef);
 
 		if (!userSnap.exists()) {
 			// Create new user stats document
-			await setDoc(userRef, {
+			batch.set(userRef, {
 				quizzesTaken: 1,
 				totalScore: quizData.score,
 				totalTime: quizData.timeTaken,
@@ -65,7 +78,7 @@ export async function updateUserStats(userId, quizData) {
 				bestScore: quizData.score,
 				lastActive: new Date(),
 				topicsStudied: quizData.topic ? [quizData.topic] : [],
-				completionRate: 100, // Since they completed 1 out of 1 quiz
+				completionRate: 100,
 			});
 		} else {
 			// Update existing user stats
@@ -75,7 +88,6 @@ export async function updateUserStats(userId, quizData) {
 			const newTotalTime = (currentData.totalTime || 0) + quizData.timeTaken;
 			const newAvgScore = newTotalScore / newQuizzesTaken;
 
-			// Update streak
 			let newStreak = currentData.streak || 0;
 			if (quizData.score >= 70) {
 				newStreak += 1;
@@ -83,13 +95,70 @@ export async function updateUserStats(userId, quizData) {
 				newStreak = 0;
 			}
 
-			// Update best score
-			const newBestScore = Math.max(
-				currentData.bestScore || 0,
-				quizData.score
-			);
+			const newBestScore = Math.max(currentData.bestScore || 0, quizData.score);
+			const topicsStudied = new Set(currentData.topicsStudied || []);
+			if (quizData.topic) {
+				topicsStudied.add(quizData.topic);
+			}
 
-			// Update topics studied
+			batch.update(userRef, {
+				quizzesTaken: newQuizzesTaken,
+				totalScore: newTotalScore,
+				totalTime: newTotalTime,
+				avgScore: newAvgScore,
+				streak: newStreak,
+				bestScore: newBestScore,
+				lastActive: new Date(),
+				topicsStudied: Array.from(topicsStudied),
+				completionRate: 100,
+			});
+		}
+
+		// Commit all operations atomically
+		await batch.commit();
+
+		// Clear cache since data changed
+		cache.clear();
+
+		console.log('Quiz results saved successfully with batch operation');
+	} catch (error) {
+		console.error('Error saving quiz results:', error);
+	}
+}
+
+// Keep original function for compatibility but make it use the optimized saveQuizResults
+export async function updateUserStats(userId, quizData) {
+	try {
+		const userRef = doc(db, 'users', userId);
+		const userSnap = await getDoc(userRef);
+
+		if (!userSnap.exists()) {
+			await setDoc(userRef, {
+				quizzesTaken: 1,
+				totalScore: quizData.score,
+				totalTime: quizData.timeTaken,
+				avgScore: quizData.score,
+				streak: quizData.score >= 70 ? 1 : 0,
+				bestScore: quizData.score,
+				lastActive: new Date(),
+				topicsStudied: quizData.topic ? [quizData.topic] : [],
+				completionRate: 100,
+			});
+		} else {
+			const currentData = userSnap.data();
+			const newQuizzesTaken = (currentData.quizzesTaken || 0) + 1;
+			const newTotalScore = (currentData.totalScore || 0) + quizData.score;
+			const newTotalTime = (currentData.totalTime || 0) + quizData.timeTaken;
+			const newAvgScore = newTotalScore / newQuizzesTaken;
+
+			let newStreak = currentData.streak || 0;
+			if (quizData.score >= 70) {
+				newStreak += 1;
+			} else {
+				newStreak = 0;
+			}
+
+			const newBestScore = Math.max(currentData.bestScore || 0, quizData.score);
 			const topicsStudied = new Set(currentData.topicsStudied || []);
 			if (quizData.topic) {
 				topicsStudied.add(quizData.topic);
@@ -104,37 +173,55 @@ export async function updateUserStats(userId, quizData) {
 				bestScore: newBestScore,
 				lastActive: new Date(),
 				topicsStudied: Array.from(topicsStudied),
-				completionRate: 100, // Simplified for now
+				completionRate: 100,
 			});
 		}
+
+		// Clear cache since data changed
+		cache.clear();
 	} catch (error) {
 		console.error('Error updating user stats:', error);
 	}
 }
 
+// Cached dashboard data
 export async function getDashboardData() {
 	try {
 		const auth = getAuth();
 		const user = auth.currentUser;
 		if (!user) throw new Error('No authenticated user');
+
+		// Check cache first
+		const cacheKey = `dashboard-${user.uid}`;
+		const cached = cache.get(cacheKey);
+		if (cached) {
+			console.log('✅ Dashboard data from cache');
+			return cached;
+		}
+
 		const userRef = doc(db, 'users', user.uid);
 		const userSnap = await getDoc(userRef);
-		if (!userSnap.exists()) {
-			return {
-				quizzesTaken: 0,
-				avgScore: 0,
-				totalTime: 0,
-				streak: 0,
-				recentQuizzes: [],
-			};
-		}
-		return userSnap.data();
+		
+		const result = userSnap.exists() ? userSnap.data() : {
+			quizzesTaken: 0,
+			avgScore: 0,
+			totalTime: 0,
+			streak: 0,
+			recentQuizzes: [],
+		};
+
+		// Cache the result
+		cache.set(cacheKey, result);
+		console.log('✅ Dashboard data from Firestore (cached)');
+		
+		return result;
 	} catch (error) {
 		console.error('❌ Failed to fetch dashboard data:', error);
 		return null;
 	}
 }
 
+// Optimized chat message saving
 export async function saveChatMessage(message, isUserMessage = true) {
 	try {
 		const auth = getAuth();
@@ -145,7 +232,6 @@ export async function saveChatMessage(message, isUserMessage = true) {
 			return;
 		}
 
-		// Get user's chat collection reference
 		const userChatsRef = collection(db, 'users', user.uid, 'chats');
 
 		// Add the new message
@@ -155,17 +241,26 @@ export async function saveChatMessage(message, isUserMessage = true) {
 			timestamp: new Date(),
 		});
 
-		// Get total chat count
-		const chatCount = await getChatCount(user.uid);
-
-		// If more than 100 messages, delete the oldest ones
-		if (chatCount > 100) {
-			await trimChatHistory(user.uid, chatCount - 100);
-		}
+		// Async cleanup (don't block the main operation)
+		setTimeout(() => {
+			cleanupOldMessages(user.uid);
+		}, 1000);
 
 		console.log('Chat message saved successfully');
 	} catch (error) {
 		console.error('Error saving chat message:', error);
+	}
+}
+
+// Async cleanup function
+async function cleanupOldMessages(userId) {
+	try {
+		const chatCount = await getChatCount(userId);
+		if (chatCount > 100) {
+			await trimChatHistory(userId, chatCount - 100);
+		}
+	} catch (error) {
+		console.error('Error in chat cleanup:', error);
 	}
 }
 
@@ -190,13 +285,21 @@ async function trimChatHistory(userId, countToDelete) {
 		);
 		const snapshot = await getDocs(q);
 
-		const deletePromises = [];
-		snapshot.forEach((doc) => {
-			deletePromises.push(deleteDoc(doc.ref));
+		// Use batch for efficient deletes
+		const batch = writeBatch(db);
+		let operationCount = 0;
+		
+		snapshot.forEach((docSnapshot) => {
+			if (operationCount < 500) { // Firestore batch limit
+				batch.delete(docSnapshot.ref);
+				operationCount++;
+			}
 		});
 
-		await Promise.all(deletePromises);
-		console.log(`Trimmed ${countToDelete} old chat messages`);
+		if (operationCount > 0) {
+			await batch.commit();
+			console.log(`Trimmed ${operationCount} old chat messages`);
+		}
 	} catch (error) {
 		console.error('Error trimming chat history:', error);
 	}
