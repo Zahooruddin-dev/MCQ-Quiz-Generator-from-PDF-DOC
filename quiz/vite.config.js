@@ -8,24 +8,15 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    chunkSizeWarningLimit: 1000,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          mui: ['@mui/material', '@mui/icons-material', '@mui/system'],
-          firebase: ['firebase/auth', 'firebase/firestore'],
-          router: ['react-router-dom'],
-        },
-      },
+          mui: ['@mui/material', '@mui/icons-material', '@mui/system']
+        }
+      }
     },
+    chunkSizeWarningLimit: 1000,
   },
   resolve: {
     alias: {
@@ -37,6 +28,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom'],
-    exclude: ['firebase', 'pdfjs-dist'],
-  },
+    exclude: ['firebase', 'pdfjs-dist']
+  }
 })
