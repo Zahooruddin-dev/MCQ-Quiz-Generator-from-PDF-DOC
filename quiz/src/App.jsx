@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense, useCallback } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import {
 	BrowserRouter as Router,
 	Routes,
@@ -39,40 +39,21 @@ const OptimizedLoader = styled(Box)(({ theme }) => ({
 	}
 }));
 
-const preloadComponent = (component) => {
-  const preloadTimeout = setTimeout(() => {
-    component.preload?.();
-  }, 2000);
-  return () => clearTimeout(preloadTimeout);
-};
-
-// Priority loading for critical components
-const LandingPage = lazy(() => 
-  import(/* webpackPrefetch: true */ './components/Landing/LandingPage')
-);
-const ModernAuthForm = lazy(() => 
-  import(/* webpackPrefetch: true */ './components/Auth/ModernAuthForm')
-);
-const Dashboard = lazy(() => 
-  import(/* webpackPrefetch: true */ './components/Dashboard/Dashboard')
-);
-
 // Lightweight fallback component
-const LoadingFallback = React.memo(({ text = "Loading..." }) => (
+const LoadingFallback = ({ text = "Loading..." }) => (
 	<OptimizedLoader>
 		<div className="spinner" />
-		<Typography 
-      variant="h6" 
-      sx={{ 
-        fontWeight: 600, 
-        fontSize: { xs: '0.875rem', sm: '1.25rem' },
-        transition: 'none' // Prevent font transition animation
-      }}
-    >
-      {text}
-   	</Typography>
+		<Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+			{text}
+		</Typography>
 	</OptimizedLoader>
-));
+);
+
+// Preload critical components immediately
+const LandingPage = lazy(() => import('./components/Landing/LandingPage'));
+const ModernAuthForm = lazy(() => import('./components/Auth/ModernAuthForm'));
+const ModernHeader = lazy(() => import('./components/Layout/ModernHeader'));
+const Dashboard = lazy(() => import('./components/Dashboard/Dashboard'));
 
 // Lazy load secondary components with preload hints
 const ModernFileUpload = lazy(() => 
@@ -90,13 +71,9 @@ const ModernAPIConfig = lazy(() =>
 const ModernUserProfile = lazy(() => 
 	import(/* webpackChunkName: "user-profile" */ './components/UserInfo/ModernUserProfile')
 );
-const ModernAdminDashboard = lazy(() => {
-  // Only load admin dashboard if user is admin
-  if (ADMIN_EMAIL === localStorage.getItem('userEmail')) {
-    return import(/* webpackChunkName: "admin" */ './components/Admin/ModernAdminDashboard');
-  }
-  return Promise.resolve(() => null);
-});
+const ModernAdminDashboard = lazy(() => 
+	import(/* webpackChunkName: "admin" */ './components/Admin/ModernAdminDashboard')
+);
 
 // Optimized Firebase imports with dynamic loading
 let firebaseCache = null;
@@ -287,37 +264,15 @@ const App = () => {
 		return () => { isMounted = false; };
 	}, [user, apiKey]);
 
-	// Preload components based on route
-	useEffect(() => {
-		if (!user) return;
-
-		// Preload dashboard components when authenticated
-		const cleanup = preloadComponent(Dashboard);
-		return () => cleanup();
-	}, [user]);
-
-	// Optimize loading state check
+	// Loading state with faster spinner
 	if (loading) {
-		return <LoadingFallback text="Loading QuizAI..." />;
+		return (
+			<ThemeProvider theme={theme}>
+				<CssBaseline />
+				<LoadingFallback text="Loading QuizAI..." />
+			</ThemeProvider>
+		);
 	}
-
-	// Optimize firebase loading
-	const loadFirebase = useCallback(async () => {
-    if (firebaseCache) return firebaseCache;
-    
-    const [firestoreModule, configModule] = await Promise.all([
-      import(/* webpackChunkName: "firestore" */ 'firebase/firestore'),
-      import(/* webpackChunkName: "config" */ './firebaseConfig')
-    ]);
-    
-    firebaseCache = {
-      doc: firestoreModule.doc,
-      getDoc: firestoreModule.getDoc,
-      db: configModule.db
-    };
-    
-    return firebaseCache;
-  }, []);
 
 	// Not logged in → only public routes
 	if (!user) {
@@ -344,112 +299,101 @@ const App = () => {
 			<Router>
 				<AppContainer>
 					<Routes>
-						{/* Optimize route rendering */}
-						{user ? (
-							<>
-								<Route path="/" element={<Navigate to="/dashboard" replace />} />
-								<Route
-									path="/dashboard"
-									element={
-										<Suspense fallback={<LoadingFallback text="Loading Dashboard..." />}>
-											<>
-												<HeaderWrapper
-													onProfileClick={() => setShowUserInfo(true)}
-													onApiConfigClick={() => setShowApiConfig(true)}
-													showApiConfig={showApiConfig}
-												/>
-												<DashboardWrapper />
-											</>
-										</Suspense>
-									}
-								/>
+						<Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-								<Route 
-									path="/shared" 
-									element={
-										<Suspense fallback={<LoadingFallback />}>
-											<ShareQuizModal />
-										</Suspense>
-									} 
-								/>
-
-								<Route
-									path="/upload"
-									element={
-										<>
-											<HeaderWrapper
-												onProfileClick={() => setShowUserInfo(true)}
-												onApiConfigClick={() => setShowApiConfig(true)}
-												showApiConfig={showApiConfig}
-											/>
-											<FileUploadWrapper
-												questions={questions}
-												setQuestions={setQuestions}
-												apiKey={apiKey}
-												baseUrl={baseUrl}
-											/>
-										</>
-									}
-								/>
-
-								<Route
-									path="/quiz"
-									element={
-										<>
-											<HeaderWrapper
-												onProfileClick={() => setShowUserInfo(true)}
-												onApiConfigClick={() => setShowApiConfig(true)}
-												showApiConfig={showApiConfig}
-											/>
-											<QuizEngineWrapper
-												questions={questions}
-												setQuizResults={setQuizResults}
-												setShowResults={setShowResults}
-											/>
-										</>
-									}
-								/>
-
-								<Route
-									path="/results"
-									element={
-										<>
-											<HeaderWrapper
-												onProfileClick={() => setShowUserInfo(true)}
-												onApiConfigClick={() => setShowApiConfig(true)}
-												showApiConfig={showApiConfig}
-											/>
-											<ResultPageWrapper
-												questions={questions}
-												quizResults={quizResults}
-												showResults={showResults}
-												resetQuiz={resetQuiz}
-											/>
-										</>
-									}
-								/>
-
-								{/* Only include admin route if user is admin */}
-								{user.email === ADMIN_EMAIL && (
-									<Route
-										path="/admin"
-										element={
-											<Suspense fallback={<LoadingFallback text="Loading Admin..." />}>
-												<ModernAdminDashboard />
-											</Suspense>
-										}
+						<Route
+							path="/dashboard"
+							element={
+								<>
+									<HeaderWrapper
+										onProfileClick={() => setShowUserInfo(true)}
+										onApiConfigClick={() => setShowApiConfig(true)}
+										showApiConfig={showApiConfig}
 									/>
-								)}
+									<DashboardWrapper />
+								</>
+							}
+						/>
 
-								<Route path="*" element={<Navigate to="/dashboard" replace />} />
-							</>
-						) : (
-							<>
-								<Route path="/" element={<LandingPage />} />
-								<Route path="/auth" element={<ModernAuthForm />} />
-								<Route path="*" element={<Navigate to="/" replace />} />
-							</>
-						)}
+						<Route 
+							path="/shared" 
+							element={
+								<Suspense fallback={<LoadingFallback />}>
+									<ShareQuizModal />
+								</Suspense>
+							} 
+						/>
+
+						<Route
+							path="/upload"
+							element={
+								<>
+									<HeaderWrapper
+										onProfileClick={() => setShowUserInfo(true)}
+										onApiConfigClick={() => setShowApiConfig(true)}
+										showApiConfig={showApiConfig}
+									/>
+									<FileUploadWrapper
+										questions={questions}
+										setQuestions={setQuestions}
+										apiKey={apiKey}
+										baseUrl={baseUrl}
+									/>
+								</>
+							}
+						/>
+
+						<Route
+							path="/quiz"
+							element={
+								<>
+									<HeaderWrapper
+										onProfileClick={() => setShowUserInfo(true)}
+										onApiConfigClick={() => setShowApiConfig(true)}
+										showApiConfig={showApiConfig}
+									/>
+									<QuizEngineWrapper
+										questions={questions}
+										setQuizResults={setQuizResults}
+										setShowResults={setShowResults}
+									/>
+								</>
+							}
+						/>
+
+						<Route
+							path="/results"
+							element={
+								<>
+									<HeaderWrapper
+										onProfileClick={() => setShowUserInfo(true)}
+										onApiConfigClick={() => setShowApiConfig(true)}
+										showApiConfig={showApiConfig}
+									/>
+									<ResultPageWrapper
+										questions={questions}
+										quizResults={quizResults}
+										showResults={showResults}
+										resetQuiz={resetQuiz}
+									/>
+								</>
+							}
+						/>
+
+						<Route
+							path="/admin"
+							element={
+								user.email === ADMIN_EMAIL ? (
+									<Suspense fallback={<LoadingFallback text="Loading Admin..." />}>
+										<ModernAdminDashboard />
+									</Suspense>
+								) : (
+									<Navigate to="/dashboard" replace />
+								)
+							}
+						/>
+
+						<Route path="*" element={<Navigate to="/dashboard" replace />} />
 					</Routes>
 
 					{/* Optimized Modals */}
