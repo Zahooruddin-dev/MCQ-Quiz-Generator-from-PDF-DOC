@@ -83,14 +83,7 @@ const ProgressTracking = ({ userId, onBack, timePeriod = 'all_time', showCharts 
 
       <Alerts indexError={indexError} dataSource={dataSource} />
 
-      <Button
-        variant="outlined"
-        onClick={onBack}
-        sx={{ alignSelf: 'flex-start', mb: 3 }}
-      >
-        ← Back to Dashboard
-      </Button>
-
+     
       <Stack spacing={3}>
         <StatsGrid data={progressData} />
         {showCharts && !compact && progressData.weeklyProgress.length > 0 && <ProgressChart data={progressData.weeklyProgress} />}
