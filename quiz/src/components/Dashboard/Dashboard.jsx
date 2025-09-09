@@ -55,32 +55,6 @@ const ComponentLoader = () => (
 		<div className="mini-spinner" />
 	</Box>
 );
-
-// Static data moved outside component to prevent recreations
-const RECENT_QUIZZES_DATA = [
-	{
-		id: 1,
-		title: 'JavaScript Fundamentals',
-		date: '2024-01-15',
-		score: 85,
-		questions: 10,
-	},
-	{
-		id: 2,
-		title: 'React Components',
-		date: '2024-01-14',
-		score: 92,
-		questions: 15,
-	},
-	{
-		id: 3,
-		title: 'Database Design',
-		date: '2024-01-13',
-		score: 78,
-		questions: 12,
-	},
-];
-
 // Memoized user initials function outside component
 const getUserInitials = (name) => {
 	if (!name) return 'U';
