@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useMemo, useCallback, lazy, Suspense, useEffect, useRef } from 'react';
 import {
 	Box,
 	Container,
@@ -25,77 +25,112 @@ import { useNavigate } from 'react-router-dom';
 import { WelcomeCard } from './StyledCards';
 import QuickActions from './QuickActions';
 
-// Lazy load heavy components
-const ProgressTracking = lazy(() => import('../ProgressTracking/ProgressTracking'));
-const AnalyticsDashboard = lazy(() => import('../Analytics/AnalyticsDashboard'));
-const RecentQuizzes = lazy(() => import('../RecentQuizzes/RecentQuizzes'));
+// Preload critical components on idle
+const preloadComponents = () => {
+	if ('requestIdleCallback' in window) {
+		requestIdleCallback(() => {
+			import('../ProgressTracking/ProgressTracking');
+			import('../Analytics/AnalyticsDashboard');
+			import('../RecentQuizzes/RecentQuizzes');
+		});
+	}
+};
 
-// Lightweight loading component
-const ComponentLoader = () => (
-	<Box 
-		sx={{ 
-			display: 'flex', 
-			justifyContent: 'center', 
-			alignItems: 'center', 
-			minHeight: '200px',
-			'& .mini-spinner': {
-				width: '24px',
-				height: '24px',
-				border: '2px solid #e0e0e0',
-				borderTop: '2px solid #1976d2',
-				borderRadius: '50%',
-				animation: 'spin 1s linear infinite'
-			},
-			'@keyframes spin': {
-				'0%': { transform: 'rotate(0deg)' },
-				'100%': { transform: 'rotate(360deg)' }
-			}
-		}}
-	>
-		<div className="mini-spinner" />
-	</Box>
+// Ultra-lightweight lazy loading with resource hints
+const ProgressTracking = lazy(() => 
+	import(/* webpackChunkName: "progress", webpackPrefetch: true */ '../ProgressTracking/ProgressTracking')
+);
+const AnalyticsDashboard = lazy(() => 
+	import(/* webpackChunkName: "analytics", webpackPrefetch: true */ '../Analytics/AnalyticsDashboard')
+);
+const RecentQuizzes = lazy(() => 
+	import(/* webpackChunkName: "recent-quizzes", webpackPrefetch: true */ '../RecentQuizzes/RecentQuizzes')
 );
 
-// Static data moved outside component to prevent recreations
-const RECENT_QUIZZES_DATA = [
-	{
-		id: 1,
-		title: 'JavaScript Fundamentals',
-		date: '2024-01-15',
-		score: 85,
-		questions: 10,
-	},
-	{
-		id: 2,
-		title: 'React Components',
-		date: '2024-01-14',
-		score: 92,
-		questions: 15,
-	},
-	{
-		id: 3,
-		title: 'Database Design',
-		date: '2024-01-13',
-		score: 78,
-		questions: 12,
-	},
-];
+// Optimized loading component with intersection observer
+const ComponentLoader = React.memo(() => {
+	const [isVisible, setIsVisible] = useState(false);
+	const loaderRef = useRef(null);
+	
+	useEffect(() => {
+		const observer = new IntersectionObserver(
+			([entry]) => {
+				setIsVisible(entry.isIntersecting);
+			},
+			{ threshold: 0.1 }
+		);
+		
+		if (loaderRef.current) {
+			observer.observe(loaderRef.current);
+		}
+		
+		return () => observer.disconnect();
+	}, []);
+	
+	return (
+		<Box 
+			ref={loaderRef}
+			sx={{ 
+				display: 'flex', 
+				justifyContent: 'center', 
+				alignItems: 'center', 
+				minHeight: '200px',
+				opacity: isVisible ? 1 : 0.7,
+				transition: 'opacity 0.3s ease',
+				'& .mini-spinner': {
+					width: '24px',
+					height: '24px',
+					border: '2px solid #e0e0e0',
+					borderTop: '2px solid #1976d2',
+					borderRadius: '50%',
+					animation: isVisible ? 'spin 1s linear infinite' : 'none'
+				},
+				'@keyframes spin': {
+					'0%': { transform: 'rotate(0deg)' },
+					'100%': { transform: 'rotate(360deg)' }
+				}
+			}}
+		>
+			<div className="mini-spinner" />
+		</Box>
+	);
+});
 
-// Memoized user initials function outside component
+ComponentLoader.displayName = 'ComponentLoader';
+
+// Memoized user initials with caching
+const userInitialsCache = new Map();
 const getUserInitials = (name) => {
 	if (!name) return 'U';
-	return name
+	if (userInitialsCache.has(name)) {
+		return userInitialsCache.get(name);
+	}
+	
+	const initials = name
 		.split(' ')
 		.map((word) => word[0])
 		.join('')
 		.toUpperCase()
 		.slice(0, 2);
+		
+	userInitialsCache.set(name, initials);
+	return initials;
 };
 
-// Optimized WelcomeSection with better memoization
+// Ultra-optimized WelcomeSection with deep memoization
 const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) => {
-	const userInitials = useMemo(() => getUserInitials(user?.displayName), [user?.displayName]);
-	const firstName = useMemo(() => user?.displayName?.split(' ')[0] || 'User', [user?.displayName]);
+	const userDisplayName = user?.displayName;
+	
+	const userInitials = useMemo(() => getUserInitials(userDisplayName), [userDisplayName]);
+	const firstName = useMemo(() => {
+		if (!userDisplayName) return 'User';
+		return userDisplayName.split(' ')[0];
+	}, [userDisplayName]);
+	
+	const premiumChip = useMemo(() => ({
+		icon: isPremium ? <Award size={16} /> : <Users size={16} />,
+		label: isPremium ? 'Premium Member' : `${credits} Credits Available`,
+	}), [isPremium, credits]);
 	
 	return (
 		<WelcomeCard>
@@ -120,6 +155,7 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
 								<Box>
 									<Typography 
 										variant="h4" 
+										component="h1"
 										sx={{ 
 											fontWeight: 700, 
 											mb: 0.5,
@@ -130,6 +166,7 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
 									</Typography>
 									<Typography 
 										variant="body1" 
+										component="p"
 										sx={{ 
 											opacity: 0.9,
 											fontSize: { xs: '0.875rem', sm: '1rem' }
@@ -146,12 +183,8 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
 								sx={{ mt: 2 }}
 							>
 								<Chip
-									icon={isPremium ? <Award size={16} /> : <Users size={16} />}
-									label={
-										isPremium
-											? 'Premium Member'
-											: `${credits} Credits Available`
-									}
+									icon={premiumChip.icon}
+									label={premiumChip.label}
 									sx={{
 										background: 'rgba(255, 255, 255, 0.2)',
 										color: 'white',
@@ -182,7 +215,7 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
 							<Button
 								variant="contained"
 								size="large"
-								endIcon={<ArrowRight />}
+								endIcon={<ArrowRight size={20} />}
 								onClick={onCreateQuiz}
 								sx={{
 									background: 'rgba(255, 255, 255, 0.2)',
@@ -191,9 +224,13 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
 									color: 'white',
 									fontWeight: 600,
 									width: { xs: '100%', md: 'auto' },
+									minHeight: 44,
 									'&:hover': {
 										background: 'rgba(255, 255, 255, 0.3)',
 										transform: 'translateY(-2px)',
+									},
+									'&:active': {
+										transform: 'translateY(0px)',
 									},
 								}}
 							>
@@ -202,6 +239,7 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
 
 							<Typography
 								variant="body2"
+								component="span"
 								sx={{
 									opacity: 0.8,
 									textAlign: { xs: 'left', md: 'right' },
@@ -216,166 +254,267 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
 			</CardContent>
 		</WelcomeCard>
 	);
+}, (prevProps, nextProps) => {
+	// Custom comparison for better memoization
+	return (
+		prevProps.user?.uid === nextProps.user?.uid &&
+		prevProps.user?.displayName === nextProps.user?.displayName &&
+		prevProps.credits === nextProps.credits &&
+		prevProps.isPremium === nextProps.isPremium &&
+		prevProps.onCreateQuiz === nextProps.onCreateQuiz
+	);
 });
 
 WelcomeSection.displayName = 'WelcomeSection';
 
-// Optimized view components with error boundaries
-const AnalyticsView = React.memo(({ userId, onBack }) => (
-	<Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
-		<Stack spacing={3}>
-			<Button
-				variant="outlined"
-				onClick={onBack}
-				sx={{ alignSelf: 'flex-start' }}
-			>
-				← Back to Dashboard
-			</Button>
-			<Suspense fallback={<ComponentLoader />}>
-				<AnalyticsDashboard userId={userId} />
-			</Suspense>
-		</Stack>
-	</Container>
-));
+// Optimized view components with cleanup
+const AnalyticsView = React.memo(({ userId, onBack }) => {
+	const mountedRef = useRef(true);
+	
+	useEffect(() => {
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
+	
+	return (
+		<Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
+			<Stack spacing={3}>
+				<Button
+					variant="outlined"
+					onClick={onBack}
+					sx={{ 
+						alignSelf: 'flex-start',
+						minHeight: 36,
+						fontSize: '0.875rem'
+					}}
+				>
+					← Back to Dashboard
+				</Button>
+				<Suspense fallback={<ComponentLoader />}>
+					<AnalyticsDashboard userId={userId} />
+				</Suspense>
+			</Stack>
+		</Container>
+	);
+});
 
 AnalyticsView.displayName = 'AnalyticsView';
 
-const ProgressView = React.memo(({ userId, onBack }) => (
-	<Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
-		<Stack spacing={3}>
-			<Button
-				variant="outlined"
-				onClick={onBack}
-				sx={{ alignSelf: 'flex-start' }}
-			>
-				← Back to Dashboard
-			</Button>
-			<Suspense fallback={<ComponentLoader />}>
-				<ProgressTracking
-					userId={userId}
-					onBack={onBack}
-					timePeriod="all_time"
-					showCharts
-					key={`progress-${userId}`}
-				/>
-			</Suspense>
-		</Stack>
-	</Container>
-));
+const ProgressView = React.memo(({ userId, onBack }) => {
+	const mountedRef = useRef(true);
+	
+	useEffect(() => {
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
+	
+	return (
+		<Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
+			<Stack spacing={3}>
+				<Button
+					variant="outlined"
+					onClick={onBack}
+					sx={{ 
+						alignSelf: 'flex-start',
+						minHeight: 36,
+						fontSize: '0.875rem'
+					}}
+				>
+					← Back to Dashboard
+				</Button>
+				<Suspense fallback={<ComponentLoader />}>
+					<ProgressTracking
+						userId={userId}
+						onBack={onBack}
+						timePeriod="all_time"
+						showCharts
+						key={`progress-${userId}`}
+					/>
+				</Suspense>
+			</Stack>
+		</Container>
+	);
+});
 
 ProgressView.displayName = 'ProgressView';
 
-const RecentQuizzesView = React.memo(({ onBack, onViewResults }) => (
-	<Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
-		<Stack spacing={3}>
-			<Button
-				variant="outlined"
-				onClick={onBack}
-				sx={{ alignSelf: 'flex-start' }}
-			>
-				← Back to Dashboard
-			</Button>
-			<Suspense fallback={<ComponentLoader />}>
-				<RecentQuizzes
-					limit={10}
-					showFilters={true}
-					onQuizClick={onViewResults}
-				/>
-			</Suspense>
-		</Stack>
-	</Container>
-));
+const RecentQuizzesView = React.memo(({ onBack, onViewResults }) => {
+	const mountedRef = useRef(true);
+	
+	useEffect(() => {
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
+	
+	return (
+		<Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
+			<Stack spacing={3}>
+				<Button
+					variant="outlined"
+					onClick={onBack}
+					sx={{ 
+						alignSelf: 'flex-start',
+						minHeight: 36,
+						fontSize: '0.875rem'
+					}}
+				>
+					← Back to Dashboard
+				</Button>
+				<Suspense fallback={<ComponentLoader />}>
+					<RecentQuizzes
+						limit={10}
+						showFilters={true}
+						onQuizClick={onViewResults}
+					/>
+				</Suspense>
+			</Stack>
+		</Container>
+	);
+});
 
 RecentQuizzesView.displayName = 'RecentQuizzesView';
 
-// Main Dashboard Component
+// Quick action icons cache to prevent recreation
+const iconCache = {
+	upload: <Upload size={32} />,
+	brain: <Brain size={32} />,
+	analytics: <BarChart3 size={32} />,
+	progress: <Zap size={32} />,
+	history: <History size={32} />
+};
+
+// Main Dashboard Component with comprehensive optimization
 const Dashboard = ({ onCreateQuiz, onViewResults }) => {
 	const { user, credits, isPremium } = useAuth();
 	const navigate = useNavigate();
-	const [activeView, setActiveView] = useState('dashboard'); // Single state for views
+	const [activeView, setActiveView] = useState('dashboard');
+	const mountedRef = useRef(true);
+	const preloadTriggered = useRef(false);
 
-	// Memoize navigation handlers
-	const handleUploadNavigation = useCallback(() => navigate('/upload'), [navigate]);
+	// Cleanup on unmount
+	useEffect(() => {
+		return () => {
+			mountedRef.current = false;
+			// Clear any caches if needed
+			if (userInitialsCache.size > 50) {
+				userInitialsCache.clear();
+			}
+		};
+	}, []);
+
+	// Preload components on first render
+	useEffect(() => {
+		if (!preloadTriggered.current) {
+			preloadTriggered.current = true;
+			preloadComponents();
+		}
+	}, []);
+
+	// Stable navigation handlers with cleanup check
+	const handleUploadNavigation = useCallback(() => {
+		if (mountedRef.current) {
+			navigate('/upload');
+		}
+	}, [navigate]);
 	
-	// Memoize view handlers
-	const showAnalytics = useCallback(() => setActiveView('analytics'), []);
-	const showProgress = useCallback(() => setActiveView('progress'), []);
-	const showRecentQuizzes = useCallback(() => setActiveView('recent'), []);
-	const showDashboard = useCallback(() => setActiveView('dashboard'), []);
+	// View handlers with stable references
+	const viewHandlers = useMemo(() => ({
+		showAnalytics: () => mountedRef.current && setActiveView('analytics'),
+		showProgress: () => mountedRef.current && setActiveView('progress'),
+		showRecentQuizzes: () => mountedRef.current && setActiveView('recent'),
+		showDashboard: () => mountedRef.current && setActiveView('dashboard'),
+	}), []);
 
-	// Memoize the quick actions with stable references
+	// Memoized quick actions with cached icons and stable handlers
 	const quickActions = useMemo(() => [
 		{
 			title: 'Upload Document',
 			description: 'Upload PDF, DOCX, or paste text to generate quiz',
-			icon: <Upload size={32} />,
+			icon: iconCache.upload,
 			color: 'primary',
 			action: handleUploadNavigation,
 		},
 		{
 			title: 'AI Quiz Generator',
 			description: 'Let AI create questions from your content',
-			icon: <Brain size={32} />,
+			icon: iconCache.brain,
 			color: 'secondary',
 			action: handleUploadNavigation,
 		},
 		{
 			title: 'View Analytics',
-			description: 'Check your performance, and insights',
-			icon: <BarChart3 size={32} />,
+			description: 'Check your performance and insights',
+			icon: iconCache.analytics,
 			color: 'success',
-			action: showAnalytics,
+			action: viewHandlers.showAnalytics,
 		},
 		{
 			title: 'Your Progress',
 			description: 'See your progress, average score, streak and time spent',
-			icon: <Zap size={32} />,
+			icon: iconCache.progress,
 			color: 'warning',
-			action: showProgress,
+			action: viewHandlers.showProgress,
 		},
 		{
 			title: 'Recent Quizzes',
 			description: 'View and retake your recent quiz attempts',
-			icon: <History size={32} />,
+			icon: iconCache.history,
 			color: 'info',
-			action: showRecentQuizzes,
+			action: viewHandlers.showRecentQuizzes,
 		},
-	], [handleUploadNavigation, showAnalytics, showProgress, showRecentQuizzes]);
+	], [handleUploadNavigation, viewHandlers]);
 
-	// Memoize user ID for child components
-	const userId = useMemo(() => user?.uid, [user?.uid]);
+	// Memoized user data to prevent unnecessary re-renders
+	const userData = useMemo(() => ({
+		user,
+		userId: user?.uid,
+		credits,
+		isPremium
+	}), [user, user?.uid, credits, isPremium]);
 
-	// Render different views based on state
-	switch (activeView) {
-		case 'analytics':
-			return <AnalyticsView userId={userId} onBack={showDashboard} />;
+	// Render views with proper cleanup
+	const renderView = useCallback(() => {
+		if (!mountedRef.current) return null;
 		
-		case 'progress':
-			return <ProgressView userId={userId} onBack={showDashboard} />;
-		
-		case 'recent':
-			return <RecentQuizzesView onBack={showDashboard} onViewResults={onViewResults} />;
-		
-		default:
-			return (
-				<Box sx={{ py: { xs: 2, sm: 4 } }}>
-					<Container maxWidth="lg">
-						<Stack spacing={{ xs: 3, sm: 4 }}>
-							{/* Welcome Section - Memoized */}
-							<WelcomeSection
-								user={user}
-								credits={credits}
-								isPremium={isPremium}
-								onCreateQuiz={onCreateQuiz}
-							/>
+		switch (activeView) {
+			case 'analytics':
+				return <AnalyticsView userId={userData.userId} onBack={viewHandlers.showDashboard} />;
+			
+			case 'progress':
+				return <ProgressView userId={userData.userId} onBack={viewHandlers.showDashboard} />;
+			
+			case 'recent':
+				return <RecentQuizzesView onBack={viewHandlers.showDashboard} onViewResults={onViewResults} />;
+			
+			default:
+				return (
+					<Box sx={{ py: { xs: 2, sm: 4 } }}>
+						<Container maxWidth="lg">
+							<Stack spacing={{ xs: 3, sm: 4 }}>
+								<WelcomeSection
+									user={userData.user}
+									credits={userData.credits}
+									isPremium={userData.isPremium}
+									onCreateQuiz={onCreateQuiz}
+								/>
+								<QuickActions quickActions={quickActions} />
+							</Stack>
+						</Container>
+					</Box>
+				);
+		}
+	}, [activeView, userData, viewHandlers, onCreateQuiz, onViewResults, quickActions]);
 
-							{/* Quick Actions - Memoized */}
-							<QuickActions quickActions={quickActions} />
-						</Stack>
-					</Container>
-				</Box>
-			);
-	}
+	return renderView();
 };
 
-export default React.memo(Dashboard);
+export default React.memo(Dashboard, (prevProps, nextProps) => {
+	// Custom comparison for Dashboard props
+	return (
+		prevProps.onCreateQuiz === nextProps.onCreateQuiz &&
+		prevProps.onViewResults === nextProps.onViewResults
+	);
+});
