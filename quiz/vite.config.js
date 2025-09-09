@@ -16,13 +16,8 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     chunkSizeWarningLimit: 1000,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
+    // Use Vite's default esbuild minifier (no terser needed)
+    minify: true,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -36,6 +31,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom'],
-    // exclude removed for Firebase compatibility
+    // Firebase excluded is optional; remove exclude if causing issues
   },
 })
