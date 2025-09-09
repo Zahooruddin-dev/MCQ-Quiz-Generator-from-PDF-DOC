@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -16,26 +15,20 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     chunkSizeWarningLimit: 1000,
-    // Use Vite's default esbuild minifier (no terser needed)
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
-      }
-    },
+    minify: 'esbuild', // ✅ use esbuild (default)
+    // esbuild options for dropping console/debugger
+    terserOptions: undefined, // remove this
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
           mui: ['@mui/material'],
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-        }
-      }
+        },
+      },
     },
   },
   optimizeDeps: {
     include: ['react', 'react-dom'],
-    // Firebase excluded is optional; remove exclude if causing issues
   },
 })
