@@ -304,3 +304,45 @@ async function trimChatHistory(userId, countToDelete) {
 		console.error('Error trimming chat history:', error);
 	}
 }
+
+let cachedApiKey = null;
+
+export async function getGlobalApiKey() {
+  if (cachedApiKey) return cachedApiKey;
+
+  try {
+    const settingsRef = doc(db, 'settings', 'apiKey');
+    const settingsSnap = await getDoc(settingsRef);
+    
+    if (settingsSnap.exists()) {
+      // Get the key from the 'value' field
+      cachedApiKey = settingsSnap.data().value;
+      return cachedApiKey;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching global API key:', error);
+    return null;
+  }
+}
+
+export async function debugCheckApiKey() {
+  try {
+    const settingsRef = doc(db, 'settings', 'apiKey');
+    const settingsSnap = await getDoc(settingsRef);
+    
+    if (settingsSnap.exists()) {
+      const data = settingsSnap.data();
+      console.log('API Key found:', {
+        exists: true,
+        hasKey: !!data.value,
+        keyPrefix: data.value?.substring(0, 4)
+      });
+      return data.value;  // Use 'value' field
+    }
+    return null;
+  } catch (error) {
+    console.error('Error checking API key:', error);
+    return null;
+  }
+}

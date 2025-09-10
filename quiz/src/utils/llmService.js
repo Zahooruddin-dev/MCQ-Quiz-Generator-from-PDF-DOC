@@ -7,20 +7,34 @@ import {
 	saveQuizResults,
 	getDashboardData,
 	saveChatMessage,
+	debugCheckApiKey,
 } from './firebaseService.js';
 import { withRetry } from './retryUtils.js';
 import { shuffleArray, validateQuestions } from './quizValidator.js';
 
 export class LLMService {
+	static instance = null;
 	// Cache for API responses
 	static responseCache = new Map();
 
 	constructor(apiKey, baseUrl) {
 		if (!apiKey) throw new Error('API key is required');
 		this.apiKey = apiKey;
-		this.baseUrl = baseUrl;
+		this.baseUrl =
+			baseUrl ||
+			'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
 		this.language = 'en';
 		this.controller = null;
+	}
+
+	static async getInstance() {
+		if (!this.instance) {
+			const apiKey = await debugCheckApiKey();
+			if (!apiKey) throw new Error('Failed to get API key');
+
+			this.instance = new LLMService(apiKey);
+		}
+		return this.instance;
 	}
 
 	// Firebase methods
@@ -58,7 +72,6 @@ export class LLMService {
 	async generateQuizQuestions(fileOrText, options = {}) {
 		const { numQuestions = 10, difficulty = 'medium' } = options;
 
-		// Cancel any pending requests
 		if (this.controller) {
 			this.controller.abort();
 		}
