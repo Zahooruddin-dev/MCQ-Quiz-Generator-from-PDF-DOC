@@ -3,7 +3,11 @@ import { REQUEST_TIMEOUT_MS } from './constants.js';
 import { detectLanguage, getLanguagePrompt } from './languageUtils.js';
 import { trimForPrompt, extractJson } from './textUtils.js';
 import { readFileContent } from './fileReader.js';
-import { saveQuizResults, getDashboardData, saveChatMessage } from './firebaseService.js';
+import {
+	saveQuizResults,
+	getDashboardData,
+	saveChatMessage,
+} from './firebaseService.js';
 import { withRetry } from './retryUtils.js';
 import { shuffleArray, validateQuestions } from './quizValidator.js';
 
@@ -91,7 +95,10 @@ export class LLMService {
 					this.controller.signal
 				);
 
-				const processedQuestions = this._processQuestions(questions, numQuestions);
+				const processedQuestions = this._processQuestions(
+					questions,
+					numQuestions
+				);
 
 				// Cache the result
 				LLMService.responseCache.set(cacheKey, processedQuestions);
@@ -125,7 +132,10 @@ ${text}`;
 	}
 
 	async _makeApiRequest(prompt, signal) {
-		const timeout = setTimeout(() => this.controller?.abort(), REQUEST_TIMEOUT_MS);
+		const timeout = setTimeout(
+			() => this.controller?.abort(),
+			REQUEST_TIMEOUT_MS
+		);
 
 		try {
 			const response = await fetch(this.baseUrl, {
@@ -212,13 +222,15 @@ ${text}`;
 	}
 
 	_cleanContext(context) {
-		return (context || '')
-			.toString()
-			.trim()
-			.replace(
-				/(according to|in|from) (the|this) (passage|text|document|article)/gi,
-				''
-			)
-			.trim() || 'Context not available';
+		return (
+			(context || '')
+				.toString()
+				.trim()
+				.replace(
+					/(according to|in|from) (the|this) (passage|text|document|article)/gi,
+					''
+				)
+				.trim() || 'Context not available'
+		);
 	}
 }
