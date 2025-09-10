@@ -1,4 +1,4 @@
-// firebaseService.js - Safe optimized version
+// firebaseService.js - Enhanced version with better API key management
 import {
 	doc,
 	setDoc,
@@ -305,44 +305,126 @@ async function trimChatHistory(userId, countToDelete) {
 	}
 }
 
+// Enhanced API Key Management
 let cachedApiKey = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export async function getGlobalApiKey() {
-  if (cachedApiKey) return cachedApiKey;
+	const now = Date.now();
+	
+	// Return cached key if still valid
+	if (cachedApiKey && (now - lastFetchTime < CACHE_DURATION)) {
+		return cachedApiKey;
+	}
 
-  try {
-    const settingsRef = doc(db, 'settings', 'apiKey');
-    const settingsSnap = await getDoc(settingsRef);
-    
-    if (settingsSnap.exists()) {
-      // Get the key from the 'value' field
-      cachedApiKey = settingsSnap.data().value;
-      return cachedApiKey;
-    }
-    return null;
-  } catch (error) {
-    console.error('Error fetching global API key:', error);
-    return null;
-  }
+	try {
+		const settingsRef = doc(db, 'settings', 'apiKey');
+		const settingsSnap = await getDoc(settingsRef);
+		
+		if (settingsSnap.exists()) {
+			const data = settingsSnap.data();
+			cachedApiKey = data.value;
+			lastFetchTime = now;
+			
+			if (!cachedApiKey) {
+				console.error('API key exists in Firestore but is empty');
+				return null;
+			}
+			
+			console.log('✅ Global API key fetched successfully');
+			return cachedApiKey;
+		} else {
+			console.error('❌ No API key document found in Firestore at settings/apiKey');
+			return null;
+		}
+	} catch (error) {
+		console.error('❌ Error fetching global API key:', error);
+		return null;
+	}
 }
 
+// Force refresh the API key (useful when key is updated)
+export async function refreshGlobalApiKey() {
+	cachedApiKey = null;
+	lastFetchTime = 0;
+	return await getGlobalApiKey();
+}
+
+// Admin function to set/update the global API key
+export async function setGlobalApiKey(newApiKey) {
+	try {
+		const auth = getAuth();
+		const user = auth.currentUser;
+		
+		if (!user) {
+			throw new Error('User must be authenticated to set API key');
+		}
+
+		// You might want to add admin role checking here
+		// const userDoc = await getDoc(doc(db, 'users', user.uid));
+		// if (!userDoc.data()?.isAdmin) {
+		//   throw new Error('Only admin users can set the global API key');
+		// }
+
+		const settingsRef = doc(db, 'settings', 'apiKey');
+		await setDoc(settingsRef, {
+			value: newApiKey,
+			updatedBy: user.uid,
+			updatedAt: new Date(),
+		});
+
+		// Clear cache to force refresh on next request
+		cachedApiKey = null;
+		lastFetchTime = 0;
+
+		console.log('✅ Global API key updated successfully');
+		return true;
+	} catch (error) {
+		console.error('❌ Error setting global API key:', error);
+		throw error;
+	}
+}
+
+// Check API key status (for admin/debugging)
+export async function checkApiKeyStatus() {
+	try {
+		const settingsRef = doc(db, 'settings', 'apiKey');
+		const settingsSnap = await getDoc(settingsRef);
+		
+		if (settingsSnap.exists()) {
+			const data = settingsSnap.data();
+			return {
+				exists: true,
+				hasKey: !!data.value,
+				keyPrefix: data.value?.substring(0, 8) + '...',
+				updatedBy: data.updatedBy,
+				updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+				isValid: data.value?.length > 10, // Basic validation
+			};
+		}
+		
+		return {
+			exists: false,
+			hasKey: false,
+			keyPrefix: null,
+			updatedBy: null,
+			updatedAt: null,
+			isValid: false,
+		};
+	} catch (error) {
+		console.error('Error checking API key status:', error);
+		return {
+			exists: false,
+			hasKey: false,
+			error: error.message,
+		};
+	}
+}
+
+// Legacy function for backward compatibility
 export async function debugCheckApiKey() {
-  try {
-    const settingsRef = doc(db, 'settings', 'apiKey');
-    const settingsSnap = await getDoc(settingsRef);
-    
-    if (settingsSnap.exists()) {
-      const data = settingsSnap.data();
-      console.log('API Key found:', {
-        exists: true,
-        hasKey: !!data.value,
-        keyPrefix: data.value?.substring(0, 4)
-      });
-      return data.value;  // Use 'value' field
-    }
-    return null;
-  } catch (error) {
-    console.error('Error checking API key:', error);
-    return null;
-  }
+	const status = await checkApiKeyStatus();
+	console.log('API Key Status:', status);
+	return status.hasKey ? await getGlobalApiKey() : null;
 }
