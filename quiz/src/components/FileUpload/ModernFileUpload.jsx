@@ -1,12 +1,13 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Stack } from '@mui/material';
-
 import { LLMService } from '../../utils/llmService';
 import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from './utils';
 import Header from './components/Header';
 import Features from './components/Features';
 import { UploadContainer, MainCard } from './ModernFileUpload.styles';
 import UploadMainCard from './components/UploadMainCard';
+import { useFileSelector } from './hooks/useFileSelector';
+import { useFileProcessor } from './hooks/useFileProcessor';
 const ModernFileUpload = ({
 	onFileUpload,
 	hasAI,
@@ -137,52 +138,16 @@ const ModernFileUpload = ({
 		]
 	);
 
-	const handleFileSelect = useCallback(
-		async (file) => {
-			if (busyRef.current) return;
-			setError(null);
-
-			try {
-				if (!file) return;
-
-				setFileName(file.name || 'uploaded-file');
-				setFileSize(file.size || null);
-				setFileType(file.type || '');
-				setSelectedFile(file);
-
-				if (file.size && file.size > MAX_FILE_SIZE) {
-					setError(
-						`File is too large (${formatBytes(
-							file.size
-						)}). Maximum allowed size is ${formatBytes(MAX_FILE_SIZE)}.`
-					);
-					clearSelectedFile();
-					return;
-				}
-
-				const mime = (file.type || '').toLowerCase();
-				const isSupported =
-					SUPPORTED.some((s) => mime.includes(s)) ||
-					/\.(pdf|docx?|txt|html)$/i.test(file.name || '');
-
-				if (!isSupported) {
-					setError(
-						'Unsupported file type. Please upload PDF, DOCX, TXT, or HTML files.'
-					);
-					clearSelectedFile();
-					return;
-				}
-
-				if (!useAI) {
-					await processFile(file);
-				}
-			} catch (err) {
-				console.error('Error selecting file:', err);
-				setError(err?.message || 'Failed to select file. Please try again.');
-			}
-		},
-		[useAI, processFile, clearSelectedFile]
-	);
+	const { handleFileSelect } = useFileSelector({
+  setError,
+  setFileName,
+  setFileSize,
+  setFileType,
+  setSelectedFile,
+  clearSelectedFile,
+  processFile,
+  useAI,
+});
 
 	const handleGenerateQuiz = useCallback(async () => {
 		if (!selectedFile) {

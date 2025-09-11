@@ -10,8 +10,9 @@ import {
   LinearProgress,
   IconButton,
   Fade,
+  Collapse,
 } from '@mui/material';
-import { Brain, Sparkles, X } from 'lucide-react';
+import { Brain, Sparkles, X, Type } from 'lucide-react';
 import { LLMService } from '../../../utils/llmService';
 import { LoadingOverlay, pulse } from '../ModernFileUpload.styles';
 
@@ -20,6 +21,7 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated }) => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showTextMode, setShowTextMode] = useState(false);
 
   const simulateProgress = () => {
     const interval = setInterval(() => {
@@ -65,6 +67,7 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated }) => {
         onQuizGenerated(questions, aiOptions);
         setIsLoading(false);
         setText('');
+        setShowTextMode(false); // auto-close after success
       }, 500);
     } catch (err) {
       clearInterval(progressInterval);
@@ -76,6 +79,7 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated }) => {
 
   return (
     <Box sx={{ position: 'relative' }}>
+      {/* Error message */}
       {error && (
         <Fade in={!!error}>
           <Alert
@@ -92,6 +96,7 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated }) => {
         </Fade>
       )}
 
+      {/* Loading overlay */}
       {isLoading && (
         <LoadingOverlay>
           <Box
@@ -142,27 +147,46 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated }) => {
         </LoadingOverlay>
       )}
 
-      <Stack spacing={2}>
-        <TextField
-          label="Paste your study text here"
-          multiline
-          minRows={6}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          variant="outlined"
-          fullWidth
-          disabled={isLoading}
-        />
+      {/* Toggle button */}
+      <Stack alignItems="center" sx={{ my: 2 }}>
         <Button
-          variant="contained"
-          startIcon={<Brain />}
-          onClick={handleGenerateQuiz}
-          disabled={isLoading}
+          variant="outlined"
+          startIcon={<Type />}
+          onClick={() => {
+            setShowTextMode((prev) => !prev);
+            setError(null);
+          }}
           sx={{ borderRadius: 2 }}
+          disabled={isLoading}
         >
-          Generate Quiz from Text
+          {showTextMode ? 'Cancel Text Mode' : 'Paste Text Instead'}
         </Button>
       </Stack>
+
+      {/* Collapsible text input */}
+      <Collapse in={showTextMode} mountOnEnter unmountOnExit>
+        <Stack spacing={2}>
+          <TextField
+            label="Paste your study text here"
+            multiline
+            minRows={6}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            variant="outlined"
+            fullWidth
+            disabled={isLoading}
+          />
+          <Button
+            variant="contained"
+            startIcon={<Brain />}
+            onClick={handleGenerateQuiz}
+            disabled={isLoading}
+            sx={{ borderRadius: 2 }}
+          >
+            Generate Quiz from Text
+          </Button>
+        </Stack>
+      </Collapse>
     </Box>
   );
 };
