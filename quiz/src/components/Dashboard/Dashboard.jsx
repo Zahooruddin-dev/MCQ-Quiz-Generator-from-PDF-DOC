@@ -114,6 +114,7 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
                   fontSize: { xs: '1rem', sm: '1.125rem' },
                   fontWeight: 400,
                   lineHeight: 1.5,
+                  color:'#d5d5d5'
                 }}
               >
                 Ready to create some amazing quizzes today?
@@ -208,6 +209,7 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
                   textAlign: { xs: 'center', md: 'right' },
                   fontSize: '0.875rem',
                   fontWeight: 400,
+                  color:'#d5d5d5',
                   mt: 1.5,
                 }}
               >

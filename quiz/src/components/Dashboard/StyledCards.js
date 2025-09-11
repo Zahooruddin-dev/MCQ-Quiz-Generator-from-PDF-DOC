@@ -20,7 +20,6 @@ export const WelcomeCard = styled(Card)(({ theme }) => ({
     background: "radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 60%)",
     pointerEvents: "none",
   },
-  
   "&::after": {
     content: '""',
     position: "absolute",
