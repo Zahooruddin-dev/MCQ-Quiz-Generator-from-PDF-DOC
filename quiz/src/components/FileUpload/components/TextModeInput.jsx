@@ -1,3 +1,4 @@
+// TextModeInput.jsx
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Box,
@@ -12,7 +13,7 @@ import {
 } from '@mui/material';
 import { Brain, Sparkles, X, Type } from 'lucide-react';
 import { LLMService } from '../../../utils/llmService';
-import { LoadingOverlay, pulse } from '../ModernFileUpload.styles';
+import { pulse } from '../ModernFileUpload.styles';
 
 const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated, children }) => {
   const [text, setText] = useState('');
@@ -80,7 +81,6 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated, children }
     }
   }, [text, apiKey, baseUrl, aiOptions, onQuizGenerated]);
 
-  // Unified container for drop zone or text mode
   const ActiveInput = showTextMode ? (
     <Stack spacing={2} ref={textAreaRef}>
       <TextField
@@ -142,32 +142,62 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated, children }
         </Button>
       </Stack>
 
-      {/* Active input with integrated loading overlay */}
-      <Box sx={{ position: 'relative' }}>
-        {ActiveInput}
+      {/* Input container */}
+      <Box
+        sx={{
+          position: 'relative',
+          borderRadius: 2,
+        }}
+      >
+        {/* Dim background when loading */}
+        <Box
+          sx={{
+            filter: isLoading ? 'blur(2px) brightness(0.7)' : 'none',
+            pointerEvents: isLoading ? 'none' : 'auto',
+            transition: 'filter 0.3s ease',
+          }}
+        >
+          {ActiveInput}
+        </Box>
 
+        {/* Loading overlay */}
         {isLoading && (
-          <LoadingOverlay>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              zIndex: 20,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'auto',
+              px: 2,
+            }}
+          >
             <Box
               sx={{
-                width: 60,
-                height: 60,
+                width: 80,
+                height: 80,
                 borderRadius: '50%',
                 background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'white',
-                mb: 2,
+                mb: 3,
                 animation: `${pulse} 1.5s infinite`,
               }}
             >
-              <Sparkles size={24} />
+              <Sparkles size={28} />
             </Box>
             <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
               Processing Your Content
             </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3, textAlign: 'center' }}>
               AI is analyzing and generating questions...
             </Typography>
             <Box sx={{ width: '100%', maxWidth: 300 }}>
@@ -182,11 +212,14 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated, children }
                   },
                 }}
               />
-              <Typography variant="caption" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+              <Typography
+                variant="caption"
+                sx={{ mt: 1, display: 'block', textAlign: 'center' }}
+              >
                 {Math.round(uploadProgress)}%
               </Typography>
             </Box>
-          </LoadingOverlay>
+          </Box>
         )}
       </Box>
     </Box>
