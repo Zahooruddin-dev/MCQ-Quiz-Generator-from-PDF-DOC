@@ -10,83 +10,299 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
+  Fade,
+  Grow,
 } from "@mui/material";
-import { Fade } from "@mui/material";
 import { QuestionCard, OptionCard } from "./QuizStyles";
+import { BookOpen, HelpCircle } from "lucide-react";
 
 const QuizContent = ({
   currentQ,
   currentQuestion,
   userAnswers,
   handleAnswerSelect,
+  isTransitioning = false,
 }) => (
-  <CardContent sx={{ p: 4 }}>
+  <CardContent sx={{ p: { xs: 3, sm: 4, md: 5 } }}>
+    {/* Context Section */}
     {currentQ?.context && (
-      <Fade in={true}>
+      <Fade in={!isTransitioning} timeout={400}>
         <Paper
+          elevation={0}
           sx={{
-            p: 3,
-            mb: 3,
-            background: "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)",
-            border: "1px solid",
-            borderColor: "grey.200",
+            p: { xs: 2.5, sm: 3 },
+            mb: { xs: 3, sm: 4 },
+            background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+            border: "1px solid #e2e8f0",
             borderLeft: "4px solid",
             borderLeftColor: "primary.main",
+            borderRadius: 2,
+            position: 'relative',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: 'rgba(59, 130, 246, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }
           }}
         >
-          <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
-            {currentQ.context}
-          </Typography>
+          <Stack direction="row" spacing={2} alignItems="flex-start">
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                flexShrink: 0,
+                mt: 0.5,
+              }}
+            >
+              <BookOpen size={16} />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: '#3b82f6', 
+                  mb: 1,
+                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                Context
+              </Typography>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  lineHeight: 1.6,
+                  color: '#374151',
+                  fontSize: { xs: '0.9rem', sm: '1rem' },
+                }}
+              >
+                {currentQ.context}
+              </Typography>
+            </Box>
+          </Stack>
         </Paper>
       </Fade>
     )}
 
-    <QuestionCard elevation={0}>
-      <Stack spacing={3}>
+    {/* Question Card */}
+    <QuestionCard 
+      elevation={0}
+      sx={{
+        opacity: isTransitioning ? 0.7 : 1,
+        transform: isTransitioning ? 'translateY(10px)' : 'translateY(0)',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      }}
+    >
+      <Stack spacing={{ xs: 3, sm: 4 }}>
+        {/* Question Header */}
         <Box>
-          <Chip
-            label={`Question ${currentQuestion + 1}`}
-            size="small"
-            sx={{ mb: 2 }}
-            color="primary"
-          />
-          <Typography variant="h5" sx={{ fontWeight: 600, lineHeight: 1.4 }}>
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            justifyContent="space-between"
+            spacing={2}
+            sx={{ mb: 3 }}
+          >
+            <Chip
+              icon={<HelpCircle size={14} />}
+              label={`Question ${currentQuestion + 1}`}
+              color="primary"
+              size="medium"
+              sx={{
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+                color: 'white',
+                border: 'none',
+                px: 1,
+                '& .MuiChip-icon': {
+                  color: 'white',
+                },
+              }}
+            />
+            
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: 'text.secondary',
+                fontWeight: 500,
+                display: { xs: 'none', sm: 'block' }
+              }}
+            >
+              Choose the best answer
+            </Typography>
+          </Stack>
+
+          <Typography 
+            variant="h4" 
+            component="h2"
+            sx={{ 
+              fontWeight: 700, 
+              lineHeight: 1.3,
+              color: '#111827',
+              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
+              letterSpacing: '-0.01em',
+              mb: 1,
+            }}
+          >
             {currentQ?.question || "Question data missing."}
+          </Typography>
+
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              fontSize: { xs: '0.85rem', sm: '0.9rem' },
+              display: { xs: 'block', sm: 'none' }
+            }}
+          >
+            Select your answer below
           </Typography>
         </Box>
 
-        <FormControl component="fieldset">
+        {/* Answer Options */}
+        <FormControl component="fieldset" sx={{ width: '100%' }}>
           <RadioGroup
             value={userAnswers[currentQuestion] ?? ""}
             onChange={(e) => handleAnswerSelect(parseInt(e.target.value))}
+            aria-labelledby={`question-${currentQuestion}-label`}
           >
-            <Stack spacing={2}>
+            <Stack spacing={{ xs: 2, sm: 2.5 }}>
               {currentQ?.options?.map((option, index) => (
-                <OptionCard
+                <Grow
                   key={index}
-                  isSelected={userAnswers[currentQuestion] === index}
-                  onClick={() => handleAnswerSelect(index)}
+                  in={!isTransitioning}
+                  timeout={300 + (index * 100)}
                 >
-                  <FormControlLabel
-                    value={index}
-                    control={<Radio sx={{ display: "none" }} />}
-                    label={
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {option}
-                      </Typography>
-                    }
-                    sx={{
-                      margin: 0,
-                      width: "100%",
-                      "& .MuiFormControlLabel-label": {
-                        width: "100%",
-                      },
-                    }}
-                  />
-                </OptionCard>
+                  <Box>
+                    <OptionCard
+                      isSelected={userAnswers[currentQuestion] === index}
+                      onClick={() => handleAnswerSelect(index)}
+                      sx={{
+                        cursor: 'pointer',
+                        minHeight: { xs: 56, sm: 64 },
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:focus-visible': {
+                          outline: '2px solid #3b82f6',
+                          outlineOffset: '2px',
+                        },
+                        '&:active': {
+                          transform: 'scale(0.98)',
+                        },
+                        // Enhanced mobile touch targets
+                        '@media (hover: none)': {
+                          '&:hover': {
+                            transform: 'none',
+                          },
+                          '&:active': {
+                            transform: 'scale(0.95)',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                          },
+                        },
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-pressed={userAnswers[currentQuestion] === index}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleAnswerSelect(index);
+                        }
+                      }}
+                    >
+                      <FormControlLabel
+                        value={index}
+                        control={
+                          <Radio 
+                            sx={{ 
+                              display: "none" 
+                            }} 
+                          />
+                        }
+                        label={
+                          <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%', py: 1 }}>
+                            {/* Option Letter */}
+                            <Box
+                              sx={{
+                                width: { xs: 28, sm: 32 },
+                                height: { xs: 28, sm: 32 },
+                                borderRadius: '50%',
+                                background: userAnswers[currentQuestion] === index
+                                  ? 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)'
+                                  : '#f3f4f6',
+                                color: userAnswers[currentQuestion] === index ? 'white' : '#6b7280',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 700,
+                                fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                                flexShrink: 0,
+                                transition: 'all 0.2s ease',
+                              }}
+                            >
+                              {String.fromCharCode(65 + index)}
+                            </Box>
+                            
+                            {/* Option Text */}
+                            <Typography 
+                              variant="body1" 
+                              sx={{ 
+                                fontWeight: 500,
+                                fontSize: { xs: '0.95rem', sm: '1rem' },
+                                lineHeight: 1.4,
+                                color: userAnswers[currentQuestion] === index ? '#111827' : '#374151',
+                                flex: 1,
+                              }}
+                            >
+                              {option}
+                            </Typography>
+                          </Stack>
+                        }
+                        sx={{
+                          margin: 0,
+                          width: "100%",
+                          "& .MuiFormControlLabel-label": {
+                            width: "100%",
+                          },
+                        }}
+                      />
+                    </OptionCard>
+                  </Box>
+                </Grow>
               ))}
             </Stack>
           </RadioGroup>
+
+          {/* Help Text */}
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                fontSize: '0.8rem',
+                display: { xs: 'none', sm: 'block' }
+              }}
+            >
+              Use keyboard shortcuts: 1, 2, 3, 4 or arrow keys to navigate
+            </Typography>
+          </Box>
         </FormControl>
       </Stack>
     </QuestionCard>
