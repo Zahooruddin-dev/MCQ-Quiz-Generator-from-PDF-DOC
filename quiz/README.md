@@ -21,7 +21,7 @@ This software is proprietary and confidential. Unauthorized copying, distributio
 - Redistribution or modification without permission
 - Incorporation into other projects without authorization
 
-For licensing inquiries, please contact: zahooruddin.dev@gmail.com
+For licensing inquiries, please contact: mzkhan886@gmail.com
 
 ## 🚀 Features
 
@@ -56,13 +56,9 @@ quiz-generator/
 ├── src/
 │   ├── components/
 │   │   ├── FileUpload.jsx
-![alt text](src/assets/img/fileupload.png)
 │   │   ├── QuizEngine.jsx
-![alt text](src/assets/img/quiz.png)
 │   │   ├── ResultPage.jsx
-![alt text](src/assets/img/results.png)
 │   │   └── APIConfig.jsx
-![alt text](src/assets/img/api.png)
 │   ├── utils/
 │   │   └── formatMCQ.js
 │   ├── App.jsx

@@ -21,7 +21,7 @@ This software is proprietary and confidential. Unauthorized copying, distributio
 - Redistribution or modification without permission
 - Incorporation into other projects without authorization
 
-For licensing inquiries, please contact: zahooruddin.dev@gmail.com
+For licensing inquiries, please contact: mzkhan886@gmail.com
 
 ## 🚀 Features
 
