@@ -1,27 +1,27 @@
-import React, { useState, useCallback } from "react";
+// src/components/TextModeInput.jsx
+import React, { useState, useCallback } from 'react';
 import {
-  CardContent,
-  Stack,
-  Typography,
-  TextField,
-  Button,
-  Collapse,
-  Alert,
-  LinearProgress,
   Box,
-} from "@mui/material";
-import { Play, Type, Sparkles } from "lucide-react";
-import { TextModeCard, pulse, LoadingOverlay } from "../ModernFileUpload.styles";
-import { LLMService } from "../../../utils/llmService";
+  Typography,
+  Button,
+  Stack,
+  Alert,
+  TextField,
+  LinearProgress,
+  IconButton,
+  Fade,
+} from '@mui/material';
+import { Brain, Sparkles, X } from 'lucide-react';
+import { LLMService } from '../../../utils/llmService';
+import { LoadingOverlay, pulse } from '../ModernFileUpload.styles';
 
 const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated }) => {
-  const [showTextMode, setShowTextMode] = useState(false);
-  const [pastedText, setPastedText] = useState("");
+  const [text, setText] = useState('');
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const simulateProgress = useCallback(() => {
+  const simulateProgress = () => {
     const interval = setInterval(() => {
       setUploadProgress((prev) => {
         if (prev >= 90) {
@@ -32,38 +32,29 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated }) => {
       });
     }, 200);
     return interval;
-  }, []);
+  };
 
-  const handleSubmit = async () => {
-    setError(null);
-
-    if (!pastedText.trim()) {
-      setError("Please paste some content first.");
+  const handleGenerateQuiz = useCallback(async () => {
+    if (!text.trim()) {
+      setError('Please enter some text first.');
       return;
     }
 
-    const wordCount = pastedText.trim().split(/\s+/).length;
-    if (wordCount < 10) {
-      setError("Please enter at least 10 words of text to generate questions.");
-      return;
-    }
-
-    const effectiveApiKey = apiKey || localStorage.getItem("geminiApiKey");
+    const effectiveApiKey = apiKey || localStorage.getItem('geminiApiKey');
     if (!effectiveApiKey || effectiveApiKey.trim().length < 8) {
-      setError(
-        "Please configure your API key first. Click the settings button to get started."
-      );
+      setError('Please configure your API key first.');
       return;
     }
 
-    setLoading(true);
+    setError(null);
+    setIsLoading(true);
     setUploadProgress(0);
     const progressInterval = simulateProgress();
 
     try {
       const llmService = new LLMService(effectiveApiKey, baseUrl);
       const questions = await llmService.generateQuizQuestions(
-        pastedText,
+        text,
         aiOptions
       );
 
@@ -72,127 +63,107 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated }) => {
 
       setTimeout(() => {
         onQuizGenerated(questions, aiOptions);
-        setLoading(false);
-        setPastedText("");
-        setShowTextMode(false);
+        setIsLoading(false);
+        setText('');
       }, 500);
     } catch (err) {
       clearInterval(progressInterval);
-      console.error("Error processing text:", err);
-      setError(err?.message || "Failed to process text. Please try again.");
-      setLoading(false);
+      console.error('Error generating quiz:', err);
+      setError(err?.message || 'Failed to generate quiz.');
+      setIsLoading(false);
     }
-  };
+  }, [text, apiKey, baseUrl, aiOptions, onQuizGenerated]);
 
   return (
-    <>
-      {/* Toggle button */}
-      <Stack alignItems="center" sx={{ my: 3 }}>
-        <Button
+    <Box sx={{ position: 'relative' }}>
+      {error && (
+        <Fade in={!!error}>
+          <Alert
+            severity="error"
+            sx={{ mb: 2 }}
+            action={
+              <IconButton size="small" onClick={() => setError(null)}>
+                <X size={16} />
+              </IconButton>
+            }
+          >
+            {error}
+          </Alert>
+        </Fade>
+      )}
+
+      {isLoading && (
+        <LoadingOverlay>
+          <Box
+            sx={{
+              width: 60,
+              height: 60,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              mb: 2,
+              animation: `${pulse} 1.5s infinite`,
+            }}
+          >
+            <Sparkles size={24} />
+          </Box>
+          <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+            Processing Your Text
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: 'text.secondary', mb: 3 }}
+          >
+            AI is analyzing and generating questions...
+          </Typography>
+          <Box sx={{ width: '100%', maxWidth: 300 }}>
+            <LinearProgress
+              variant="determinate"
+              value={uploadProgress}
+              sx={{
+                height: 8,
+                borderRadius: 4,
+                '& .MuiLinearProgress-bar': {
+                  background:
+                    'linear-gradient(90deg, #6366F1 0%, #8B5CF6 100%)',
+                },
+              }}
+            />
+            <Typography
+              variant="caption"
+              sx={{ mt: 1, display: 'block', textAlign: 'center' }}
+            >
+              {Math.round(uploadProgress)}%
+            </Typography>
+          </Box>
+        </LoadingOverlay>
+      )}
+
+      <Stack spacing={2}>
+        <TextField
+          label="Paste your study text here"
+          multiline
+          minRows={6}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
           variant="outlined"
-          startIcon={<Type />}
-          onClick={() => {
-            setShowTextMode((prev) => !prev);
-            setError(null);
-          }}
+          fullWidth
+          disabled={isLoading}
+        />
+        <Button
+          variant="contained"
+          startIcon={<Brain />}
+          onClick={handleGenerateQuiz}
+          disabled={isLoading}
           sx={{ borderRadius: 2 }}
-          disabled={loading}
         >
-          {showTextMode ? "Cancel Text Mode" : "Paste Text Instead"}
+          Generate Quiz from Text
         </Button>
       </Stack>
-
-      {/* Collapsible input */}
-      <Collapse in={showTextMode} mountOnEnter unmountOnExit>
-        <TextModeCard>
-          <CardContent>
-            <Stack spacing={3}>
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Paste Text Content
-              </Typography>
-
-              {error && <Alert severity="error">{error}</Alert>}
-
-              <TextField
-                multiline
-                rows={8}
-                fullWidth
-                placeholder="Paste your study material here..."
-                value={pastedText}
-                onChange={(e) => setPastedText(e.target.value)}
-                disabled={loading}
-                inputProps={{
-                  style: { fontFamily: "monospace", fontSize: "0.9rem" },
-                }}
-              />
-
-              <Stack direction="row" spacing={2} justifyContent="flex-end">
-                <Button
-                  variant="contained"
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  startIcon={<Play />}
-                  sx={{ borderRadius: 2 }}
-                >
-                  Generate Quiz
-                </Button>
-              </Stack>
-
-              {loading && (
-                <LoadingOverlay>
-                  <Box
-                    sx={{
-                      width: 60,
-                      height: 60,
-                      borderRadius: "50%",
-                      background:
-                        "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white",
-                      mb: 2,
-                      animation: `${pulse} 1.5s infinite`,
-                    }}
-                  >
-                    <Sparkles size={24} />
-                  </Box>
-                  <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-                    Processing Your Content
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: "text.secondary", mb: 3 }}
-                  >
-                    AI is analyzing and generating questions...
-                  </Typography>
-                  <Box sx={{ width: "100%", maxWidth: 300 }}>
-                    <LinearProgress
-                      variant="determinate"
-                      value={uploadProgress}
-                      sx={{
-                        height: 8,
-                        borderRadius: 4,
-                        "& .MuiLinearProgress-bar": {
-                          background:
-                            "linear-gradient(90deg, #6366F1 0%, #8B5CF6 100%)",
-                        },
-                      }}
-                    />
-                    <Typography
-                      variant="caption"
-                      sx={{ mt: 1, display: "block", textAlign: "center" }}
-                    >
-                      {Math.round(uploadProgress)}%
-                    </Typography>
-                  </Box>
-                </LoadingOverlay>
-              )}
-            </Stack>
-          </CardContent>
-        </TextModeCard>
-      </Collapse>
-    </>
+    </Box>
   );
 };
 
