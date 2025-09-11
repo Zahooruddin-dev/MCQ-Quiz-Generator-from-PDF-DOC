@@ -1,66 +1,231 @@
-// src/components/LandingPage/HeroSection.jsx
-import React from "react";
-import { Container, Grid, Stack, Typography, Button, Box, Chip } from "@mui/material";
-import { ArrowRight, Brain, BarChart3, Zap, Target, Star } from "lucide-react";
-import { HeroSectionWrapper, FloatingElement, GlassCard, AnimatedSection, pulse } from "./Styles";
+import React from 'react';
+import {
+  Box,
+  Container,
+  Typography,
+  Button,
+  Grid,
+  Chip,
+  useTheme,
+  alpha,
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
-const HeroSection = ({ handleGetStarted }) => (
-  <HeroSectionWrapper>
-    <FloatingElement sx={{ top: "10%", left: "10%" }} delay={0}><Brain size={60} /></FloatingElement>
-    <FloatingElement sx={{ top: "20%", right: "15%" }} delay={2}><BarChart3 size={80} /></FloatingElement>
-    <FloatingElement sx={{ bottom: "30%", left: "20%" }} delay={4}><Zap size={40} /></FloatingElement>
-    <FloatingElement sx={{ bottom: "20%", right: "10%" }} delay={1}><Target size={50} /></FloatingElement>
+const HeroSection = ({ user }) => {
+  const theme = useTheme();
+  const navigate = useNavigate();
 
-    <Container maxWidth="lg">
-      <Grid container spacing={6} alignItems="center" sx={{ minHeight: "100vh" }}>
-        <Grid item xs={12} md={6}>
-          <AnimatedSection>
-            <Stack spacing={4}>
-              <Chip
-                label="🚀 AI-Powered Quiz Generation"
-                sx={{ alignSelf: "flex-start", background: "rgba(255,255,255,0.2)", color: "white", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.3)" }}
-              />
-              <Typography variant="h1" sx={{ color: "white", fontWeight: 900 }}>
-                Transform Any Content Into
-                <Box component="span" sx={{ display: "block", color: "#FFD700" }}>
-                  Interactive Quizzes
-                </Box>
-              </Typography>
-              <Typography variant="h5" sx={{ color: "rgba(255,255,255,0.9)", fontWeight: 400 }}>
-                Upload documents or paste text and let AI create quizzes in seconds.
-              </Typography>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                <Button variant="contained" size="large" endIcon={<ArrowRight />} onClick={handleGetStarted}>
-                  Get Started Free
-                </Button>
-                <Button variant="outlined" size="large">Watch Demo</Button>
-              </Stack>
-            </Stack>
-          </AnimatedSection>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <GlassCard sx={{ p: 4, textAlign: "center" }}>
-            <Stack spacing={3} alignItems="center">
-              <Box
+  const handleGetStarted = () => {
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/auth');
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+        color: 'white',
+        py: { xs: 8, md: 12 },
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background:
+            'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0 0h20v20H0V0zm10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm0-11a4 4 0 1 1 0 8 4 4 0 0 1 0-8z\' fill=\'%23ffffff\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
+          opacity: 0.5,
+        },
+      }}
+    >
+      <Container maxWidth="lg">
+        <Grid container spacing={4} alignItems="center">
+          {/* Left Side */}
+          <Grid item xs={12} md={6}>
+            <Chip
+              label="New: Enhanced OCR Technology"
+              sx={{
+                background: alpha('#fff', 0.2),
+                color: 'white',
+                mb: 2,
+                fontWeight: 600,
+              }}
+            />
+            <Typography
+              variant="h1"
+              sx={{
+                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                fontWeight: 800,
+                lineHeight: 1.2,
+                mb: 2,
+              }}
+            >
+              Transform Documents into Engaging Quizzes with AI
+            </Typography>
+            <Typography
+              variant="h5"
+              sx={{ opacity: 0.9, mb: 4, fontWeight: 400 }}
+            >
+              Upload PDFs, DOCX, or images and let our advanced AI generate
+              customized quizzes in seconds.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                size="large"
                 sx={{
-                  width: 80, height: 80, borderRadius: "50%",
-                  background: "linear-gradient(45deg, #FFD700 30%, #FFA500 90%)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  animation: `${pulse} 2s infinite`,
+                  background: 'white',
+                  color: theme.palette.primary.main,
+                  fontWeight: 700,
+                  px: 4,
+                  py: 1.5,
+                  '&:hover': { background: alpha('#fff', 0.9) },
+                }}
+                onClick={handleGetStarted}
+              >
+                Get Started Free
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                sx={{
+                  borderColor: 'white',
+                  color: 'white',
+                  fontWeight: 600,
+                  px: 4,
+                  py: 1.5,
+                  '&:hover': {
+                    borderColor: 'white',
+                    background: alpha('#fff', 0.1),
+                  },
                 }}
               >
-                <Brain size={40} color="#1E293B" />
+                See Demo
+              </Button>
+            </Box>
+          </Grid>
+
+          {/* Right Side Preview */}
+          <Grid
+            item
+            xs={12}
+            md={6}
+            sx={{ display: { xs: 'none', md: 'block' } }}
+          >
+            <Box
+              sx={{
+                background: alpha('#fff', 0.1),
+                borderRadius: 4,
+                p: 2,
+                backdropFilter: 'blur(10px)',
+                border: '1px solid',
+                borderColor: alpha('#fff', 0.2),
+                maxWidth: 400,
+                mx: 'auto',
+              }}
+            >
+              <Box
+                sx={{
+                  background: 'white',
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  color: theme.palette.text.primary,
+                  boxShadow: theme.shadows[10],
+                }}
+              >
+                <Box
+                  sx={{
+                    p: 2,
+                    background: theme.palette.grey[100],
+                    display: 'flex',
+                    gap: 1,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      background: '#ff5f56',
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      background: '#ffbd2e',
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      background: '#27c93f',
+                    }}
+                  />
+                </Box>
+                <Box sx={{ p: 3 }}>
+                  <Typography
+                    variant="h6"
+                    gutterBottom
+                    sx={{ fontWeight: 700 }}
+                  >
+                    Quiz: World History Chapter 3
+                  </Typography>
+                  <Box sx={{ mb: 3 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, mb: 1 }}
+                    >
+                      1. What was the primary cause of the Industrial
+                      Revolution?
+                    </Typography>
+                    <Box sx={{ pl: 2 }}>
+                      <Typography variant="body2">A) Agricultural advancements</Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: 'success.main', fontWeight: 600 }}
+                      >
+                        B) Technological innovations ✓
+                      </Typography>
+                      <Typography variant="body2">C) Political revolutions</Typography>
+                      <Typography variant="body2">D) Religious movements</Typography>
+                    </Box>
+                  </Box>
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, mb: 1 }}
+                    >
+                      2. Which invention revolutionized textile manufacturing?
+                    </Typography>
+                    <Box sx={{ pl: 2 }}>
+                      <Typography variant="body2">A) Steam engine</Typography>
+                      <Typography variant="body2">B) Telegraph</Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: 'success.main', fontWeight: 600 }}
+                      >
+                        C) Spinning jenny ✓
+                      </Typography>
+                      <Typography variant="body2">D) Cotton gin</Typography>
+                    </Box>
+                  </Box>
+                </Box>
               </Box>
-              <Typography variant="h4" sx={{ color: "white", fontWeight: 700 }}>AI Quiz Generator</Typography>
-              <Stack direction="row" spacing={1}>
-                {[1,2,3,4,5].map(i => <Star key={i} size={20} fill="#FFD700" />)}
-              </Stack>
-            </Stack>
-          </GlassCard>
+            </Box>
+          </Grid>
         </Grid>
-      </Grid>
-    </Container>
-  </HeroSectionWrapper>
-);
+      </Container>
+    </Box>
+  );
+};
 
 export default HeroSection;
