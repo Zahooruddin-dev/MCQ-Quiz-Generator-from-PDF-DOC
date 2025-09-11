@@ -22,7 +22,6 @@ import {
 	Zap,
 	CheckCircle,
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import { auth, db } from '../../firebaseConfig';
 import {
 	createUserWithEmailAndPassword,
@@ -40,13 +39,11 @@ import {
 	FeatureChip,
 	StyledTextField,
 	GradientButton,
-	GoogleButton,
 } from './AuthStyles';
 import { getFriendlyError } from './errorMapping';
 import GoogleLoginButton from './GoogleLoginButton';
 
 const ModernAuthForm = () => {
-	const { loginWithGoogle } = useAuth();
 	const [isSignup, setIsSignup] = useState(false);
 	const [email, setEmail] = useState('');
 	const [username, setUsername] = useState('');

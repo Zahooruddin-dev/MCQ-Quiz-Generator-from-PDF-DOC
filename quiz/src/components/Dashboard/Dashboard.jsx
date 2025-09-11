@@ -37,10 +37,10 @@ const ComponentLoader = () => (
       alignItems: 'center',
       minHeight: '200px',
       '& .mini-spinner': {
-        width: '24px',
-        height: '24px',
-        border: '2px solid #e0e0e0',
-        borderTop: '2px solid #1976d2',
+        width: '32px',
+        height: '32px',
+        border: '3px solid #f3f4f6',
+        borderTop: '3px solid #3b82f6',
         borderRadius: '50%',
         animation: 'spin 1s linear infinite',
       },
@@ -70,92 +70,131 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
 
   return (
     <WelcomeCard>
-      <CardContent sx={{ p: { xs: 2, sm: 4 } }}>
-        <Grid container spacing={{ xs: 2, md: 4 }} alignItems="center">
-          {/* Removed `item` prop */}
-          <Grid xs={12} md={8}>
-            <Stack spacing={2}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Avatar
-                  sx={{
-                    width: { xs: 48, sm: 64 },
-                    height: { xs: 48, sm: 64 },
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    backdropFilter: 'blur(10px)',
-                    border: '2px solid rgba(255, 255, 255, 0.3)',
-                    fontWeight: 600,
-                    fontSize: { xs: '1rem', sm: '1.5rem' },
-                  }}
-                >
-                  {userInitials}
-                </Avatar>
-                <Box>
-                  <Typography
-                    variant="h4"
-                    sx={{
-                      fontWeight: 700,
-                      mb: 0.5,
-                      fontSize: { xs: '1.5rem', sm: '2rem' },
-                    }}
-                  >
-                    Welcome back, {firstName}!
-                  </Typography>
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      opacity: 0.9,
-                      fontSize: { xs: '0.875rem', sm: '1rem' },
-                    }}
-                  >
-                    Ready to create some amazing quizzes today?
-                  </Typography>
-                </Box>
-              </Stack>
+      <CardContent sx={{ p: { xs: 3, sm: 4, md: 5 } }}>
+        <Stack spacing={{ xs: 3, sm: 4 }}>
+          {/* Header Section */}
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            spacing={{ xs: 2, sm: 3 }} 
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+          >
+            <Avatar
+              sx={{
+                width: { xs: 56, sm: 72 },
+                height: { xs: 56, sm: 72 },
+                background: 'rgba(255, 255, 255, 0.25)',
+                backdropFilter: 'blur(10px)',
+                border: '2px solid rgba(255, 255, 255, 0.4)',
+                fontWeight: 700,
+                fontSize: { xs: '1.25rem', sm: '1.75rem' },
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+              }}
+            >
+              {userInitials}
+            </Avatar>
+            
+            <Box sx={{ flex: 1 }}>
+              <Typography
+                variant="h3"
+                component="h1"
+                sx={{
+                  fontWeight: 800,
+                  mb: 1,
+                  fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.5rem' },
+                  lineHeight: 1.2,
+                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                Welcome back, {firstName}!
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  opacity: 0.95,
+                  fontSize: { xs: '1rem', sm: '1.125rem' },
+                  fontWeight: 400,
+                  lineHeight: 1.5,
+                }}
+              >
+                Ready to create some amazing quizzes today?
+              </Typography>
+            </Box>
+          </Stack>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 2 }}>
-                <Chip
-                  icon={isPremium ? <Award size={16} /> : <Users size={16} />}
-                  label={isPremium ? 'Premium Member' : `${credits} Credits Available`}
-                  sx={{
-                    background: 'rgba(255, 255, 255, 0.2)',
+          {/* Status and Action Section */}
+          <Stack 
+            direction={{ xs: 'column', md: 'row' }} 
+            spacing={{ xs: 3, md: 4 }} 
+            alignItems={{ xs: 'stretch', md: 'center' }}
+            justifyContent="space-between"
+          >
+            {/* Status Chips */}
+            <Stack 
+              direction={{ xs: 'column', sm: 'row' }} 
+              spacing={{ xs: 1.5, sm: 2 }}
+              sx={{ flex: 1 }}
+            >
+              <Chip
+                icon={isPremium ? <Award size={18} /> : <Users size={18} />}
+                label={isPremium ? 'Premium Member' : `${credits} Credits Available`}
+                sx={{
+                  background: 'rgba(255, 255, 255, 0.25)',
+                  color: 'white',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.4)',
+                  fontWeight: 600,
+                  fontSize: { xs: '0.875rem', sm: '0.9rem' },
+                  height: { xs: 36, sm: 40 },
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                  '& .MuiChip-icon': {
                     color: 'white',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    fontWeight: 600,
-                  }}
-                />
-                <Chip
-                  label="7 Day Streak 🔥"
-                  sx={{
-                    background: 'rgba(255, 215, 0, 0.2)',
-                    color: 'white',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 215, 0, 0.3)',
-                    fontWeight: 600,
-                  }}
-                />
-              </Stack>
+                  },
+                }}
+              />
+              <Chip
+                label="7 Day Streak 🔥"
+                sx={{
+                  background: 'rgba(255, 193, 7, 0.9)',
+                  color: 'rgba(0, 0, 0, 0.87)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 193, 7, 0.3)',
+                  fontWeight: 600,
+                  fontSize: { xs: '0.875rem', sm: '0.9rem' },
+                  height: { xs: 36, sm: 40 },
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                }}
+              />
             </Stack>
-          </Grid>
 
-          {/* Removed `item` prop */}
-          <Grid xs={12} md={4}>
-            <Stack spacing={2} alignItems={{ xs: 'flex-start', md: 'flex-end' }}>
+            {/* Action Button */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'stretch', md: 'flex-end' } }}>
               <Button
                 variant="contained"
                 size="large"
-                endIcon={<ArrowRight />}
+                endIcon={<ArrowRight size={20} />}
                 onClick={onCreateQuiz}
                 sx={{
-                  background: 'rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.25)',
                   backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  border: '2px solid rgba(255, 255, 255, 0.4)',
                   color: 'white',
-                  fontWeight: 600,
-                  width: { xs: '100%', md: 'auto' },
+                  fontWeight: 700,
+                  fontSize: { xs: '0.95rem', sm: '1rem' },
+                  px: { xs: 3, sm: 4 },
+                  py: { xs: 1.5, sm: 2 },
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  minWidth: { xs: 'auto', md: '180px' },
                   '&:hover': {
-                    background: 'rgba(255, 255, 255, 0.3)',
-                    transform: 'translateY(-2px)',
+                    background: 'rgba(255, 255, 255, 0.35)',
+                    transform: 'translateY(-3px)',
+                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.2)',
+                    borderColor: 'rgba(255, 255, 255, 0.6)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(-1px)',
                   },
                 }}
               >
@@ -165,16 +204,18 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
               <Typography
                 variant="body2"
                 sx={{
-                  opacity: 0.8,
-                  textAlign: { xs: 'left', md: 'right' },
+                  opacity: 0.85,
+                  textAlign: { xs: 'center', md: 'right' },
                   fontSize: '0.875rem',
+                  fontWeight: 400,
+                  mt: 1.5,
                 }}
               >
                 Last quiz: 2 days ago
               </Typography>
-            </Stack>
-          </Grid>
-        </Grid>
+            </Box>
+          </Stack>
+        </Stack>
       </CardContent>
     </WelcomeCard>
   );
@@ -182,164 +223,184 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
 
 WelcomeSection.displayName = 'WelcomeSection';
 
-// rest of your Dashboard stays unchanged
-
 // Optimized view components with error boundaries
 const AnalyticsView = React.memo(({ userId, onBack }) => (
-	<Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
-		<Stack spacing={3}>
-			<Button
-				variant="outlined"
-				onClick={onBack}
-				sx={{ alignSelf: 'flex-start' }}
-			>
-				← Back to Dashboard
-			</Button>
-			<Suspense fallback={<ComponentLoader />}>
-				<AnalyticsDashboard userId={userId} />
-			</Suspense>
-		</Stack>
-	</Container>
+  <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+    <Stack spacing={3}>
+      <Button
+        variant="outlined"
+        onClick={onBack}
+        sx={{ 
+          alignSelf: 'flex-start',
+          borderRadius: 2,
+          px: 3,
+          py: 1,
+          fontWeight: 600,
+        }}
+      >
+        ← Back to Dashboard
+      </Button>
+      <Suspense fallback={<ComponentLoader />}>
+        <AnalyticsDashboard userId={userId} />
+      </Suspense>
+    </Stack>
+  </Container>
 ));
 
 AnalyticsView.displayName = 'AnalyticsView';
 
 const ProgressView = React.memo(({ userId, onBack }) => (
-	<Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
-		<Stack spacing={3}>
-			<Button
-				variant="outlined"
-				onClick={onBack}
-				sx={{ alignSelf: 'flex-start' }}
-			>
-				← Back to Dashboard
-			</Button>
-			<Suspense fallback={<ComponentLoader />}>
-				<ProgressTracking
-					userId={userId}
-					onBack={onBack}
-					timePeriod="all_time"
-					showCharts
-					key={`progress-${userId}`}
-				/>
-			</Suspense>
-		</Stack>
-	</Container>
+  <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+    <Stack spacing={3}>
+      <Button
+        variant="outlined"
+        onClick={onBack}
+        sx={{ 
+          alignSelf: 'flex-start',
+          borderRadius: 2,
+          px: 3,
+          py: 1,
+          fontWeight: 600,
+        }}
+      >
+        ← Back to Dashboard
+      </Button>
+      <Suspense fallback={<ComponentLoader />}>
+        <ProgressTracking
+          userId={userId}
+          onBack={onBack}
+          timePeriod="all_time"
+          showCharts
+          key={`progress-${userId}`}
+        />
+      </Suspense>
+    </Stack>
+  </Container>
 ));
 
 ProgressView.displayName = 'ProgressView';
 
 const RecentQuizzesView = React.memo(({ onBack, onViewResults }) => (
-	<Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
-		<Stack spacing={3}>
-			<Button
-				variant="outlined"
-				onClick={onBack}
-				sx={{ alignSelf: 'flex-start' }}
-			>
-				← Back to Dashboard
-			</Button>
-			<Suspense fallback={<ComponentLoader />}>
-				<RecentQuizzes
-					limit={10}
-					showFilters={true}
-					onQuizClick={onViewResults}
-				/>
-			</Suspense>
-		</Stack>
-	</Container>
+  <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+    <Stack spacing={3}>
+      <Button
+        variant="outlined"
+        onClick={onBack}
+        sx={{ 
+          alignSelf: 'flex-start',
+          borderRadius: 2,
+          px: 3,
+          py: 1,
+          fontWeight: 600,
+        }}
+      >
+        ← Back to Dashboard
+      </Button>
+      <Suspense fallback={<ComponentLoader />}>
+        <RecentQuizzes
+          limit={10}
+          showFilters={true}
+          onQuizClick={onViewResults}
+        />
+      </Suspense>
+    </Stack>
+  </Container>
 ));
 
 RecentQuizzesView.displayName = 'RecentQuizzesView';
 
 // Main Dashboard Component
 const Dashboard = ({ onCreateQuiz, onViewResults }) => {
-	const { user, credits, isPremium } = useAuth();
-	const navigate = useNavigate();
-	const [activeView, setActiveView] = useState('dashboard'); // Single state for views
+  const { user, credits, isPremium } = useAuth();
+  const navigate = useNavigate();
+  const [activeView, setActiveView] = useState('dashboard');
 
-	// Memoize navigation handlers
-	const handleUploadNavigation = useCallback(() => navigate('/upload'), [navigate]);
-	
-	// Memoize view handlers
-	const showAnalytics = useCallback(() => setActiveView('analytics'), []);
-	const showProgress = useCallback(() => setActiveView('progress'), []);
-	const showRecentQuizzes = useCallback(() => setActiveView('recent'), []);
-	const showDashboard = useCallback(() => setActiveView('dashboard'), []);
+  // Memoize navigation handlers
+  const handleUploadNavigation = useCallback(() => navigate('/upload'), [navigate]);
+  
+  // Memoize view handlers
+  const showAnalytics = useCallback(() => setActiveView('analytics'), []);
+  const showProgress = useCallback(() => setActiveView('progress'), []);
+  const showRecentQuizzes = useCallback(() => setActiveView('recent'), []);
+  const showDashboard = useCallback(() => setActiveView('dashboard'), []);
 
-	// Memoize the quick actions with stable references
-	const quickActions = useMemo(() => [
-		{
-			title: 'Upload Document',
-			description: 'Upload PDF, DOCX, or paste text to generate quiz',
-			icon: <Upload size={32} />,
-			color: 'primary',
-			action: handleUploadNavigation,
-		},
-		{
-			title: 'AI Quiz Generator',
-			description: 'Let AI create questions from your content',
-			icon: <Brain size={32} />,
-			color: 'secondary',
-			action: handleUploadNavigation,
-		},
-		{
-			title: 'View Analytics',
-			description: 'Check your performance, and insights',
-			icon: <BarChart3 size={32} />,
-			color: 'success',
-			action: showAnalytics,
-		},
-		{
-			title: 'Your Progress',
-			description: 'See your progress, average score, streak and time spent',
-			icon: <Zap size={32} />,
-			color: 'warning',
-			action: showProgress,
-		},
-		{
-			title: 'Recent Quizzes',
-			description: 'View and retake your recent quiz attempts',
-			icon: <History size={32} />,
-			color: 'info',
-			action: showRecentQuizzes,
-		},
-	], [handleUploadNavigation, showAnalytics, showProgress, showRecentQuizzes]);
+  // Memoize the quick actions with stable references
+  const quickActions = useMemo(() => [
+    {
+      title: 'Upload Document',
+      description: 'Upload PDF, DOCX, or paste text to generate quiz',
+      icon: <Upload size={28} />,
+      color: 'primary',
+      action: handleUploadNavigation,
+    },
+    {
+      title: 'AI Quiz Generator',
+      description: 'Let AI create questions from your content',
+      icon: <Brain size={28} />,
+      color: 'secondary',
+      action: handleUploadNavigation,
+    },
+    {
+      title: 'View Analytics',
+      description: 'Check your performance and insights',
+      icon: <BarChart3 size={28} />,
+      color: 'success',
+      action: showAnalytics,
+    },
+    {
+      title: 'Your Progress',
+      description: 'See progress, average score, streak and time spent',
+      icon: <Zap size={28} />,
+      color: 'warning',
+      action: showProgress,
+    },
+    {
+      title: 'Recent Quizzes',
+      description: 'View and retake your recent quiz attempts',
+      icon: <History size={28} />,
+      color: 'info',
+      action: showRecentQuizzes,
+    },
+  ], [handleUploadNavigation, showAnalytics, showProgress, showRecentQuizzes]);
 
-	// Memoize user ID for child components
-	const userId = useMemo(() => user?.uid, [user?.uid]);
+  // Memoize user ID for child components
+  const userId = useMemo(() => user?.uid, [user?.uid]);
 
-	// Render different views based on state
-	switch (activeView) {
-		case 'analytics':
-			return <AnalyticsView userId={userId} onBack={showDashboard} />;
-		
-		case 'progress':
-			return <ProgressView userId={userId} onBack={showDashboard} />;
-		
-		case 'recent':
-			return <RecentQuizzesView onBack={showDashboard} onViewResults={onViewResults} />;
-		
-		default:
-			return (
-				<Box sx={{ py: { xs: 2, sm: 4 } }}>
-					<Container maxWidth="lg">
-						<Stack spacing={{ xs: 3, sm: 4 }}>
-							{/* Welcome Section - Memoized */}
-							<WelcomeSection
-								user={user}
-								credits={credits}
-								isPremium={isPremium}
-								onCreateQuiz={onCreateQuiz}
-							/>
+  // Render different views based on state
+  switch (activeView) {
+    case 'analytics':
+      return <AnalyticsView userId={userId} onBack={showDashboard} />;
+    
+    case 'progress':
+      return <ProgressView userId={userId} onBack={showDashboard} />;
+    
+    case 'recent':
+      return <RecentQuizzesView onBack={showDashboard} onViewResults={onViewResults} />;
+    
+    default:
+      return (
+        <Box sx={{ 
+          py: { xs: 3, sm: 4, md: 5 },
+          minHeight: '100vh',
+          background: 'linear-gradient(to bottom, #f8fafc 0%, #f1f5f9 100%)',
+        }}>
+          <Container maxWidth="lg">
+            <Stack spacing={{ xs: 4, sm: 5, md: 6 }}>
+              {/* Welcome Section - Memoized */}
+              <WelcomeSection
+                user={user}
+                credits={credits}
+                isPremium={isPremium}
+                onCreateQuiz={onCreateQuiz}
+              />
 
-							{/* Quick Actions - Memoized */}
-							<QuickActions quickActions={quickActions} />
-						</Stack>
-					</Container>
-				</Box>
-			);
-	}
+              {/* Quick Actions - Memoized */}
+              <QuickActions quickActions={quickActions} />
+            </Stack>
+          </Container>
+        </Box>
+      );
+  }
 };
 
 export default React.memo(Dashboard);
