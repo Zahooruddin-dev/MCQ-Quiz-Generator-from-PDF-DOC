@@ -151,3 +151,10 @@ export function validateQuestionQuality(questions) {
     });
     return { isValid: issues.length === 0, issues, score: Math.max(0, 100 - issues.length * 20) };
 }
+
+// -------------------
+// Legacy Wrapper (to prevent breaking llmService.js)
+// -------------------
+export function getLanguagePrompt(language, numQuestions, difficulty, contextAnalysis) {
+    return generateSmartPrompt(language, numQuestions, difficulty, contextAnalysis);
+}

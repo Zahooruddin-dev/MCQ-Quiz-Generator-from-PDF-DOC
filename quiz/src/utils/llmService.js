@@ -1,6 +1,6 @@
-// LLMService.js - FIXED VERSION - Uses current working Gemini models
+// LLMService.js - FIXED VERSION with safe contextAnalysis handling
 import { REQUEST_TIMEOUT_MS } from './constants.js';
-import { detectLanguage, getLanguagePrompt } from './languageUtils.js';
+import { detectLanguage, getLanguagePrompt, analyzeContext } from './languageUtils.js';
 import { trimForPrompt, extractJson } from './textUtils.js';
 import { readFileContent } from './fileReader.js';
 import {
@@ -14,16 +14,15 @@ import { shuffleArray, validateQuestions } from './quizValidator.js';
 
 export class LLMService {
 	static instance = null;
-	// Cache for API responses
 	static responseCache = new Map();
 
 	constructor() {
-		// Using the current working Gemini model
-		this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+		this.baseUrl =
+			'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 		this.language = 'en';
 		this.controller = null;
-		this.apiKey = null; // Will be loaded dynamically
-		
+		this.apiKey = null;
+
 		console.log('✅ LLMService initialized with model: gemini-1.5-flash');
 	}
 
@@ -34,34 +33,35 @@ export class LLMService {
 		return this.instance;
 	}
 
-	// Method to ensure API key is loaded
 	async ensureApiKey() {
 		if (!this.apiKey) {
 			this.apiKey = await getGlobalApiKey();
 			if (!this.apiKey) {
-				throw new Error('No global API key configured in Firestore. Please contact administrator.');
+				throw new Error(
+					'No global API key configured in Firestore. Please contact administrator.'
+				);
 			}
 			console.log('✅ Global API key loaded successfully');
 		}
 		return this.apiKey;
 	}
 
-	// Method to refresh API key (useful if key is updated in Firestore)
 	async refreshApiKey() {
-		this.apiKey = null; // Clear cached key
+		this.apiKey = null;
 		const newKey = await this.ensureApiKey();
 		console.log('🔄 API key refreshed');
 		return newKey;
 	}
 
-	// Alternative model URLs in case you need to switch
 	static MODEL_URLS = {
-		'flash-1.5': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
-		'pro-1.5': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent',
-		'flash-2.0': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent'
+		'flash-1.5':
+			'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+		'pro-1.5':
+			'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent',
+		'flash-2.0':
+			'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent',
 	};
 
-	// Method to switch models if needed
 	setModel(modelKey = 'flash-1.5') {
 		if (LLMService.MODEL_URLS[modelKey]) {
 			this.baseUrl = LLMService.MODEL_URLS[modelKey];
@@ -71,7 +71,6 @@ export class LLMService {
 		}
 	}
 
-	// Firebase methods
 	async saveQuizResults(quizData) {
 		return saveQuizResults(quizData);
 	}
@@ -84,12 +83,10 @@ export class LLMService {
 		return saveChatMessage(message, isUserMessage);
 	}
 
-	// File reading method
 	async readFileContent(file) {
 		return withRetry(async () => readFileContent(file));
 	}
 
-	// Utility methods
 	shuffleArray(array) {
 		return shuffleArray(array);
 	}
@@ -98,7 +95,6 @@ export class LLMService {
 		return validateQuestions(questions);
 	}
 
-	// Add cache key generator
 	static generateCacheKey(content, options) {
 		return `${content.slice(0, 100)}-${JSON.stringify(options)}`;
 	}
@@ -106,16 +102,12 @@ export class LLMService {
 	async generateQuizQuestions(fileOrText, options = {}) {
 		const { numQuestions = 10, difficulty = 'medium' } = options;
 
-		// Ensure we have an API key before proceeding
 		await this.ensureApiKey();
 
 		console.log(`🚀 Starting quiz generation with model: ${this.baseUrl}`);
 
 		return withRetry(async () => {
-			// Create a fresh controller for each retry attempt
-			if (this.controller) {
-				this.controller.abort();
-			}
+			if (this.controller) this.controller.abort();
 			this.controller = new AbortController();
 
 			try {
@@ -128,7 +120,6 @@ export class LLMService {
 					throw new Error('The document seems empty or too short.');
 				}
 
-				// Check cache first
 				const cacheKey = LLMService.generateCacheKey(sourceText, options);
 				if (LLMService.responseCache.has(cacheKey)) {
 					console.log('📋 Using cached quiz questions');
@@ -137,15 +128,20 @@ export class LLMService {
 
 				this.language = detectLanguage(sourceText);
 				const text = trimForPrompt(sourceText);
+
+				// ✅ Always ensure contextAnalysis exists
+				const contextAnalysis = analyzeContext(sourceText);
+
 				const languagePrompt = getLanguagePrompt(
 					this.language,
 					numQuestions,
-					difficulty
+					difficulty,
+					contextAnalysis
 				);
 
 				const prompt = this._buildPrompt(languagePrompt, text);
 				console.log(`🔧 Making API request to: ${this.baseUrl}`);
-				
+
 				const questions = await this._makeApiRequest(
 					prompt,
 					this.controller.signal
@@ -156,23 +152,29 @@ export class LLMService {
 					numQuestions
 				);
 
-				// Cache the result
 				LLMService.responseCache.set(cacheKey, processedQuestions);
 				console.log('✅ Quiz questions generated and cached successfully');
 
 				return processedQuestions;
 			} catch (error) {
-				if (error?.name === 'AbortError') throw new Error('Request cancelled.');
-				
-				// Enhanced error handling
+				if (error?.name === 'AbortError')
+					throw new Error('Request cancelled.');
+
 				if (error.message?.includes('404') && error.message?.includes('gemini-pro')) {
-					console.error('❌ Using deprecated model gemini-pro! Check your code for old model references.');
-					this.setModel('flash-1.5'); // Force switch to working model
-					throw new Error('Model not found. Switched to gemini-1.5-flash. Please try again.');
+					console.error(
+						'❌ Using deprecated model gemini-pro! Check your code for old model references.'
+					);
+					this.setModel('flash-1.5');
+					throw new Error(
+						'Model not found. Switched to gemini-1.5-flash. Please try again.'
+					);
 				}
-				
-				// If API key error, try refreshing it once
-				if (error.message?.includes('API key') || error.message?.includes('401') || error.message?.includes('403')) {
+
+				if (
+					error.message?.includes('API key') ||
+					error.message?.includes('401') ||
+					error.message?.includes('403')
+				) {
 					try {
 						await this.refreshApiKey();
 						console.log('🔄 API key refreshed, retrying request...');
@@ -180,14 +182,13 @@ export class LLMService {
 						console.error('❌ Failed to refresh API key:', keyError);
 					}
 				}
-				
+
 				console.error('❌ Quiz generation error:', error);
 				throw error;
 			}
 		});
 	}
 
-	// Break down into smaller methods for better maintainability
 	_buildPrompt(languagePrompt, text) {
 		return `${languagePrompt}
 
@@ -205,25 +206,21 @@ ${text}`;
 	}
 
 	async _makeApiRequest(prompt, signal) {
-		// Ensure we have an API key
 		const apiKey = await this.ensureApiKey();
-		
+
 		console.log(`📡 API Request Details:
 URL: ${this.baseUrl}
 API Key: ${apiKey?.substring(0, 8)}...
 Content Length: ${prompt.length} characters`);
-		
-		const timeout = setTimeout(
-			() => this.controller?.abort(),
-			REQUEST_TIMEOUT_MS
-		);
+
+		const timeout = setTimeout(() => this.controller?.abort(), REQUEST_TIMEOUT_MS);
 
 		try {
 			const response = await fetch(this.baseUrl, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					'x-goog-api-key': apiKey, // Use the global API key
+					'x-goog-api-key': apiKey,
 				},
 				body: JSON.stringify({
 					contents: [{ parts: [{ text: prompt }] }],
@@ -242,17 +239,16 @@ Content Length: ${prompt.length} characters`);
 				const errorMessage = `API failed: ${response.status} - ${
 					errorData.error?.message || response.statusText
 				}`;
-				
+
 				console.error(`❌ API Error Details:
 Status: ${response.status}
 URL: ${this.baseUrl}
 Error: ${errorData.error?.message || response.statusText}`);
-				
-				// If it's an API key error, clear the cached key so it gets refreshed on next request
+
 				if (response.status === 401 || response.status === 403) {
 					this.apiKey = null;
 				}
-				
+
 				throw new Error(errorMessage);
 			}
 
