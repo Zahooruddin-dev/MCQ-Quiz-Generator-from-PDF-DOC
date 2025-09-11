@@ -535,14 +535,19 @@ const ModernFileUpload = ({
               </ConfigPanel>
             )}
 
-            <DropZone
-              isDragActive={dragOver}
-              hasFile={!!fileName}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onClick={() => fileInputRef.current?.click()}
-            >
+   <DropZone
+  isDragActive={dragOver}
+  hasFile={!!fileName}
+  onDrop={handleDrop}
+  onDragOver={handleDragOver}
+  onDragLeave={handleDragLeave}
+  onClick={() => {
+    if (!fileName) {
+      fileInputRef.current?.click();
+    }
+  }}
+>
+
               {effectiveLoading && (
                 <LoadingOverlay>
                   <Box
