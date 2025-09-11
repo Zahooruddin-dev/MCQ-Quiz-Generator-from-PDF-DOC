@@ -8,6 +8,7 @@ import { UploadContainer, MainCard } from './ModernFileUpload.styles';
 import UploadMainCard from './components/MainCard';
 import { useFileSelector } from './hooks/useFileSelector';
 import { useFileProcessor } from './hooks/useFileProcessor';
+
 const ModernFileUpload = ({
 	onFileUpload,
 	hasAI,
@@ -139,15 +140,15 @@ const ModernFileUpload = ({
 	);
 
 	const { handleFileSelect } = useFileSelector({
-  setError,
-  setFileName,
-  setFileSize,
-  setFileType,
-  setSelectedFile,
-  clearSelectedFile,
-  processFile,
-  useAI,
-});
+		setError,
+		setFileName,
+		setFileSize,
+		setFileType,
+		setSelectedFile,
+		clearSelectedFile,
+		processFile,
+		useAI,
+	});
 
 	const handleGenerateQuiz = useCallback(async () => {
 		if (!selectedFile) {
@@ -180,12 +181,24 @@ const ModernFileUpload = ({
 
 	const handleDragLeave = useCallback((e) => {
 		e.preventDefault();
-		setDragOver(false);
+		// Only set dragOver to false if we're actually leaving the drop zone
+		if (!e.currentTarget.contains(e.relatedTarget)) {
+			setDragOver(false);
+		}
 	}, []);
 
+	const handleKeyDown = useCallback((e) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			if (fileInputRef.current && !effectiveLoading) {
+				fileInputRef.current.click();
+			}
+		}
+	}, [effectiveLoading]);
+
 	return (
-		<UploadContainer maxWidth='md'>
-			<Stack spacing={4}>
+		<UploadContainer maxWidth='lg'>
+			<Stack spacing={{ xs: 3, sm: 4, md: 5 }}>
 				<Header />
 				<Features />
 
@@ -211,6 +224,7 @@ const ModernFileUpload = ({
 					handleFileSelect={handleFileSelect}
 					clearSelectedFile={clearSelectedFile}
 					handleGenerateQuiz={handleGenerateQuiz}
+					handleKeyDown={handleKeyDown}
 					baseUrl={baseUrl}
 					onFileUpload={onFileUpload}
 				/>
