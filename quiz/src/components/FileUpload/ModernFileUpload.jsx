@@ -33,14 +33,11 @@ import Features from './components/Features';
 import {
 	UploadContainer,
 	MainCard,
-	DropZone,
-	FileIcon,
-	LoadingOverlay,
-	pulse,
 } from './ModernFileUpload.styles';
 import TextModeInput from './components/TextModeInput';
 import FileDropZone from './components/FileDropZone';
 import ConfigPanel from "./components/ConfigPanel";
+import UploadMainCard from './components/UploadMainCard';
 const ModernFileUpload = ({
 	onFileUpload,
 	hasAI,
@@ -258,64 +255,32 @@ const ModernFileUpload = ({
 				<Header />
 				<Features />
 
-				<MainCard>
-					<CardContent sx={{ p: 4, position: 'relative' }}>
-						{error && (
-							<Fade in={!!error}>
-								<Alert
-									severity='error'
-									sx={{ mb: 3 }}
-									action={
-										<IconButton size='small' onClick={() => setError(null)}>
-											<X size={16} />
-										</IconButton>
-									}
-								>
-									{error}
-								</Alert>
-							</Fade>
-						)}
+  <UploadMainCard
+    error={error}
+    setError={setError}
+    hasAI={hasAI}
+    apiKey={apiKey}
+    effectiveLoading={effectiveLoading}
+    aiOptions={aiOptions}
+    setAiOptions={setAiOptions}
+    handleReconfigure={handleReconfigure}
+    dragOver={dragOver}
+    fileName={fileName}
+    fileSize={fileSize}
+    fileType={fileType}
+    useAI={useAI}
+    uploadProgress={uploadProgress}
+    fileInputRef={fileInputRef}
+    handleDrop={handleDrop}
+    handleDragOver={handleDragOver}
+    handleDragLeave={handleDragLeave}
+    handleFileSelect={handleFileSelect}
+    clearSelectedFile={clearSelectedFile}
+    handleGenerateQuiz={handleGenerateQuiz}
+    baseUrl={baseUrl}
+    onFileUpload={onFileUpload}
+  />
 
-						{hasAI && (
-							<ConfigPanel
-								hasAI={hasAI}
-								apiKey={apiKey}
-								loading={effectiveLoading}
-								initialOptions={aiOptions}
-								onOptionsChange={(opts) => setAiOptions(opts)}
-								onReconfigure={handleReconfigure}
-							/>
-						)}
-						<FileDropZone
-							dragOver={dragOver}
-							fileName={fileName}
-							fileSize={fileSize}
-							fileType={fileType}
-							useAI={useAI}
-							effectiveLoading={effectiveLoading}
-							uploadProgress={uploadProgress}
-							fileInputRef={fileInputRef}
-							onDrop={handleDrop}
-							onDragOver={handleDragOver}
-							onDragLeave={handleDragLeave}
-							onFileSelect={handleFileSelect}
-							onClear={clearSelectedFile}
-							onGenerateQuiz={handleGenerateQuiz}
-						/>
-
-						<Divider sx={{ my: 4 }}>or</Divider>
-
-						{/* ✅ Self-contained text input */}
-						<TextModeInput
-							apiKey={apiKey}
-							baseUrl={baseUrl}
-							aiOptions={aiOptions}
-							onQuizGenerated={(questions, options) =>
-								onFileUpload(questions, true, options)
-							}
-						/>
-					</CardContent>
-				</MainCard>
 			</Stack>
 		</UploadContainer>
 	);
