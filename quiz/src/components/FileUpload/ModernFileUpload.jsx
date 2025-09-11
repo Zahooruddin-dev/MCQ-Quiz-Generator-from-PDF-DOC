@@ -595,6 +595,8 @@ const ModernFileUpload = ({
 							setPastedText={setPastedText}
 							effectiveLoading={effectiveLoading}
 							handleTextSubmit={handleTextSubmit}
+							  apiKey={apiKey}
+
 						/>
 					</CardContent>
 				</MainCard>
