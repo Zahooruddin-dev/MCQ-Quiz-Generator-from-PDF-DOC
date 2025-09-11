@@ -343,6 +343,27 @@ const ModernQuizEngine = ({
   const cancelFinish = useCallback(() => {
     setShowFinishConfirm(false);
   }, []);
+// Inside your ModernQuizEngine component
+
+// Timer countdown effect
+useEffect(() => {
+  if (!showTimer || !timeLimit) return;
+  if (timeRemaining === null) setTimeRemaining(timeLimit);
+
+  const timerId = setInterval(() => {
+    setTimeRemaining(prev => {
+      if (prev === null) return null;
+      if (prev <= 1) {
+        clearInterval(timerId);
+        submitQuiz(); // auto-submit when time runs out
+        return 0;
+      }
+      return prev - 1;
+    });
+  }, 1000);
+
+  return () => clearInterval(timerId);
+}, [showTimer, timeLimit, submitQuiz]);
 
   // Keyboard navigation
   useEffect(() => {
