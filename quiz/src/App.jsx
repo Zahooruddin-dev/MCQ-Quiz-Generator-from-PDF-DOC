@@ -206,7 +206,19 @@ const HeaderWrapper = ({ onProfileClick, onApiConfigClick, showApiConfig }) => (
 			showApiConfig={showApiConfig}
 		/>
 	</Suspense>
-);
+);const handleFileUpload = (uploadedQuestions) => {
+	setQuestions(uploadedQuestions);
+
+	// Persist for refresh
+	try {
+		localStorage.setItem('quiz_questions', JSON.stringify(uploadedQuestions));
+	} catch (err) {
+		console.warn('Failed to save questions to localStorage:', err);
+	}
+
+	navigate('/quiz');
+};
+
 
 // Main App
 const App = () => {
@@ -266,6 +278,18 @@ const App = () => {
 				}
 			}
 		};
+useEffect(() => {
+	if (!questions) {
+		const savedQuestions = localStorage.getItem('quiz_questions');
+		if (savedQuestions) {
+			try {
+				setQuestions(JSON.parse(savedQuestions));
+			} catch (err) {
+				console.warn('Failed to parse saved questions:', err);
+			}
+		}
+	}
+}, []);
 
 		const timeoutId = setTimeout(fetchApiKey, 100);
 		return () => {
