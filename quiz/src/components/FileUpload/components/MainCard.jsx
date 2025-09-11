@@ -1,5 +1,4 @@
-// src/components/UploadMainCard.jsx
-import React from "react";
+import React, { useState } from "react";
 import {
   CardContent,
   Alert,
@@ -38,6 +37,8 @@ const UploadMainCard = ({
   baseUrl,
   onFileUpload,
 }) => {
+  const [showTextMode, setShowTextMode] = useState(false);
+
   return (
     <CardContent sx={{ p: 4, position: "relative" }}>
       {/* ❌ Error Alert */}
@@ -69,35 +70,51 @@ const UploadMainCard = ({
         />
       )}
 
-      {/* 📂 File Upload */}
-      <FileDropZone
-        dragOver={dragOver}
-        fileName={fileName}
-        fileSize={fileSize}
-        fileType={fileType}
-        useAI={useAI}
-        effectiveLoading={effectiveLoading}
-        uploadProgress={uploadProgress}
-        fileInputRef={fileInputRef}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onFileSelect={handleFileSelect}
-        onClear={clearSelectedFile}
-        onGenerateQuiz={handleGenerateQuiz}
-      />
+      {/* Active input: file drop or text input */}
+      <Box sx={{ position: "relative" }}>
+        {showTextMode ? (
+          <TextModeInput
+            apiKey={apiKey}
+            baseUrl={baseUrl}
+            aiOptions={aiOptions}
+            onQuizGenerated={(questions, options) => {
+              onFileUpload(questions, true, options);
+              setShowTextMode(false);
+            }}
+          >
+            {/* Nothing here: text mode replaces drop zone */}
+          </TextModeInput>
+        ) : (
+          <FileDropZone
+            dragOver={dragOver}
+            fileName={fileName}
+            fileSize={fileSize}
+            fileType={fileType}
+            useAI={useAI}
+            effectiveLoading={effectiveLoading}
+            uploadProgress={uploadProgress}
+            fileInputRef={fileInputRef}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onFileSelect={handleFileSelect}
+            onClear={clearSelectedFile}
+            onGenerateQuiz={handleGenerateQuiz}
+          />
+        )}
+      </Box>
 
       <Divider sx={{ my: 4 }}>or</Divider>
 
-      {/* 📝 Text Input Mode */}
-      <TextModeInput
-        apiKey={apiKey}
-        baseUrl={baseUrl}
-        aiOptions={aiOptions}
-        onQuizGenerated={(questions, options) =>
-          onFileUpload(questions, true, options)
-        }
-      />
+      {/* Toggle Button */}
+      <Button
+        variant="outlined"
+        onClick={() => setShowTextMode((prev) => !prev)}
+        sx={{ borderRadius: 2 }}
+        disabled={effectiveLoading}
+      >
+        {showTextMode ? "Cancel Text Mode" : "Paste Text Instead"}
+      </Button>
     </CardContent>
   );
 };
