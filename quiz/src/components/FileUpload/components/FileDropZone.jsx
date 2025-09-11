@@ -6,6 +6,8 @@ import {
   Button,
   Stack,
   LinearProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { Upload, FileText, Brain, X, File, FileType, Type, Sparkles } from "lucide-react";
 import { DropZone, FileIcon, LoadingOverlay, pulse } from "../ModernFileUpload.styles";
@@ -26,13 +28,18 @@ const FileDropZone = ({
   onFileSelect,
   onClear,
   onGenerateQuiz,
+  error,
+  setError,
 }) => {
   const getFileIcon = (type) => {
     if (type.includes("pdf")) return <FileType size={40} />;
-    if (type.includes("word") || type.includes("document"))
-      return <FileText size={40} />;
+    if (type.includes("word") || type.includes("document")) return <FileText size={40} />;
     if (type.includes("text")) return <Type size={40} />;
     return <File size={40} />;
+  };
+
+  const handleCloseError = () => {
+    setError(null);
   };
 
   return (
@@ -43,10 +50,9 @@ const FileDropZone = ({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onClick={() => {
-        if (!fileName) {
-          fileInputRef.current?.click();
-        }
+        if (!fileName) fileInputRef.current?.click();
       }}
+      sx={{ position: "relative" }}
     >
       {effectiveLoading && (
         <LoadingOverlay>
@@ -69,10 +75,7 @@ const FileDropZone = ({
           <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
             Processing Your Content
           </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", mb: 3 }}
-          >
+          <Typography variant="body2" sx={{ color: "text.secondary", mb: 3 }}>
             AI is analyzing and generating questions...
           </Typography>
           <Box sx={{ width: "100%", maxWidth: 300 }}>
@@ -105,17 +108,10 @@ const FileDropZone = ({
           <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
             Drag & drop your study material here
           </Typography>
-          <Typography
-            variant="body2"
-            sx={{ mb: 3, color: "text.secondary" }}
-          >
+          <Typography variant="body2" sx={{ mb: 3, color: "text.secondary" }}>
             Supports PDF, DOCX, TXT, HTML (Max {formatBytes(MAX_FILE_SIZE)})
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Upload />}
-            sx={{ borderRadius: 2 }}
-          >
+          <Button variant="contained" startIcon={<Upload />} sx={{ borderRadius: 2 }}>
             Browse Files
           </Button>
         </Box>
@@ -126,19 +122,11 @@ const FileDropZone = ({
             {fileName}
           </Typography>
           {fileSize && (
-            <Typography
-              variant="body2"
-              sx={{ mb: 2, color: "text.secondary" }}
-            >
+            <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
               {formatBytes(fileSize)}
             </Typography>
           )}
-          <Stack
-            direction="row"
-            spacing={2}
-            justifyContent="center"
-            sx={{ mt: 2 }}
-          >
+          <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
             {useAI && (
               <Button
                 variant="contained"
@@ -167,13 +155,21 @@ const FileDropZone = ({
         type="file"
         ref={fileInputRef}
         style={{ display: "none" }}
-        onChange={(e) => {
-          if (e.target.files?.[0]) {
-            onFileSelect(e.target.files[0]);
-          }
-        }}
+        onChange={(e) => e.target.files?.[0] && onFileSelect(e.target.files[0])}
         accept=".pdf,.doc,.docx,.txt,.html"
       />
+
+      {/* Error Popup */}
+      <Snackbar
+        open={!!error}
+        autoHideDuration={7000}
+        onClose={handleCloseError}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={handleCloseError} severity="error" sx={{ width: "100%" }}>
+          {error}
+        </Alert>
+      </Snackbar>
     </DropZone>
   );
 };
