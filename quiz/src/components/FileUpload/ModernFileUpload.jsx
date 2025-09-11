@@ -35,13 +35,12 @@ import {
 	MainCard,
 	DropZone,
 	FileIcon,
-	ConfigPanel,
 	LoadingOverlay,
 	pulse,
 } from './ModernFileUpload.styles';
 import TextModeInput from './components/TextModeInput';
 import FileDropZone from './components/FileDropZone';
-
+import ConfigPanel from "./components/ConfigPanel";
 const ModernFileUpload = ({
 	onFileUpload,
 	hasAI,
@@ -253,14 +252,6 @@ const ModernFileUpload = ({
 		setDragOver(false);
 	}, []);
 
-	const getFileIcon = useCallback((type) => {
-		if (type.includes('pdf')) return <FileType size={40} />;
-		if (type.includes('word') || type.includes('document'))
-			return <FileText size={40} />;
-		if (type.includes('text')) return <Type size={40} />;
-		return <File size={40} />;
-	}, []);
-
 	return (
 		<UploadContainer maxWidth='md'>
 			<Stack spacing={4}>
@@ -286,85 +277,14 @@ const ModernFileUpload = ({
 						)}
 
 						{hasAI && (
-							<ConfigPanel>
-								<CardContent sx={{ p: 3 }}>
-									<Stack spacing={3}>
-										<Stack direction='row' alignItems='center' spacing={2}>
-											<Box
-												sx={{
-													width: 40,
-													height: 40,
-													borderRadius: 1,
-													background:
-														'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-													display: 'flex',
-													alignItems: 'center',
-													justifyContent: 'center',
-													color: 'white',
-												}}
-											>
-												<Settings size={20} />
-											</Box>
-											<Typography variant='h6' sx={{ fontWeight: 600 }}>
-												AI Generation Settings
-											</Typography>
-										</Stack>
-
-										<FormControlLabel
-											control={
-												<Switch
-													checked={useAI}
-													onChange={(e) => setUseAI(e.target.checked)}
-													disabled={effectiveLoading}
-												/>
-											}
-											label='Enable AI-powered question generation'
-										/>
-
-										<Collapse in={useAI}>
-											<Stack spacing={3}>
-												<TextField
-													label='Number of Questions'
-													type='number'
-													value={aiOptions.numQuestions}
-													onChange={(e) => {
-														const val = e.target.value;
-														setAiOptions((prev) => ({
-															...prev,
-															numQuestions: val === '' ? '' : Number(val),
-														}));
-													}}
-													onBlur={(e) => {
-														let val = Number(e.target.value);
-														if (!val || val < 5) val = 5;
-														if (val > 50) val = 50;
-														setAiOptions((prev) => ({
-															...prev,
-															numQuestions: val,
-														}));
-													}}
-													inputProps={{ min: 5, max: 50 }}
-													disabled={effectiveLoading}
-													sx={{ flex: 1 }}
-												/>
-
-												{!apiKey && (
-													<Alert severity='warning' sx={{ mt: 2 }}>
-														API key not configured.
-														<Button
-															size='small'
-															onClick={handleReconfigure}
-															sx={{ ml: 1 }}
-														>
-															Configure Now
-														</Button>
-													</Alert>
-												)}
-											</Stack>
-										</Collapse>
-									</Stack>
-								</CardContent>
-							</ConfigPanel>
+							<ConfigPanel
+								hasAI={hasAI}
+								apiKey={apiKey}
+								loading={effectiveLoading}
+								initialOptions={aiOptions}
+								onOptionsChange={(opts) => setAiOptions(opts)}
+								onReconfigure={handleReconfigure}
+							/>
 						)}
 						<FileDropZone
 							dragOver={dragOver}
