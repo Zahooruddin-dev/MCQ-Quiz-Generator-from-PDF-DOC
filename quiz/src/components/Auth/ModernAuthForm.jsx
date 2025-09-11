@@ -9,6 +9,10 @@ import {
 	IconButton,
 	InputAdornment,
 	Button,
+	useMediaQuery,
+	useTheme,
+	Fade,
+	Collapse,
 } from '@mui/material';
 import {
 	Eye,
@@ -21,6 +25,8 @@ import {
 	Shield,
 	Zap,
 	CheckCircle,
+	AlertCircle,
+	CheckIcon,
 } from 'lucide-react';
 import { auth, db } from '../../firebaseConfig';
 import {
@@ -44,6 +50,10 @@ import { getFriendlyError } from './errorMapping';
 import GoogleLoginButton from './GoogleLoginButton';
 
 const ModernAuthForm = () => {
+	const theme = useTheme();
+	const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+	const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+	
 	const [isSignup, setIsSignup] = useState(false);
 	const [email, setEmail] = useState('');
 	const [username, setUsername] = useState('');
@@ -52,12 +62,39 @@ const ModernAuthForm = () => {
 	const [error, setError] = useState('');
 	const [successMsg, setSuccessMsg] = useState('');
 	const [loading, setLoading] = useState(false);
+	const [resetSent, setResetSent] = useState(false);
 
 	const features = [
-		{ icon: <Brain size={16} />, label: 'AI-Powered' },
-		{ icon: <Zap size={16} />, label: 'Lightning Fast' },
-		{ icon: <Shield size={16} />, label: 'Secure' },
+		{ icon: <Brain size={isMobile ? 14 : 16} />, label: 'AI-Powered' },
+		{ icon: <Zap size={isMobile ? 14 : 16} />, label: 'Lightning Fast' },
+		{ icon: <Shield size={isMobile ? 14 : 16} />, label: 'Secure' },
 	];
+
+	// Enhanced validation
+	const validateForm = () => {
+		if (!email || !password) {
+			setError('Please fill in all required fields.');
+			return false;
+		}
+		
+		if (isSignup && !username.trim()) {
+			setError('Please enter your full name.');
+			return false;
+		}
+		
+		if (password.length < 6) {
+			setError('Password must be at least 6 characters long.');
+			return false;
+		}
+		
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(email)) {
+			setError('Please enter a valid email address.');
+			return false;
+		}
+		
+		return true;
+	};
 
 	// Signup
 	const handleSignup = async () => {
@@ -66,11 +103,11 @@ const ModernAuthForm = () => {
 			email,
 			password
 		);
-		await updateProfile(userCred.user, { displayName: username });
+		await updateProfile(userCred.user, { displayName: username.trim() });
 
 		await setDoc(doc(db, 'users', userCred.user.uid), {
-			displayName: username,
-			email,
+			displayName: username.trim(),
+			email: email.toLowerCase(),
 			credits: 5,
 			createdAt: serverTimestamp(),
 		});
@@ -89,6 +126,9 @@ const ModernAuthForm = () => {
 		e.preventDefault();
 		setError('');
 		setSuccessMsg('');
+		
+		if (!validateForm()) return;
+		
 		setLoading(true);
 
 		try {
@@ -98,6 +138,7 @@ const ModernAuthForm = () => {
 				await handleLogin();
 			}
 		} catch (err) {
+			console.error('Auth error:', err);
 			setError(getFriendlyError(err.code));
 		} finally {
 			setLoading(false);
@@ -107,122 +148,213 @@ const ModernAuthForm = () => {
 	// Forgot password
 	const handleForgotPassword = async () => {
 		if (!email) {
-			setError('Please enter your email first.');
+			setError('Please enter your email address first.');
 			return;
 		}
+		
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(email)) {
+			setError('Please enter a valid email address.');
+			return;
+		}
+		
 		try {
 			await sendPasswordResetEmail(auth, email);
-			setSuccessMsg('Password reset email sent! Check your inbox.');
+			setResetSent(true);
+			setSuccessMsg('Password reset email sent! Check your inbox and spam folder.');
 		} catch (err) {
+			console.error('Password reset error:', err);
 			setError(getFriendlyError(err.code));
 		}
 	};
-	return (
-		<AuthContainer>
-			{/* Floating Elements */}
-			<FloatingElement sx={{ top: '10%', left: '10%' }} delay={0}>
-				<Brain size={40} />
-			</FloatingElement>
-			<FloatingElement sx={{ top: '20%', right: '15%' }} delay={2}>
-				<Zap size={50} />
-			</FloatingElement>
-			<FloatingElement sx={{ bottom: '30%', left: '20%' }} delay={4}>
-				<Shield size={35} />
-			</FloatingElement>
-			<FloatingElement sx={{ bottom: '20%', right: '10%' }} delay={1}>
-				<CheckCircle size={45} />
-			</FloatingElement>
 
-			<AuthCard>
-				<CardContent sx={{ p: 4 }}>
-					{/* Brand Section */}
+	const switchMode = () => {
+		setIsSignup(!isSignup);
+		setError('');
+		setSuccessMsg('');
+		setResetSent(false);
+		// Clear form on mode switch for better UX
+		if (isSignup) {
+			setUsername('');
+		}
+	};
+
+	return (
+		<AuthContainer isMobile={isMobile}>
+			{/* Enhanced Floating Elements with better mobile handling */}
+			{!isMobile && (
+				<>
+					<FloatingElement sx={{ top: '10%', left: '10%' }} delay={0}>
+						<Brain size={isTablet ? 30 : 40} />
+					</FloatingElement>
+					<FloatingElement sx={{ top: '20%', right: '15%' }} delay={2}>
+						<Zap size={isTablet ? 35 : 50} />
+					</FloatingElement>
+					<FloatingElement sx={{ bottom: '30%', left: '20%' }} delay={4}>
+						<Shield size={isTablet ? 25 : 35} />
+					</FloatingElement>
+					<FloatingElement sx={{ bottom: '20%', right: '10%' }} delay={1}>
+						<CheckCircle size={isTablet ? 35 : 45} />
+					</FloatingElement>
+				</>
+			)}
+
+			<AuthCard isMobile={isMobile} isTablet={isTablet}>
+				<CardContent 
+					sx={{ 
+						p: { xs: 3, sm: 4, md: 5 },
+						// Ensure proper spacing on mobile
+						'&:last-child': {
+							paddingBottom: { xs: 3, sm: 4, md: 5 }
+						}
+					}}
+				>
+					{/* Enhanced Brand Section */}
 					<BrandSection>
-						<LogoIcon>
-							<Brain size={32} />
+						<LogoIcon isMobile={isMobile}>
+							<Brain size={isMobile ? 24 : 32} />
 						</LogoIcon>
 						<Typography
-							variant='h4'
+							variant={isMobile ? 'h5' : 'h4'}
 							sx={{
 								fontWeight: 800,
-								background: 'linear-gradient(45deg, #6366F1 30%, #8B5CF6 90%)',
+								background: 'linear-gradient(45deg, #3b82f6 20%, #6366f1 50%, #8b5cf6 80%)',
 								WebkitBackgroundClip: 'text',
 								WebkitTextFillColor: 'transparent',
+								backgroundClip: 'text',
 								mb: 1,
+								// Better fallback for unsupported browsers
+								color: '#3b82f6',
+								fontSize: { xs: '1.75rem', sm: '2rem', md: '2.125rem' },
 							}}
 						>
 							QuizAI
 						</Typography>
-						<Typography variant='body1' sx={{ color: 'text.secondary', mb: 3 }}>
+						<Typography 
+							variant='body1' 
+							sx={{ 
+								color: 'text.secondary', 
+								mb: { xs: 2, sm: 3 },
+								fontSize: { xs: '0.9rem', sm: '1rem' },
+								lineHeight: 1.5,
+								maxWidth: '400px',
+								margin: '0 auto',
+								marginBottom: { xs: 2, sm: 3 },
+							}}
+						>
 							{isSignup
 								? 'Create your account and start generating quizzes with AI'
 								: 'Welcome back! Sign in to continue your learning journey'}
 						</Typography>
 						<Stack
 							direction='row'
-							spacing={1}
+							spacing={{ xs: 0.5, sm: 1 }}
 							justifyContent='center'
-							sx={{ mb: 2 }}
+							sx={{ 
+								mb: { xs: 2, sm: 2 },
+								flexWrap: 'wrap',
+								gap: { xs: 0.5, sm: 1 },
+							}}
 						>
 							{features.map((f, i) => (
 								<FeatureChip
 									key={i}
 									icon={f.icon}
 									label={f.label}
-									size='small'
+									size={isMobile ? 'small' : 'medium'}
+									sx={{
+										fontSize: { xs: '0.7rem', sm: '0.75rem' },
+										height: { xs: 24, sm: 28 },
+									}}
 								/>
 							))}
 						</Stack>
 					</BrandSection>
 
-					{/* Error / Success */}
-					{error && (
-						<Alert severity='error' sx={{ mb: 3, borderRadius: 2 }}>
+					{/* Enhanced Error / Success with animations */}
+					<Collapse in={!!error}>
+						<Alert 
+							severity='error' 
+							sx={{ 
+								mb: 3, 
+								borderRadius: 2,
+								fontSize: { xs: '0.875rem', sm: '1rem' },
+							}}
+							icon={<AlertCircle size={20} />}
+							onClose={() => setError('')}
+						>
 							{error}
 						</Alert>
-					)}
-					{successMsg && (
-						<Alert severity='success' sx={{ mb: 3, borderRadius: 2 }}>
+					</Collapse>
+
+					<Collapse in={!!successMsg}>
+						<Alert 
+							severity='success' 
+							sx={{ 
+								mb: 3, 
+								borderRadius: 2,
+								fontSize: { xs: '0.875rem', sm: '1rem' },
+							}}
+							icon={<CheckIcon size={20} />}
+						>
 							{successMsg}
 						</Alert>
-					)}
+					</Collapse>
 
-					{/* Form */}
-					<Box component='form' onSubmit={handleAuth}>
-						<Stack spacing={3}>
-							{isSignup && (
-								<StyledTextField
-									fullWidth
-									label='Full Name'
-									value={username}
-									onChange={(e) => setUsername(e.target.value)}
-									required
-									placeholder='Enter your full name'
-									InputProps={{
-										startAdornment: (
-											<InputAdornment position='start'>
-												<User size={20} color='#6366F1' />
-											</InputAdornment>
-										),
-									}}
-								/>
-							)}
+					{/* Enhanced Form */}
+					<Box component='form' onSubmit={handleAuth} noValidate>
+						<Stack spacing={{ xs: 2.5, sm: 3 }}>
+							<Fade in={isSignup} timeout={300}>
+								<Box>
+									{isSignup && (
+										<StyledTextField
+											fullWidth
+											label='Full Name'
+											value={username}
+											onChange={(e) => setUsername(e.target.value)}
+											required
+											placeholder='Enter your full name'
+											autoComplete='name'
+											disabled={loading}
+											inputProps={{
+												'aria-label': 'Full name',
+												style: { fontSize: isMobile ? '16px' : '14px' } // Prevent zoom on iOS
+											}}
+											InputProps={{
+												startAdornment: (
+													<InputAdornment position='start'>
+														<User size={20} color='#3b82f6' />
+													</InputAdornment>
+												),
+											}}
+										/>
+									)}
+								</Box>
+							</Fade>
+
 							<StyledTextField
 								fullWidth
 								type='email'
 								label='Email Address'
 								value={email}
-								onChange={(e) => setEmail(e.target.value)}
+								onChange={(e) => setEmail(e.target.value.toLowerCase().trim())}
 								autoComplete='email'
 								required
 								placeholder='you@example.com'
+								disabled={loading}
+								inputProps={{
+									'aria-label': 'Email address',
+									style: { fontSize: isMobile ? '16px' : '14px' } // Prevent zoom on iOS
+								}}
 								InputProps={{
 									startAdornment: (
 										<InputAdornment position='start'>
-											<Mail size={20} color='#6366F1' />
+											<Mail size={20} color='#3b82f6' />
 										</InputAdornment>
 									),
 								}}
 							/>
+
 							<StyledTextField
 								fullWidth
 								type={showPassword ? 'text' : 'password'}
@@ -232,18 +364,31 @@ const ModernAuthForm = () => {
 								onChange={(e) => setPassword(e.target.value)}
 								required
 								placeholder='••••••••'
+								disabled={loading}
+								inputProps={{
+									'aria-label': 'Password',
+									minLength: 6,
+									style: { fontSize: isMobile ? '16px' : '14px' } // Prevent zoom on iOS
+								}}
 								InputProps={{
 									startAdornment: (
 										<InputAdornment position='start'>
-											<Lock size={20} color='#6366F1' />
+											<Lock size={20} color='#3b82f6' />
 										</InputAdornment>
 									),
 									endAdornment: (
 										<InputAdornment position='end'>
 											<IconButton
 												onClick={() => setShowPassword(!showPassword)}
+												onMouseDown={(e) => e.preventDefault()}
 												edge='end'
 												size='small'
+												disabled={loading}
+												aria-label={showPassword ? 'Hide password' : 'Show password'}
+												sx={{
+													minWidth: { xs: 44, sm: 'auto' },
+													minHeight: { xs: 44, sm: 'auto' },
+												}}
 											>
 												{showPassword ? (
 													<EyeOff size={20} />
@@ -255,12 +400,17 @@ const ModernAuthForm = () => {
 									),
 								}}
 							/>
+
 							<GradientButton
 								type='submit'
 								fullWidth
 								size='large'
 								disabled={loading}
 								endIcon={loading ? null : <ArrowRight size={20} />}
+								sx={{
+									minHeight: { xs: 48, sm: 56 },
+									fontSize: { xs: '1rem', sm: '1.1rem' },
+								}}
 							>
 								{loading
 									? 'Please wait...'
@@ -271,58 +421,76 @@ const ModernAuthForm = () => {
 						</Stack>
 					</Box>
 
-					{/* Forgot Password */}
+					{/* Enhanced Forgot Password */}
 					{!isSignup && (
-						<Box sx={{ textAlign: 'center', mt: 2 }}>
+						<Box sx={{ textAlign: 'center', mt: { xs: 2, sm: 2.5 } }}>
 							<Button
 								variant='text'
 								onClick={handleForgotPassword}
+								disabled={loading || resetSent}
 								sx={{
 									color: 'primary.main',
 									fontWeight: 500,
 									textTransform: 'none',
+									fontSize: { xs: '0.9rem', sm: '1rem' },
+									minHeight: { xs: 44, sm: 'auto' },
 								}}
 							>
-								Forgot your password?
+								{resetSent ? 'Reset email sent!' : 'Forgot your password?'}
 							</Button>
 						</Box>
 					)}
 
-					{/* Divider */}
-					<Box sx={{ my: 3 }}>
+					{/* Enhanced Divider */}
+					<Box sx={{ my: { xs: 3, sm: 4 } }}>
 						<Divider>
 							<Typography
 								variant='body2'
-								sx={{ color: 'text.secondary', px: 2 }}
+								sx={{ 
+									color: 'text.secondary', 
+									px: 2,
+									fontSize: { xs: '0.8rem', sm: '0.875rem' },
+									fontWeight: 500,
+								}}
 							>
 								OR
 							</Typography>
 						</Divider>
 					</Box>
 
-					{/* Google Sign In */}
+					{/* Enhanced Google Sign In */}
 					<GoogleLoginButton
 						disabled={loading}
 						onSuccess={(msg) => setSuccessMsg(msg)}
 						onError={(errMsg) => setError(errMsg)}
+						isMobile={isMobile}
 					/>
 
-					{/* Switch form mode */}
-					<Box sx={{ textAlign: 'center', mt: 3 }}>
-						<Typography variant='body2' sx={{ color: 'text.secondary' }}>
+					{/* Enhanced Switch form mode */}
+					<Box sx={{ textAlign: 'center', mt: { xs: 3, sm: 4 } }}>
+						<Typography 
+							variant='body2' 
+							sx={{ 
+								color: 'text.secondary',
+								fontSize: { xs: '0.875rem', sm: '1rem' },
+							}}
+						>
 							{isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
 							<Button
 								variant='text'
-								onClick={() => {
-									setIsSignup(!isSignup);
-									setError('');
-									setSuccessMsg('');
-								}}
+								onClick={switchMode}
+								disabled={loading}
 								sx={{
 									color: 'primary.main',
 									fontWeight: 600,
 									textTransform: 'none',
 									p: 0,
+									fontSize: { xs: '0.875rem', sm: '1rem' },
+									minHeight: { xs: 44, sm: 'auto' },
+									'&:hover': {
+										backgroundColor: 'transparent',
+										textDecoration: 'underline',
+									},
 								}}
 							>
 								{isSignup ? 'Sign In' : 'Sign Up'}
@@ -330,7 +498,7 @@ const ModernAuthForm = () => {
 						</Typography>
 					</Box>
 
-					{/* Terms */}
+					{/* Enhanced Terms */}
 					{isSignup && (
 						<Typography
 							variant='caption'
@@ -338,13 +506,18 @@ const ModernAuthForm = () => {
 								color: 'text.secondary',
 								textAlign: 'center',
 								display: 'block',
-								mt: 2,
+								mt: { xs: 2, sm: 3 },
 								lineHeight: 1.4,
+								fontSize: { xs: '0.7rem', sm: '0.75rem' },
+								maxWidth: '360px',
+								margin: 'auto',
+								marginTop: { xs: 2, sm: 3 },
 							}}
 						>
 							By creating an account, you agree to our{' '}
 							<Button
 								variant='text'
+								disabled={loading}
 								sx={{
 									color: 'primary.main',
 									p: 0,
@@ -352,6 +525,9 @@ const ModernAuthForm = () => {
 									fontSize: 'inherit',
 									textTransform: 'none',
 									textDecoration: 'underline',
+									'&:hover': {
+										backgroundColor: 'transparent',
+									},
 								}}
 							>
 								Terms of Service
@@ -359,6 +535,7 @@ const ModernAuthForm = () => {
 							and{' '}
 							<Button
 								variant='text'
+								disabled={loading}
 								sx={{
 									color: 'primary.main',
 									p: 0,
@@ -366,6 +543,9 @@ const ModernAuthForm = () => {
 									fontSize: 'inherit',
 									textTransform: 'none',
 									textDecoration: 'underline',
+									'&:hover': {
+										backgroundColor: 'transparent',
+									},
 								}}
 							>
 								Privacy Policy
