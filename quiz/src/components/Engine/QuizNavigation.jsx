@@ -79,6 +79,8 @@ const QuizNavigation = ({
             px: { xs: 2, sm: 3 },
             py: { xs: 1, sm: 1.5 },
             fontWeight: 600,
+            margin: 2,
+
             textTransform: 'none',
             minWidth: { xs: 'auto', sm: '120px' },
             borderColor: '#d1d5db',
@@ -183,6 +185,7 @@ const QuizNavigation = ({
               px: { xs: 2, sm: 3 },
               py: { xs: 1, sm: 1.5 },
               fontWeight: 700,
+
               textTransform: 'none',
               minWidth: { xs: 'auto', sm: '120px' },
               boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
@@ -222,6 +225,7 @@ const QuizNavigation = ({
               px: { xs: 2, sm: 3 },
               py: { xs: 1, sm: 1.5 },
               fontWeight: 600,
+              margin: 2,
               textTransform: 'none',
               minWidth: { xs: 'auto', sm: '120px' },
               boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)',
