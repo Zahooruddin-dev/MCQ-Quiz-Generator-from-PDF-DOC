@@ -286,13 +286,15 @@ const ModernQuizEngine = ({
         answeredQuestions: questions.length - unansweredCount,
         correctAnswers: score,
         timestamp: new Date().toISOString(),
-        timeSpent: timeLimit ? timeLimit - timeRemaining : null,
+        timeSpent: timeLimit && showTimer ? timeLimit - (timeRemaining || 0) : timeTaken,
         timeTaken: timeTaken,
         topic: topic,
         difficulty: difficulty,
         quizTitle: quizTitle,
         questionStats: questionStats,
         completionRate: 100,
+        timeExpired: showTimer && timeRemaining === 0, // Flag to indicate if quiz was auto-submitted due to time
+        timeRemaining: timeRemaining, // Include remaining time in results
       };
 
       // Show smooth processing transition
@@ -442,6 +444,8 @@ const ModernQuizEngine = ({
               cancelFinish={cancelFinish}
               submitQuiz={submitQuiz}
               isSubmitting={isSubmitting}
+              timeRemaining={timeRemaining}
+              showTimer={showTimer}
             />
           </Stack>
         </QuizContainer>

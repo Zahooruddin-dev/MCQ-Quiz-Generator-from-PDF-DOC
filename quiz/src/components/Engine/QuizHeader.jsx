@@ -12,13 +12,14 @@ const QuizHeader = ({
   timeRemaining,
 }) => {
   const formatTime = (seconds) => {
-    if (!seconds) return "";
+    if (!seconds && seconds !== 0) return "";
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const isTimerUrgent = timeRemaining && timeRemaining < 300; // Less than 5 minutes
+  const isTimerCritical = timeRemaining && timeRemaining < 60; // Less than 1 minute
   const progressPercentage = Math.round((answeredCount / totalQuestions) * 100);
 
   return (
@@ -137,25 +138,37 @@ const QuizHeader = ({
         </Box>
 
         {/* Timer */}
-        {showTimer && timeRemaining && (
+        {showTimer && timeRemaining !== null && (
           <StatsChip
             icon={<Clock size={16} />}
             label={formatTime(timeRemaining)}
             sx={{
-              background: isTimerUrgent
+              background: isTimerCritical
                 ? 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)'
+                : isTimerUrgent
+                ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
                 : 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-              border: isTimerUrgent
+              border: isTimerCritical
                 ? '1px solid #fca5a5'
+                : isTimerUrgent
+                ? '1px solid #fcd34d'
                 : '1px solid #7dd3fc',
-              color: isTimerUrgent ? '#991b1b' : '#0c4a6e',
+              color: isTimerCritical 
+                ? '#991b1b' 
+                : isTimerUrgent 
+                ? '#92400e' 
+                : '#0c4a6e',
               fontWeight: 700,
               fontSize: { xs: '0.8rem', sm: '0.875rem' },
               height: { xs: 32, sm: 36 },
-              animation: isTimerUrgent ? 'pulse 2s infinite' : 'none',
+              animation: isTimerCritical ? 'pulse 1s infinite' : isTimerUrgent ? 'pulse 2s infinite' : 'none',
               fontFamily: 'monospace',
               '& .MuiChip-icon': {
-                color: isTimerUrgent ? '#dc2626' : '#0284c7',
+                color: isTimerCritical 
+                  ? '#dc2626' 
+                  : isTimerUrgent 
+                  ? '#f59e0b' 
+                  : '#0284c7',
               },
               '@keyframes pulse': {
                 '0%, 100%': {
@@ -185,11 +198,14 @@ const QuizHeader = ({
           }}
         >
           {progressPercentage}% complete • {totalQuestions - answeredCount} questions remaining
+          {showTimer && timeRemaining !== null && (
+            <> • {formatTime(timeRemaining)} left</>
+          )}
         </Typography>
       </Box>
 
-      {/* Timer Warning */}
-      {isTimerUrgent && (
+      {/* Timer Critical Warning */}
+      {isTimerCritical && (
         <Box
           sx={{
             mt: 2,
@@ -209,7 +225,33 @@ const QuizHeader = ({
               fontSize: { xs: '0.8rem', sm: '0.875rem' },
             }}
           >
-            ⚠️ Less than 5 minutes remaining!
+            ⚠️ Less than 1 minute remaining! Quiz will auto-submit soon.
+          </Typography>
+        </Box>
+      )}
+
+      {/* Timer Warning (5 minutes) */}
+      {isTimerUrgent && !isTimerCritical && (
+        <Box
+          sx={{
+            mt: 2,
+            p: 1.5,
+            background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+            border: '1px solid #fcd34d',
+            borderRadius: 2,
+            textAlign: 'center',
+            animation: 'pulse 3s infinite',
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: '#92400e',
+              fontWeight: 600,
+              fontSize: { xs: '0.8rem', sm: '0.875rem' },
+            }}
+          >
+            ⏰ Less than 5 minutes remaining!
           </Typography>
         </Box>
       )}
