@@ -22,29 +22,34 @@ export class LLMService {
   static responseCache = new Map();
 
   constructor() {
-    this.baseUrl = null;
-    this.apiKey = null;
+    // ----- ADDED: preload from sessionStorage -----
+    this.baseUrl = sessionStorage.getItem('llm_baseUrl') || null;
+    this.apiKey = sessionStorage.getItem('llm_apiKey') || null;
+    // ---------------------------------------------
     this.language = 'en';
     this.controller = null;
-    console.log(
-      '✅ LLMService initialized (endpoint & API key will be fetched dynamically)'
-    );
+    console.log('✅ LLMService initialized (endpoint & API key will be fetched dynamically if missing)');
   }
 
-  static async getInstance() {
-    if (!this.instance) {
-      this.instance = new LLMService();
+  // ----- NEW STATIC METHOD: Preload API key and endpoint -----
+  static async preloadApiConfig() {
+    if (!LLMService.instance) {
+      LLMService.instance = new LLMService();
     }
-    return this.instance;
+    await LLMService.instance.ensureApiKey();
+    await LLMService.instance.ensureEndpoint();
+    console.log('🚀 LLMService preloaded API key and endpoint in the background.');
   }
+  // -----------------------------------------------------------
 
   async ensureApiKey() {
     if (!this.apiKey) {
-      this.apiKey = await getGlobalApiKey();
-      if (!this.apiKey) {
-        throw new Error('No global API key configured in Firestore.');
-      }
-      console.log('✅ Global API key loaded successfully');
+      // ----- ADDED: check sessionStorage first -----
+      this.apiKey = sessionStorage.getItem('llm_apiKey') || (await getGlobalApiKey());
+      if (!this.apiKey) throw new Error('No global API key configured in Firestore.');
+      sessionStorage.setItem('llm_apiKey', this.apiKey);
+      console.log('✅ Global API key loaded successfully (preloaded)');
+      // ---------------------------------------------
     }
     return this.apiKey;
   }
@@ -52,17 +57,19 @@ export class LLMService {
   async ensureEndpoint() {
     if (!this.baseUrl) {
       const config = await getGlobalApiConfig();
-      if (!config?.baseUrl) {
-        throw new Error('No API endpoint (baseUrl) configured in Firestore.');
-      }
+      if (!config?.baseUrl) throw new Error('No API endpoint (baseUrl) configured in Firestore.');
       this.baseUrl = config.baseUrl;
-      console.log(`✅ Dynamic endpoint loaded: ${this.baseUrl}`);
+      // ----- ADDED: cache in sessionStorage -----
+      sessionStorage.setItem('llm_baseUrl', this.baseUrl);
+      console.log(`✅ Dynamic endpoint loaded (preloaded): ${this.baseUrl}`);
+      // -----------------------------------------
     }
     return this.baseUrl;
   }
 
   async refreshApiKey() {
     this.apiKey = null;
+    sessionStorage.removeItem('llm_apiKey'); // ----- ADDED -----
     const newKey = await this.ensureApiKey();
     console.log('🔄 API key refreshed');
     return newKey;

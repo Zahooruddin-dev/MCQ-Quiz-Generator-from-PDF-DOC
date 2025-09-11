@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react'; // Import useEffect
 import { Stack } from '@mui/material';
 import { LLMService } from '../../utils/llmService';
 import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from './utils';
@@ -35,6 +35,12 @@ const ModernFileUpload = ({
 	const fileInputRef = useRef(null);
 
 	const effectiveLoading = isLoading || loadingFromParent;
+
+	// ----- NEW: Call preloadApiConfig on component mount -----
+	useEffect(() => {
+		LLMService.preloadApiConfig().catch(console.error);
+	}, []); // Empty dependency array ensures it runs only once on mount
+	// ---------------------------------------------------------
 
 	const startLoading = useCallback(() => {
 		setError(null);
@@ -94,19 +100,25 @@ const ModernFileUpload = ({
 					return;
 				}
 
-				const effectiveApiKey = apiKey || localStorage.getItem('geminiApiKey');
-				if (!effectiveApiKey || effectiveApiKey.trim().length < 8) {
+				// The ensureApiKey and ensureEndpoint calls in LLMService constructor and methods
+				// will now leverage the preloaded values or fetch them if still missing.
+				// We no longer explicitly check localStorage.getItem('geminiApiKey') here as LLMService handles it.
+				// However, if `apiKey` prop is explicitly passed and is empty, we should still warn.
+				if (!apiKey && !sessionStorage.getItem('llm_apiKey')) {
 					setError(
 						'Please configure your API key first. Click the settings button to get started.'
 					);
 					return;
 				}
 
+
 				startLoading();
 				const progressInterval = simulateProgress();
 
 				try {
-					const llmService = new LLMService(effectiveApiKey, baseUrl);
+					// Instantiate LLMService without passing apiKey/baseUrl if they are managed internally
+					// The LLMService instance will use the preloaded values or fetch them.
+					const llmService = new LLMService(); // No arguments needed now
 					const questions = await llmService.generateQuizQuestions(
 						file,
 						aiOptions
@@ -129,8 +141,7 @@ const ModernFileUpload = ({
 		},
 		[
 			useAI,
-			apiKey,
-			baseUrl,
+			apiKey, // Keep apiKey in dependency array if it's passed as a prop and used for initial check
 			aiOptions,
 			onFileUpload,
 			startLoading,
