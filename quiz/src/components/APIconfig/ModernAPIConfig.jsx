@@ -1,3 +1,4 @@
+// src/components/ModernAPIConfig.jsx
 import React, { useState, useEffect } from 'react';
 import {
   DialogContent,
@@ -34,23 +35,32 @@ const ModernAPIConfig = ({ onConfigSave, onClose }) => {
     { icon: 'shield', title: 'Secure & Private', description: 'Your data stays protected' },
   ];
 
-  useEffect(() => {
-    const fetchApiKey = async () => {
-      try {
-        const snap = await getDoc(doc(db, 'settings', 'apiKey'));
-        if (snap.exists()) {
-          setApiKey(snap.data().value || '');
-          setValidationStatus('valid');
-        }
-      } catch (err) {
-        console.error('Failed to fetch API key:', err);
-        setValidationStatus('error');
-      } finally {
-        setLoading(false);
+  // Load both apiKey and baseUrl from Firestore
+useEffect(() => {
+  const fetchApiConfig = async () => {
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'apiConfig'));
+      if (snap.exists()) {
+        const data = snap.data();
+        setApiKey(data.apiKey || localStorage.getItem('geminiApiKey') || '');
+        setBaseUrl(data.baseUrl || localStorage.getItem('geminiBaseUrl') || baseUrl);
+        setValidationStatus('valid');
+      } else {
+        // If nothing saved yet, fallback to localStorage if available
+        setApiKey(localStorage.getItem('geminiApiKey') || '');
+        setBaseUrl(localStorage.getItem('geminiBaseUrl') || baseUrl);
+        setValidationStatus('valid');
       }
-    };
-    fetchApiKey();
-  }, []);
+    } catch (err) {
+      console.error('Failed to fetch API config:', err);
+      setValidationStatus('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchApiConfig();
+}, []);
+
 
   const handleSave = async () => {
     if (!apiKey.trim()) return;
@@ -72,23 +82,25 @@ const ModernAPIConfig = ({ onConfigSave, onClose }) => {
       const auth = getAuth();
       const user = auth.currentUser;
 
-      await setDoc(doc(db, 'settings', 'apiKey'), {
-        value: apiKey.trim(),
+      // Save both apiKey + baseUrl
+      await setDoc(doc(db, 'settings', 'apiConfig'), {
+        apiKey: apiKey.trim(),
+        baseUrl: baseUrl.trim(),
         updatedBy: user ? user.uid : 'unknown',
         updatedAt: serverTimestamp(),
       });
 
       setSaveProgress(100);
       await new Promise((r) => setTimeout(r, 500));
-      onConfigSave?.(apiKey.trim(), baseUrl);
-      
-      // Note: We're now using global API key, so no need to store in localStorage
-      // But keeping it for backward compatibility if needed
+      onConfigSave?.(apiKey.trim(), baseUrl.trim());
+
+      // Backward compatibility (optional)
       localStorage.setItem('geminiApiKey', apiKey.trim());
-      
+      localStorage.setItem('geminiBaseUrl', baseUrl.trim());
+
       setTimeout(() => onClose?.(), 1000);
     } catch (err) {
-      console.error('Failed to save API key:', err);
+      console.error('Failed to save API config:', err);
       setValidationStatus('error');
     } finally {
       clearInterval(progressInterval);
