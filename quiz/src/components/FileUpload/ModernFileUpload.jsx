@@ -5,7 +5,7 @@ import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from './utils';
 import Header from './components/Header';
 import Features from './components/Features';
 import { UploadContainer, MainCard } from './ModernFileUpload.styles';
-import UploadMainCard from './components/UploadMainCard';
+import UploadMainCard from './components/MainCard';
 import { useFileSelector } from './hooks/useFileSelector';
 import { useFileProcessor } from './hooks/useFileProcessor';
 const ModernFileUpload = ({

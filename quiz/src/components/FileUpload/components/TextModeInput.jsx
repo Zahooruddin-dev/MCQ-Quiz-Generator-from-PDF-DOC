@@ -1,5 +1,5 @@
 // src/components/TextModeInput.jsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -22,6 +22,18 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showTextMode, setShowTextMode] = useState(false);
+
+  const toggleRef = useRef(null);
+  const textAreaRef = useRef(null);
+
+  // 🌀 Auto-scroll when toggled
+  useEffect(() => {
+    if (showTextMode && textAreaRef.current) {
+      textAreaRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (!showTextMode && toggleRef.current) {
+      toggleRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showTextMode]);
 
   const simulateProgress = () => {
     const interval = setInterval(() => {
@@ -148,7 +160,7 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated }) => {
       )}
 
       {/* Toggle button */}
-      <Stack alignItems="center" sx={{ my: 2 }}>
+      <Stack alignItems="center" sx={{ my: 2 }} ref={toggleRef}>
         <Button
           variant="outlined"
           startIcon={<Type />}
@@ -165,7 +177,7 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated }) => {
 
       {/* Collapsible text input */}
       <Collapse in={showTextMode} mountOnEnter unmountOnExit>
-        <Stack spacing={2}>
+        <Stack spacing={2} ref={textAreaRef}>
           <TextField
             label="Paste your study text here"
             multiline
