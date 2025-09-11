@@ -203,7 +203,7 @@ const UploadMainCard = ({
             fontSize: { xs: '0.75rem', sm: '0.875rem' },
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
-            backgroundColor: 'white',
+            backgroundColor: 'none',
             px: 1,
           }}
         >
