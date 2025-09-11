@@ -1,42 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
-import {
-	Box,
-	Typography,
-	Button,
-	CardContent,
-	Stack,
-	Alert,
-	LinearProgress,
-	IconButton,
-	Divider,
-	Switch,
-	FormControlLabel,
-	TextField,
-	Fade,
-	Collapse,
-} from '@mui/material';
-import {
-	Upload,
-	FileText,
-	Brain,
-	Settings,
-	X,
-	File,
-	FileType,
-	Sparkles,
-	Type,
-} from 'lucide-react';
+import { Stack } from '@mui/material';
+
 import { LLMService } from '../../utils/llmService';
 import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from './utils';
 import Header from './components/Header';
 import Features from './components/Features';
-import {
-	UploadContainer,
-	MainCard,
-} from './ModernFileUpload.styles';
-import TextModeInput from './components/TextModeInput';
-import FileDropZone from './components/FileDropZone';
-import ConfigPanel from "./components/ConfigPanel";
+import { UploadContainer, MainCard } from './ModernFileUpload.styles';
 import UploadMainCard from './components/UploadMainCard';
 const ModernFileUpload = ({
 	onFileUpload,
@@ -255,32 +224,31 @@ const ModernFileUpload = ({
 				<Header />
 				<Features />
 
-  <UploadMainCard
-    error={error}
-    setError={setError}
-    hasAI={hasAI}
-    apiKey={apiKey}
-    effectiveLoading={effectiveLoading}
-    aiOptions={aiOptions}
-    setAiOptions={setAiOptions}
-    handleReconfigure={handleReconfigure}
-    dragOver={dragOver}
-    fileName={fileName}
-    fileSize={fileSize}
-    fileType={fileType}
-    useAI={useAI}
-    uploadProgress={uploadProgress}
-    fileInputRef={fileInputRef}
-    handleDrop={handleDrop}
-    handleDragOver={handleDragOver}
-    handleDragLeave={handleDragLeave}
-    handleFileSelect={handleFileSelect}
-    clearSelectedFile={clearSelectedFile}
-    handleGenerateQuiz={handleGenerateQuiz}
-    baseUrl={baseUrl}
-    onFileUpload={onFileUpload}
-  />
-
+				<UploadMainCard
+					error={error}
+					setError={setError}
+					hasAI={hasAI}
+					apiKey={apiKey}
+					effectiveLoading={effectiveLoading}
+					aiOptions={aiOptions}
+					setAiOptions={setAiOptions}
+					handleReconfigure={handleReconfigure}
+					dragOver={dragOver}
+					fileName={fileName}
+					fileSize={fileSize}
+					fileType={fileType}
+					useAI={useAI}
+					uploadProgress={uploadProgress}
+					fileInputRef={fileInputRef}
+					handleDrop={handleDrop}
+					handleDragOver={handleDragOver}
+					handleDragLeave={handleDragLeave}
+					handleFileSelect={handleFileSelect}
+					clearSelectedFile={clearSelectedFile}
+					handleGenerateQuiz={handleGenerateQuiz}
+					baseUrl={baseUrl}
+					onFileUpload={onFileUpload}
+				/>
 			</Stack>
 		</UploadContainer>
 	);
