@@ -173,7 +173,6 @@ const ModernFileUpload = ({
 
 	const effectiveLoading = isLoading || loadingFromParent;
 
-
 	const startLoading = useCallback(() => {
 		setError(null);
 		setIsLoading(true);
@@ -723,8 +722,6 @@ const ModernFileUpload = ({
 											spacing={2}
 											justifyContent='flex-end'
 										>
-									
-								
 											<Button
 												variant='contained'
 												onClick={() => handleTextSubmit(pastedText)}
