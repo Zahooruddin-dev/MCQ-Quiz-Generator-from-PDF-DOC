@@ -3,7 +3,6 @@ import {
   doc,
   setDoc,
   getDoc,
-  updateDoc,
   collection,
   addDoc,
   query,
@@ -103,13 +102,9 @@ export async function getDashboardData() {
     if (cached) return cached;
 
     const userSnap = await getDoc(doc(db, 'users', user.uid));
-    const result = userSnap.exists() ? userSnap.data() : {
-      quizzesTaken: 0,
-      avgScore: 0,
-      totalTime: 0,
-      streak: 0,
-      recentQuizzes: [],
-    };
+    const result = userSnap.exists()
+      ? userSnap.data()
+      : { quizzesTaken: 0, avgScore: 0, totalTime: 0, streak: 0, recentQuizzes: [] };
 
     cache.set(cacheKey, result);
     return result;
@@ -161,19 +156,22 @@ async function trimChatHistory(userId, countToDelete) {
     const snap = await getDocs(q);
     const batch = writeBatch(db);
     let ops = 0;
-    snap.forEach(d => { if (ops++ < 500) batch.delete(d.ref); });
+    snap.forEach(d => {
+      if (ops++ < 500) batch.delete(d.ref);
+    });
     if (ops > 0) await batch.commit();
   } catch (err) {
     console.error('❌ trimChatHistory error:', err);
   }
 }
 
-// --- API Key & Base URL Management ---
+// --- Global API Key & Base URL Management ---
 let cachedApiConfig = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000;
 
-export async function getApiConfig() {
+// Get the global API config
+export async function getGlobalApiConfig() {
   const now = Date.now();
   if (cachedApiConfig && now - lastFetchTime < CACHE_DURATION) return cachedApiConfig;
 
@@ -186,18 +184,26 @@ export async function getApiConfig() {
     }
     return { apiKey: null, baseUrl: null };
   } catch (err) {
-    console.error('❌ getApiConfig error:', err);
+    console.error('❌ getGlobalApiConfig error:', err);
     return { apiKey: null, baseUrl: null };
   }
 }
 
+// Get only API key
+export async function getGlobalApiKey() {
+  const config = await getGlobalApiConfig();
+  return config?.apiKey || null;
+}
+
+// Refresh cached API config
 export async function refreshApiConfig() {
   cachedApiConfig = null;
   lastFetchTime = 0;
-  return getApiConfig();
+  return getGlobalApiConfig();
 }
 
-export async function setApiConfig({ apiKey, baseUrl }) {
+// Set/update global API config
+export async function setGlobalApiConfig({ apiKey, baseUrl }) {
   try {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -209,10 +215,11 @@ export async function setApiConfig({ apiKey, baseUrl }) {
       updatedBy: user.uid,
       updatedAt: new Date(),
     });
+
     cachedApiConfig = null;
     return true;
   } catch (err) {
-    console.error('❌ setApiConfig error:', err);
+    console.error('❌ setGlobalApiConfig error:', err);
     throw err;
   }
 }
