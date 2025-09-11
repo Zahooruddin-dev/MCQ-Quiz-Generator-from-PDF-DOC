@@ -422,9 +422,9 @@ export async function checkApiKeyStatus() {
 	}
 }
 
-// Legacy function for backward compatibility
+/* // Legacy function for backward compatibility
 export async function debugCheckApiKey() {
 	const status = await checkApiKeyStatus();
 	console.log('API Key Status:', status);
 	return status.hasKey ? await getGlobalApiKey() : null;
-}
+} */
