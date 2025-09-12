@@ -1,7 +1,7 @@
 {
   "name": "quiz",
   "private": true,
-  "version": "5.3.5",
+  "version": "7.1.2",
   "type": "module",
   "engines": {
     "node": "20.x"
