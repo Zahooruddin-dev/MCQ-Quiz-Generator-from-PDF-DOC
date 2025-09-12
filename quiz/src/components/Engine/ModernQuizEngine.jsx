@@ -423,58 +423,67 @@ useEffect(() => {
 
   return (
     <>
-      <Fade in={isInitialized} timeout={600}>
-        <QuizContainer maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
-          <Stack spacing={{ xs: 3, sm: 4, md: 5 }}>
-            <QuizHeader
-              quizTitle={quizTitle}
-              currentQuestion={currentQuestion}
-              totalQuestions={questions.length}
-              answeredCount={answeredCount}
-              showTimer={showTimer}
-              timeRemaining={timeRemaining}
-            />
+// Add this to your ModernQuizEngine component's return statement
+// Replace the existing QuizContainer with this version:
 
-            <QuizProgress
-              progressPercentage={progressPercentage}
-              answeredCount={answeredCount}
-              totalQuestions={questions.length}
-            />
+<Fade in={isInitialized} timeout={600}>
+  <QuizContainer 
+    maxWidth="lg" 
+    sx={{ 
+      px: { xs: 2, sm: 3, md: 4 },
+      pb: { xs: 12, sm: 6 }, // Extra bottom padding on mobile for fixed navigation
+    }}
+  >
+    <Stack spacing={{ xs: 3, sm: 4, md: 5 }}>
+      <QuizHeader
+        quizTitle={quizTitle}
+        currentQuestion={currentQuestion}
+        totalQuestions={questions.length}
+        answeredCount={answeredCount}
+        showTimer={showTimer}
+        timeRemaining={timeRemaining}
+      />
 
-            <QuizCard>
-              <QuizContent
-                currentQ={currentQ}
-                currentQuestion={currentQuestion}
-                userAnswers={userAnswers}
-                handleAnswerSelect={handleAnswerSelect}
-                isTransitioning={isTransitioning}
-              />
+      <QuizProgress
+        progressPercentage={progressPercentage}
+        answeredCount={answeredCount}
+        totalQuestions={questions.length}
+      />
 
-              <QuizNavigation
-                currentQuestion={currentQuestion}
-                totalQuestions={questions.length}
-                userAnswers={userAnswers}
-                setCurrentQuestion={setCurrentQuestion}
-                goToPrevQuestion={goToPrevQuestion}
-                goToNextQuestion={goToNextQuestion}
-                handleFinishClick={handleFinishClick}
-                isSubmitting={isSubmitting}
-                transitionToQuestion={transitionToQuestion}
-              />
-            </QuizCard>
+      <QuizCard>
+        <QuizContent
+          currentQ={currentQ}
+          currentQuestion={currentQuestion}
+          userAnswers={userAnswers}
+          handleAnswerSelect={handleAnswerSelect}
+          isTransitioning={isTransitioning}
+        />
 
-            <FinishDialog
-              open={showFinishConfirm}
-              unansweredCount={unansweredCount}
-              cancelFinish={cancelFinish}
-              submitQuiz={submitQuiz}
-              isSubmitting={isSubmitting}
-              timeRemaining={timeRemaining}
-              showTimer={showTimer}
-            />
-          </Stack>
-        </QuizContainer>
-      </Fade>
+        <QuizNavigation
+          currentQuestion={currentQuestion}
+          totalQuestions={questions.length}
+          userAnswers={userAnswers}
+          setCurrentQuestion={setCurrentQuestion}
+          goToPrevQuestion={goToPrevQuestion}
+          goToNextQuestion={goToNextQuestion}
+          handleFinishClick={handleFinishClick}
+          isSubmitting={isSubmitting}
+          transitionToQuestion={transitionToQuestion}
+        />
+      </QuizCard>
+
+      <FinishDialog
+        open={showFinishConfirm}
+        unansweredCount={unansweredCount}
+        cancelFinish={cancelFinish}
+        submitQuiz={submitQuiz}
+        isSubmitting={isSubmitting}
+        timeRemaining={timeRemaining}
+        showTimer={showTimer}
+      />
+    </Stack>
+  </QuizContainer>
+</Fade>
 
       {/* Enhanced Loading Backdrop */}
       <Backdrop
