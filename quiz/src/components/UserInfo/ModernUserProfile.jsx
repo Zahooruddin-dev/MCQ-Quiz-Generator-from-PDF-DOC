@@ -62,9 +62,9 @@ const ModernUserProfile = ({ user, onClose, isAdmin }) => {
         setIsPremium(data.isPremium || false);
 
         setUserStats({
-          quizzesCompleted: data.quizzesCompleted || 0,
+          quizzesCompleted: data.quizzesTaken || 0,
           totalQuestions: data.totalQuestions || 0,
-          averageScore: data.averageScore || 0,
+          averageScore: data.avgScore || 0,
           streak: data.streak || 0,
         });
       }
