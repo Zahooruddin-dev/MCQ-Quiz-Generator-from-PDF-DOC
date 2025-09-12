@@ -151,3 +151,5 @@ VITE_DEFAULT_BASE_URL= (Gemini API endpoint)
 - Use React.memo for expensive components
 - Implement virtualization for large lists
 - Optimize Firebase queries with proper indexing
+!
+Product of mizuka.vercel.app
