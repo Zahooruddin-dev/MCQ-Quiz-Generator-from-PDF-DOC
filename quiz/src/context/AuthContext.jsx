@@ -115,7 +115,18 @@ export const AuthProvider = ({ children }) => {
     const userRef = doc(db, "users", user.uid);
     await updateDoc(userRef, { credits: credits - 1 });
     setCredits((c) => c - 1);
+    console.log(`💳 Credit deducted. Remaining: ${credits - 1}`);
     return true;
+  };
+
+  // 🔹 Refund 1 credit (for failed API calls)
+  const refundCredit = async () => {
+    if (!user || isPremium || isAdmin) return; // premium/admin don't need refunds
+    
+    const userRef = doc(db, "users", user.uid);
+    await updateDoc(userRef, { credits: credits + 1 });
+    setCredits((c) => c + 1);
+    console.log(`💰 Credit refunded due to API failure. Remaining: ${credits + 1}`);
   };
 
   return (
@@ -129,6 +140,7 @@ export const AuthProvider = ({ children }) => {
         loginWithGoogle,
         logout,
         useCredit,
+        refundCredit,
         // Expose setters in case components need manual updates
         setCredits,
         setIsPremium,

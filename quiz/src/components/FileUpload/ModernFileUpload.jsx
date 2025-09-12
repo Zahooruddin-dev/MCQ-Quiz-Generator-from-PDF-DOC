@@ -19,7 +19,7 @@ const ModernFileUpload = ({
 	onReconfigure,
 }) => {
 	// Get credit system from AuthContext
-	const { useCredit, credits, isPremium, isAdmin } = useAuth();
+	const { useCredit, refundCredit, credits, isPremium, isAdmin } = useAuth();
 	const [error, setError] = useState(null);
 	const [useAI, setUseAI] = useState(hasAI);
 	const [aiOptions, setAiOptions] = useState({
@@ -190,30 +190,45 @@ const ModernFileUpload = ({
 						throw new Error('Insufficient credits. You need at least 1 credit to generate a quiz.');
 					}
 
-					// Stage 5: AI question generation
-					updateLoadingStage('generating', 'AI is generating quiz questions...', 70);
+					let creditDeducted = true; // Track if we deducted a credit
 
-					const questions = await llmService.generateQuizQuestions(
-						extractedText,
-						aiOptions
-					);
+					try {
+						// Stage 5: AI question generation
+						updateLoadingStage('generating', 'AI is generating quiz questions...', 70);
 
-					// Stage 6: Finalizing
-					updateLoadingStage(
-						'finalizing',
-						`Generated ${questions.length} questions successfully! 1 credit used.`,
-						95,
-						{ questionsGenerated: questions.length }
-					);
+						const questions = await llmService.generateQuizQuestions(
+							extractedText,
+							aiOptions
+						);
 
-					// Stage 7: Complete
-					setTimeout(() => {
-						updateLoadingStage('complete', 'Quiz ready!', 100);
+						// Stage 6: Finalizing
+						updateLoadingStage(
+							'finalizing',
+							`Generated ${questions.length} questions successfully! 1 credit used.`,
+							95,
+							{ questionsGenerated: questions.length }
+						);
+
+						// Stage 7: Complete
 						setTimeout(() => {
-							onFileUpload(questions, true, aiOptions);
-							stopLoading();
-						}, 500);
-					}, 800);
+							updateLoadingStage('complete', 'Quiz ready!', 100);
+							setTimeout(() => {
+								onFileUpload(questions, true, aiOptions);
+								stopLoading();
+							}, 500);
+						}, 800);
+					} catch (apiError) {
+						// If API call fails after credit deduction, refund the credit
+						if (creditDeducted) {
+							try {
+								await refundCredit();
+								console.log('💰 Credit refunded due to API failure');
+							} catch (refundError) {
+								console.error('❌ Failed to refund credit:', refundError);
+							}
+						}
+						throw apiError; // Re-throw the original API error
+					}
 				} catch (err) {
 					throw err;
 				}
@@ -228,11 +243,21 @@ const ModernFileUpload = ({
 					userMessage += ' Go to Settings to configure your AI provider.';
 				} else if (
 					userMessage.includes('network') ||
-					userMessage.includes('timeout')
+					userMessage.includes('timeout') ||
+					userMessage.includes('503') ||
+					userMessage.includes('overloaded') ||
+					userMessage.includes('Service Unavailable')
 				) {
-					userMessage += ' Check your internet connection and try again.';
+					userMessage += ' The AI service is temporarily unavailable. Your credit has been refunded. Please try again later.';
 				} else if (userMessage.includes('image') || userMessage.includes('OCR')) {
 					userMessage += ' Try using a higher quality image or a different file format.';
+				} else if (
+					userMessage.includes('API failed') ||
+					userMessage.includes('500') ||
+					userMessage.includes('502') ||
+					userMessage.includes('504')
+				) {
+					userMessage += ' Server error occurred. Your credit has been refunded. Please try again.';
 				}
 
 				setError(userMessage);

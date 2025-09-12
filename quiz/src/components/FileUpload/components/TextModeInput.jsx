@@ -17,7 +17,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { pulse } from '../ModernFileUpload.styles';
 
 const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated, children }) => {
-  const { useCredit, credits, isPremium, isAdmin } = useAuth();
+  const { useCredit, refundCredit, credits, isPremium, isAdmin } = useAuth();
   const [text, setText] = useState('');
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,12 +68,15 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated, children }
     setUploadProgress(0);
     const progressInterval = simulateProgress();
 
+    let creditDeducted = false; // Track if we deducted a credit
+
     try {
       // Deduct credit before AI generation
       const canUseCredit = await useCredit();
       if (!canUseCredit) {
         throw new Error('Insufficient credits. You need at least 1 credit to generate a quiz.');
       }
+      creditDeducted = true; // Credit was successfully deducted
 
       const llmService = new LLMService(effectiveApiKey, baseUrl);
       const questions = await llmService.generateQuizQuestions(text, aiOptions);
@@ -90,7 +93,32 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated, children }
     } catch (err) {
       clearInterval(progressInterval);
       console.error('Error generating quiz:', err);
-      setError(err?.message || 'Failed to generate quiz.');
+      
+      // If credit was deducted and API call failed, refund the credit
+      if (creditDeducted) {
+        try {
+          await refundCredit();
+          console.log('💰 Credit refunded due to API failure');
+        } catch (refundError) {
+          console.error('❌ Failed to refund credit:', refundError);
+        }
+      }
+      
+      // Enhanced error messages
+      let errorMessage = err?.message || 'Failed to generate quiz.';
+      if (
+        errorMessage.includes('503') ||
+        errorMessage.includes('overloaded') ||
+        errorMessage.includes('Service Unavailable') ||
+        errorMessage.includes('API failed') ||
+        errorMessage.includes('500') ||
+        errorMessage.includes('502') ||
+        errorMessage.includes('504')
+      ) {
+        errorMessage += ' The AI service is temporarily unavailable. Your credit has been refunded. Please try again later.';
+      }
+      
+      setError(errorMessage);
       setIsLoading(false);
     }
   }, [text, apiKey, baseUrl, aiOptions, onQuizGenerated]);
