@@ -117,9 +117,9 @@ const FileUploadWrapper = ({ apiKey, baseUrl }) => {
 	const handleFileUpload = (uploadedQuestions, isAI, options) => {
 		// Create new quiz session with uploaded questions
 		const quiz = QuizManager.createQuiz(uploadedQuestions, {
-			title: options?.title || 'New Quiz',
+			title: options?.title || null, // Let the quiz generate its own title
 			aiGenerated: isAI,
-			source: options?.source || 'File Upload'
+			source: options?.source || options?.fileName || (isAI ? 'AI Generated Quiz' : 'File Upload')
 		});
 		
 		navigate(`/quiz/${quiz.id}`);

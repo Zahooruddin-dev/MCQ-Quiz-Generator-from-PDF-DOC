@@ -32,6 +32,7 @@ export class QuizSession {
     this.answers = data.answers || [];
     this.startTime = data.startTime || null;
     this.endTime = data.endTime || null;
+    this.completedAt = data.completedAt || null;
     this.timeLimit = data.timeLimit || 1800; // 30 minutes default
     this.createdAt = data.createdAt || Date.now();
     this.userId = data.userId || null;
@@ -41,10 +42,42 @@ export class QuizSession {
 
   generateTitle() {
     if (this.source) {
-      return `Quiz: ${this.source}`;
+      // Extract meaningful name from source
+      if (typeof this.source === 'string') {
+        // Remove file extensions and clean up the name
+        const cleanSource = this.source
+          .replace(/\.(pdf|docx?|txt)$/i, '')
+          .replace(/[_-]/g, ' ')
+          .replace(/\b\w/g, l => l.toUpperCase())
+          .trim();
+        
+        if (cleanSource && cleanSource !== 'File Upload' && cleanSource !== 'Legacy Import') {
+          return cleanSource;
+        }
+      }
     }
-    const date = new Date().toLocaleDateString();
-    return `Quiz - ${date}`;
+    
+    // Try to generate title from first question
+    if (this.questions && this.questions.length > 0 && this.questions[0].question) {
+      const firstQuestion = this.questions[0].question;
+      // Extract key topic words from the first question
+      const words = firstQuestion
+        .replace(/[?.,!]/g, '')
+        .split(' ')
+        .filter(word => word.length > 3)
+        .slice(0, 3)
+        .join(' ');
+      
+      if (words) {
+        return `${words} Quiz`;
+      }
+    }
+    
+    // Fallback with more descriptive names
+    const topics = ['Science', 'History', 'Literature', 'Math', 'General Knowledge', 'Geography', 'Technology'];
+    const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+    const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `${randomTopic} Quiz - ${date}`;
   }
 
   // Start the quiz
@@ -67,6 +100,7 @@ export class QuizSession {
   complete() {
     this.status = QUIZ_STATUS.COMPLETED;
     this.endTime = Date.now();
+    this.completedAt = Date.now(); // Add completedAt timestamp
     this.save();
     
     // Save to history
@@ -173,6 +207,7 @@ export class QuizSession {
       answers: this.answers,
       startTime: this.startTime,
       endTime: this.endTime,
+      completedAt: this.completedAt,
       timeLimit: this.timeLimit,
       createdAt: this.createdAt,
       userId: this.userId,

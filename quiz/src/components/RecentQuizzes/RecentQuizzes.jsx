@@ -45,16 +45,36 @@ const RecentQuizzesCard = styled(Card)(({ theme }) => ({
 
 // Utility functions
 const formatDate = (date) => {
-  if (!date) return 'Unknown date';
+  if (!date) return 'Just now';
   
-  const dateObj = date?.toDate ? date.toDate() : new Date(date);
+  let dateObj;
   
-  if (isNaN(dateObj.getTime())) return 'Unknown date';
+  // Handle Firebase Timestamp
+  if (date?.toDate && typeof date.toDate === 'function') {
+    dateObj = date.toDate();
+  }
+  // Handle Unix timestamp (number)
+  else if (typeof date === 'number') {
+    dateObj = new Date(date);
+  }
+  // Handle Date object or string
+  else {
+    dateObj = new Date(date);
+  }
+  
+  // Check if date is valid
+  if (isNaN(dateObj.getTime())) {
+    console.warn('Invalid date:', date);
+    return 'Just now';
+  }
   
   const now = new Date();
   const diffTime = Math.abs(now - dateObj);
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
+  if (diffTime < 60000) return 'Just now'; // Less than 1 minute
+  if (diffTime < 3600000) return `${Math.ceil(diffTime / 60000)} minutes ago`; // Less than 1 hour
+  if (diffTime < 86400000) return `${Math.ceil(diffTime / 3600000)} hours ago`; // Less than 1 day
   if (diffDays === 1) return 'Today';
   if (diffDays === 2) return 'Yesterday';
   if (diffDays <= 7) return `${diffDays - 1} days ago`;
@@ -146,10 +166,10 @@ const QuizCard = ({ quiz, onQuizClick, onResumeQuiz, onRetakeQuiz }) => {
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
             <Box sx={{ flexGrow: 1 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {quiz.quizTitle || quiz.title || 'Quiz'}
+                {quiz.title || quiz.quizTitle || 'Untitled Quiz'}
               </Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                {formatDate(quiz.completedAt || quiz.timestamp)} • {quiz.topic || 'General'}
+                {formatDate(quiz.completedAt || quiz.endTime || quiz.createdAt || quiz.timestamp)} • {quiz.source || quiz.topic || 'General'}
               </Typography>
             </Box>
             
@@ -459,9 +479,9 @@ const RecentQuizzes = ({
             </CardContent>
           </Card>
         ) : filteredAndSortedQuizzes.length > 0 ? (
-          filteredAndSortedQuizzes.map((quiz) => (
+          filteredAndSortedQuizzes.map((quiz, index) => (
             <QuizCard
-              key={quiz.id}
+              key={`${quiz.id}-${index}`}
               quiz={quiz}
               onQuizClick={onQuizClick}
               onResumeQuiz={onResumeQuiz}
