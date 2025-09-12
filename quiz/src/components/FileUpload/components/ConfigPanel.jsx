@@ -10,8 +10,10 @@ import {
   Alert,
   Button,
   Collapse,
+  Chip,
 } from "@mui/material";
-import { Settings } from "lucide-react";
+import { Settings, Coins, Crown } from "lucide-react";
+import { useAuth } from '../../../context/AuthContext';
 
 const ConfigPanel = ({
   hasAI = false,
@@ -21,6 +23,8 @@ const ConfigPanel = ({
   onOptionsChange,
   onReconfigure,
 }) => {
+  // Get credit information
+  const { credits, isPremium, isAdmin } = useAuth();
   // Ensure all values are defined to prevent controlled/uncontrolled issues
   const defaultOptions = {
     numQuestions: 10,
@@ -80,7 +84,7 @@ const ConfigPanel = ({
     >
       <Stack spacing={3}>
         {/* Header */}
-        <Stack direction="row" alignItems="center" spacing={2}>
+        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
           <Box
             sx={{
               width: 40,
@@ -95,9 +99,56 @@ const ConfigPanel = ({
           >
             <Settings size={20} />
           </Box>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            AI Generation Settings
-          </Typography>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              AI Generation Settings
+            </Typography>
+            {/* Credit status */}
+            <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+              {isPremium ? (
+                <Chip
+                  icon={<Crown size={12} />}
+                  label="Premium - Unlimited"
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.7rem',
+                    background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+                    color: 'white',
+                    fontWeight: 600,
+                  }}
+                />
+              ) : isAdmin ? (
+                <Chip
+                  icon={<Crown size={12} />}
+                  label="Admin - Unlimited"
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.7rem',
+                    background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+                    color: 'white',
+                    fontWeight: 600,
+                  }}
+                />
+              ) : (
+                <Chip
+                  icon={<Coins size={12} />}
+                  label={`${credits} Credits - 1 per quiz`}
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.7rem',
+                    background: credits > 0 
+                      ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' 
+                      : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+                    color: 'white',
+                    fontWeight: 600,
+                  }}
+                />
+              )}
+            </Stack>
+          </Box>
         </Stack>
 
         {/* Enable AI */}
@@ -106,10 +157,19 @@ const ConfigPanel = ({
             <Switch
               checked={useAI || false}
               onChange={handleToggleAI}
-              disabled={loading}
+              disabled={loading || (!isPremium && !isAdmin && credits <= 0)}
             />
           }
-          label="Enable AI-powered question generation"
+          label={
+            <Box>
+              <Typography component="span">Enable AI-powered question generation</Typography>
+              {!isPremium && !isAdmin && credits <= 0 && (
+                <Typography variant="caption" color="error" display="block">
+                  No credits remaining - upgrade to Premium or wait for daily reset
+                </Typography>
+              )}
+            </Box>
+          }
         />
 
         {/* AI Options */}

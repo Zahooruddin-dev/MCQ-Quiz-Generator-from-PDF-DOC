@@ -13,9 +13,11 @@ import {
 } from '@mui/material';
 import { Brain, Sparkles, X, Type } from 'lucide-react';
 import { LLMService } from '../../../utils/llmService';
+import { useAuth } from '../../../context/AuthContext';
 import { pulse } from '../ModernFileUpload.styles';
 
 const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated, children }) => {
+  const { useCredit, credits, isPremium, isAdmin } = useAuth();
   const [text, setText] = useState('');
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,6 +51,12 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated, children }
       return;
     }
 
+    // Check credits first
+    if (!isPremium && !isAdmin && credits <= 0) {
+      setError('You have no credits remaining. Please upgrade to Premium or wait 24 hours for daily credit reset.');
+      return;
+    }
+
     const effectiveApiKey = apiKey || localStorage.getItem('geminiApiKey');
     if (!effectiveApiKey || effectiveApiKey.trim().length < 8) {
       setError('Please configure your API key first.');
@@ -61,6 +69,12 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated, children }
     const progressInterval = simulateProgress();
 
     try {
+      // Deduct credit before AI generation
+      const canUseCredit = await useCredit();
+      if (!canUseCredit) {
+        throw new Error('Insufficient credits. You need at least 1 credit to generate a quiz.');
+      }
+
       const llmService = new LLMService(effectiveApiKey, baseUrl);
       const questions = await llmService.generateQuizQuestions(text, aiOptions);
 
@@ -97,10 +111,10 @@ const TextModeInput = ({ apiKey, baseUrl, aiOptions, onQuizGenerated, children }
         variant="contained"
         startIcon={<Brain />}
         onClick={handleGenerateQuiz}
-        disabled={isLoading}
+        disabled={isLoading || (!isPremium && !isAdmin && credits <= 0)}
         sx={{ borderRadius: 2 }}
       >
-        Generate Quiz from Text
+        {!isPremium && !isAdmin && credits <= 0 ? 'No Credits Available' : 'Generate Quiz from Text'}
       </Button>
     </Stack>
   ) : (

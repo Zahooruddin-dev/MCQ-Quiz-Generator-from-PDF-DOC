@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'; // Import useEffect
 import { Stack } from '@mui/material';
 import { LLMService } from '../../utils/llmService';
+import { useAuth } from '../../context/AuthContext'; // Import useAuth for credits
 import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from './utils';
 import Header from './components/Header';
 import Features from './components/Features';
@@ -17,6 +18,8 @@ const ModernFileUpload = ({
 	loading: loadingFromParent = false,
 	onReconfigure,
 }) => {
+	// Get credit system from AuthContext
+	const { useCredit, credits, isPremium, isAdmin } = useAuth();
 	const [error, setError] = useState(null);
 	const [useAI, setUseAI] = useState(hasAI);
 	const [aiOptions, setAiOptions] = useState({
@@ -106,6 +109,14 @@ const ModernFileUpload = ({
 					return;
 				}
 
+				// Check credit availability first (before API key check)
+				if (!isPremium && !isAdmin && credits <= 0) {
+					setError(
+						'You have no credits remaining. Please upgrade to Premium or wait 24 hours for daily credit reset.'
+					);
+					return;
+				}
+
 				// Check API key availability
 				if (!apiKey && !sessionStorage.getItem('llm_apiKey')) {
 					setError(
@@ -170,7 +181,16 @@ const ModernFileUpload = ({
 						textExtracted: extractedText?.length || 0,
 					});
 
-					// Stage 4: AI question generation
+					// Stage 4: Deduct credit before AI generation
+					updateLoadingStage('validating', 'Checking credits...', 65);
+					
+					// Deduct credit (this also checks if user has credits available)
+					const canUseCredit = await useCredit();
+					if (!canUseCredit) {
+						throw new Error('Insufficient credits. You need at least 1 credit to generate a quiz.');
+					}
+
+					// Stage 5: AI question generation
 					updateLoadingStage('generating', 'AI is generating quiz questions...', 70);
 
 					const questions = await llmService.generateQuizQuestions(
@@ -178,15 +198,15 @@ const ModernFileUpload = ({
 						aiOptions
 					);
 
-					// Stage 5: Finalizing
+					// Stage 6: Finalizing
 					updateLoadingStage(
 						'finalizing',
-						`Generated ${questions.length} questions successfully!`,
+						`Generated ${questions.length} questions successfully! 1 credit used.`,
 						95,
 						{ questionsGenerated: questions.length }
 					);
 
-					// Stage 6: Complete
+					// Stage 7: Complete
 					setTimeout(() => {
 						updateLoadingStage('complete', 'Quiz ready!', 100);
 						setTimeout(() => {

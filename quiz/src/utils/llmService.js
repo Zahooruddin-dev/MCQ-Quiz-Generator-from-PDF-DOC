@@ -14,6 +14,9 @@ import {
   getGlobalApiKey,
   getGlobalApiConfig, // fetch baseUrl & apiKey
 } from './firebaseService.js';
+import { getAuth } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebaseConfig.js';
 import { withRetry } from './retryUtils.js';
 import { shuffleArray, validateQuestions } from './quizValidator.js';
 
@@ -109,13 +112,56 @@ export class LLMService {
     }
   }
 
+  // Check if user has sufficient credits (additional safety check)
+  async checkUserCredits() {
+    try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) throw new Error('User not authenticated');
+
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) {
+        throw new Error('User profile not found');
+      }
+
+      const userData = userSnap.data();
+      const isPremium = userData.isPremium || false;
+      const credits = userData.credits || 0;
+      
+      // Check if user is admin
+      const tokenResult = await user.getIdTokenResult();
+      const isAdmin = tokenResult.claims.admin === true;
+
+      // Premium users and admins have unlimited credits
+      if (isPremium || isAdmin) {
+        return true;
+      }
+
+      // Check if regular user has credits
+      if (credits <= 0) {
+        throw new Error('Insufficient credits. You need at least 1 credit to generate a quiz.');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('❌ Credit check failed:', error);
+      throw error;
+    }
+  }
+
   async generateQuizQuestions(fileOrText, options = {}) {
     const { numQuestions = 10, difficulty = 'medium' } = options;
+
+    // Check credits first (safety check - UI should already handle this)
+    await this.checkUserCredits();
 
     await this.ensureApiKey();
     await this.ensureEndpoint();
 
     console.log(`🚀 Starting quiz generation at: ${this.baseUrl}`);
+    console.log('💳 Credit check passed - proceeding with generation');
 
     return withRetry(async () => {
       if (this.controller) this.controller.abort();
