@@ -55,6 +55,40 @@ const ComponentLoader = () => (
   </Box>
 );
 
+// Simple error boundary to protect lazy views
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('Dashboard view error:', error, info);
+  }
+  handleReset = () => {
+    this.setState({ hasError: false, error: null });
+    if (this.props.onReset) this.props.onReset();
+  };
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+          <Stack spacing={2}>
+            <Typography variant="h6">Something went wrong</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {this.state.error?.message || 'An unexpected error occurred.'}
+            </Typography>
+            <Button variant="outlined" onClick={this.handleReset}>Back to Dashboard</Button>
+          </Stack>
+        </Container>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const getUserInitials = (name) => {
   if (!name) return 'U';
   return name
@@ -247,9 +281,11 @@ const AnalyticsView = React.memo(({ userId, onBack }) => (
       >
         ← Back to Dashboard
       </Button>
-      <Suspense fallback={<ComponentLoader />}>
-        <AnalyticsDashboard userId={userId} />
-      </Suspense>
+      <ErrorBoundary onReset={onBack}>
+        <Suspense fallback={<ComponentLoader />}>
+          <AnalyticsDashboard userId={userId} />
+        </Suspense>
+      </ErrorBoundary>
     </Stack>
   </Container>
 ));
@@ -272,15 +308,17 @@ const ProgressView = React.memo(({ userId, onBack }) => (
       >
         ← Back to Dashboard
       </Button>
-      <Suspense fallback={<ComponentLoader />}>
-        <ProgressTracking
-          userId={userId}
-          onBack={onBack}
-          timePeriod="all_time"
-          showCharts
-          key={`progress-${userId}`}
-        />
-      </Suspense>
+      <ErrorBoundary onReset={onBack}>
+        <Suspense fallback={<ComponentLoader />}>
+          <ProgressTracking
+            userId={userId}
+            onBack={onBack}
+            timePeriod="all_time"
+            showCharts
+            key={`progress-${userId}`}
+          />
+        </Suspense>
+      </ErrorBoundary>
     </Stack>
   </Container>
 ));
@@ -303,16 +341,18 @@ const RecentQuizzesView = React.memo(({ onBack, onViewResults, onResumeQuiz, onR
       >
         ← Back to Dashboard
       </Button>
-      <Suspense fallback={<ComponentLoader />}>
-        <RecentQuizzes
-          limit={50}
-          showFilters={true}
-          isFullPage={true}
-          onQuizClick={onViewResults}
-          onResumeQuiz={onResumeQuiz}
-          onRetakeQuiz={onRetakeQuiz}
-        />
-      </Suspense>
+      <ErrorBoundary onReset={onBack}>
+        <Suspense fallback={<ComponentLoader />}>
+          <RecentQuizzes
+            limit={50}
+            showFilters={true}
+            isFullPage={true}
+            onQuizClick={onViewResults}
+            onResumeQuiz={onResumeQuiz}
+            onRetakeQuiz={onRetakeQuiz}
+          />
+        </Suspense>
+      </ErrorBoundary>
     </Stack>
   </Container>
 ));
