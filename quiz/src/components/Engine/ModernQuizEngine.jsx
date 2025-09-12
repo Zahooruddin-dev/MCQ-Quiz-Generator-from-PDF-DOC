@@ -25,17 +25,20 @@ import { getAuth } from 'firebase/auth';
 const db = getFirestore();
 
 const ModernQuizEngine = ({
-  questions = [],
+  quizSession,
   onFinish,
-  quizTitle = "Interactive Quiz",
-  showTimer = false,
-  timeLimit = null,
-  topic = "General",
-  difficulty = "medium",
+  showTimer = true,
 }) => {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const questions = quizSession?.questions || [];
+  const quizTitle = quizSession?.title || "Interactive Quiz";
+  const timeLimit = quizSession?.timeLimit;
+  const topic = quizSession?.source || "General";
+  const difficulty = "medium"; // Could be added to QuizSession later
+  const [currentQuestion, setCurrentQuestion] = useState(
+    quizSession?.currentQuestionIndex || 0
+  );
   const [userAnswers, setUserAnswers] = useState(
-    new Array(questions.length).fill(null)
+    quizSession?.answers || new Array(questions.length).fill(null)
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
@@ -48,15 +51,19 @@ const ModernQuizEngine = ({
   const questionTransitionRef = useRef(null);
   const autoSaveRef = useRef(null);
 
-  // Initialize quiz with smooth entrance
+  // Initialize quiz with smooth entrance and start session
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialized(true);
+      // Start the quiz session if not already started
+      if (quizSession && quizSession.status === 'not_started') {
+        quizSession.start();
+      }
     }, 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [quizSession]);
 
-  // Auto-save progress periodically
+  // Auto-save progress periodically (now handled by QuizSession)
   useEffect(() => {
     if (autoSaveRef.current) {
       clearInterval(autoSaveRef.current);
@@ -64,14 +71,9 @@ const ModernQuizEngine = ({
 
     autoSaveRef.current = setInterval(() => {
       const answeredCount = userAnswers.filter(a => a !== null).length;
-      if (answeredCount > 0) {
-        // Auto-save progress to localStorage
-        localStorage.setItem('quiz_progress', JSON.stringify({
-          currentQuestion,
-          userAnswers,
-          quizTitle,
-          timestamp: Date.now()
-        }));
+      if (answeredCount > 0 && quizSession) {
+        // Quiz session automatically saves itself when updated
+        quizSession.save();
       }
     }, 30000); // Save every 30 seconds
 
@@ -80,7 +82,7 @@ const ModernQuizEngine = ({
         clearInterval(autoSaveRef.current);
       }
     };
-  }, [currentQuestion, userAnswers, quizTitle]);
+  }, [currentQuestion, userAnswers, quizSession]);
 
   const answeredCount = useMemo(
     () => userAnswers.filter((a) => a !== null).length,
@@ -97,7 +99,7 @@ const ModernQuizEngine = ({
     [userAnswers]
   );
 
-  // Optimized answer selection with smooth feedback
+  // Optimized answer selection with smooth feedback and session persistence
   const handleAnswerSelect = useCallback(
     (index) => {
       if (isTransitioning) return; // Prevent rapid clicks during transitions
@@ -108,12 +110,17 @@ const ModernQuizEngine = ({
         return newAnswers;
       });
 
+      // Update quiz session
+      if (quizSession) {
+        quizSession.answerQuestion(currentQuestion, index);
+      }
+
       // Provide haptic feedback on mobile
       if ('vibrate' in navigator) {
         navigator.vibrate(50);
       }
     },
-    [currentQuestion, isTransitioning]
+    [currentQuestion, isTransitioning, quizSession]
   );
 
   // Smooth question transitions
@@ -260,48 +267,50 @@ const ModernQuizEngine = ({
     setShowFinishConfirm(false);
 
     try {
-      // Calculate results with more detailed analytics
-      const score = userAnswers.reduce(
-        (total, answer, idx) =>
-          total + (answer === questions[idx]?.correctAnswer ? 1 : 0),
-        0
-      );
-
-      const timeTaken = Math.floor((Date.now() - startTime) / 1000);
-      const scorePercentage = Math.round((score / questions.length) * 100);
-      
-      // Calculate additional metrics
-      const questionStats = questions.map((q, idx) => ({
-        questionIndex: idx,
-        userAnswer: userAnswers[idx],
-        correctAnswer: q.correctAnswer,
-        isCorrect: userAnswers[idx] === q.correctAnswer,
-        timeSpent: null, // Could be tracked per question if needed
-      }));
-
-      const results = {
-        answers: userAnswers,
-        score: scorePercentage,
-        totalQuestions: questions.length,
-        answeredQuestions: questions.length - unansweredCount,
-        correctAnswers: score,
-        timestamp: new Date().toISOString(),
-        timeSpent: timeLimit && showTimer ? timeLimit - (timeRemaining || 0) : timeTaken,
-        timeTaken: timeTaken,
-        topic: topic,
-        difficulty: difficulty,
-        quizTitle: quizTitle,
-        questionStats: questionStats,
-        completionRate: 100,
-        timeExpired: showTimer && timeRemaining === 0, // Flag to indicate if quiz was auto-submitted due to time
-        timeRemaining: timeRemaining, // Include remaining time in results
-      };
-
       // Show smooth processing transition
       await new Promise(resolve => setTimeout(resolve, 800));
       
       setSubmitStatus('saving');
       await new Promise(resolve => setTimeout(resolve, 600));
+
+      // Complete the quiz session and get results
+      let results;
+      if (quizSession) {
+        // Ensure all current answers are saved to the session
+        userAnswers.forEach((answer, index) => {
+          if (answer !== null) {
+            quizSession.answerQuestion(index, answer);
+          }
+        });
+        
+        // Complete the quiz and get comprehensive results
+        results = quizSession.complete();
+        
+        // Add additional metadata
+        results.timeExpired = showTimer && timeRemaining === 0;
+        results.timeRemaining = timeRemaining;
+      } else {
+        // Fallback for backward compatibility
+        const score = userAnswers.reduce(
+          (total, answer, idx) =>
+            total + (answer === questions[idx]?.correctAnswer ? 1 : 0),
+          0
+        );
+
+        const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+        const scorePercentage = Math.round((score / questions.length) * 100);
+        
+        results = {
+          answers: userAnswers,
+          score: scorePercentage,
+          totalQuestions: questions.length,
+          answeredQuestions: questions.length - unansweredCount,
+          correctAnswers: score,
+          timeTaken: timeTaken,
+          timeExpired: showTimer && timeRemaining === 0,
+          timeRemaining: timeRemaining,
+        };
+      }
 
       // Show results immediately for better UX
       setSubmitStatus('complete');
@@ -310,10 +319,7 @@ const ModernQuizEngine = ({
       // Call onFinish with results
       await onFinish?.(results);
 
-      // Save to Firestore in background (non-blocking)
-      saveQuizToFirestore(results).catch(error => {
-        console.error('Background save failed:', error);
-      });
+      // Background save is now handled by QuizSession.complete()
 
     } catch (error) {
       console.error("Error finishing quiz:", error);
@@ -332,12 +338,10 @@ const ModernQuizEngine = ({
     onFinish,
     isSubmitting,
     unansweredCount,
-    timeLimit,
     timeRemaining,
     startTime,
-    topic,
-    difficulty,
-    quizTitle,
+    quizSession,
+    showTimer,
   ]);
 
   const cancelFinish = useCallback(() => {

@@ -16,6 +16,7 @@ import {
   InputLabel,
   Skeleton,
   Alert,
+  Menu,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -23,19 +24,12 @@ import {
   FilterAltOutlined as FilterIcon,
   ArrowForward as ArrowRightIcon,
   MoreVert as MoreVertIcon,
+  PlayArrow as PlayIcon,
+  Refresh as RetakeIcon,
+  Visibility as ViewIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-
-// Firebase imports
-import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  getDocs,
-  orderBy,
-  limit as firestoreLimit,
-} from 'firebase/firestore';
+import { QuizManager } from '../../utils/quizManager';
 
 const db = getFirestore();
 
@@ -90,17 +84,25 @@ const getPerformanceLabel = (score) => {
   return 'Needs Work';
 };
 
-const QuizCard = ({ quiz, onQuizClick }) => {
+const QuizCard = ({ quiz, onQuizClick, onResumeQuiz, onRetakeQuiz }) => {
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const menuOpen = Boolean(menuAnchor);
+  
   const getScoreColor = (score) => {
     if (score >= 90) return 'success';
     if (score >= 70) return 'warning';
     return 'error';
   };
 
+  const isInProgress = quiz.status === 'in_progress';
+  const isCompleted = quiz.status === 'completed';
+
   const handleCardClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (onQuizClick) {
+    if (isInProgress && onResumeQuiz) {
+      onResumeQuiz(quiz);
+    } else if (isCompleted && onQuizClick) {
       onQuizClick(quiz);
     }
   };
@@ -108,8 +110,32 @@ const QuizCard = ({ quiz, onQuizClick }) => {
   const handleMoreClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    // Add menu functionality here if needed
-    console.log('More options for quiz:', quiz.id);
+    setMenuAnchor(e.currentTarget);
+  };
+
+  const handleCloseMenu = () => {
+    setMenuAnchor(null);
+  };
+
+  const handleViewResults = () => {
+    handleCloseMenu();
+    if (onQuizClick) {
+      onQuizClick(quiz);
+    }
+  };
+
+  const handleResumeQuiz = () => {
+    handleCloseMenu();
+    if (onResumeQuiz) {
+      onResumeQuiz(quiz);
+    }
+  };
+
+  const handleRetakeQuiz = () => {
+    handleCloseMenu();
+    if (onRetakeQuiz) {
+      onRetakeQuiz(quiz);
+    }
   };
 
   return (
@@ -127,12 +153,22 @@ const QuizCard = ({ quiz, onQuizClick }) => {
             </Box>
             
             <Stack direction="row" spacing={1} alignItems="center">
-              <Chip
-                label={`${Math.round(quiz.score || 0)}%`}
-                size="small"
-                color={getScoreColor(quiz.score || 0)}
-                sx={{ fontWeight: 600 }}
-              />
+              {isInProgress ? (
+                <Chip
+                  label="In Progress"
+                  size="small"
+                  color="warning"
+                  variant="outlined"
+                  sx={{ fontWeight: 600 }}
+                />
+              ) : (
+                <Chip
+                  label={`${Math.round(quiz.score || quiz.percentage || 0)}%`}
+                  size="small"
+                  color={getScoreColor(quiz.score || quiz.percentage || 0)}
+                  sx={{ fontWeight: 600 }}
+                />
+              )}
               <IconButton size="small" onClick={handleMoreClick}>
                 <MoreVertIcon fontSize="small" />
               </IconButton>
@@ -168,21 +204,62 @@ const QuizCard = ({ quiz, onQuizClick }) => {
           </Box>
           
           <Stack direction="row" spacing={1}>
-            <Chip
-              label={getPerformanceLabel(quiz.score || 0)}
-              size="small"
-              variant="outlined"
-              color={getScoreColor(quiz.score || 0)}
-            />
+            {isCompleted && (
+              <Chip
+                label={getPerformanceLabel(quiz.score || quiz.percentage || 0)}
+                size="small"
+                variant="outlined"
+                color={getScoreColor(quiz.score || quiz.percentage || 0)}
+              />
+            )}
             <Chip
               label={quiz.difficulty || 'medium'}
               size="small"
               variant="outlined"
               sx={{ textTransform: 'capitalize' }}
             />
+            {quiz.aiGenerated && (
+              <Chip
+                label="AI Generated"
+                size="small"
+                variant="outlined"
+                color="info"
+              />
+            )}
           </Stack>
         </Stack>
       </CardContent>
+
+      {/* Action Menu */}
+      <Menu
+        anchorEl={menuAnchor}
+        open={menuOpen}
+        onClose={handleCloseMenu}
+        PaperProps={{
+          sx: {
+            minWidth: 180,
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+            border: '1px solid #e5e7eb',
+          },
+        }}
+      >
+        {isCompleted && (
+          <MenuItem onClick={handleViewResults} sx={{ py: 1.5 }}>
+            <ViewIcon sx={{ mr: 2 }} fontSize="small" />
+            View Results
+          </MenuItem>
+        )}
+        {isInProgress && (
+          <MenuItem onClick={handleResumeQuiz} sx={{ py: 1.5 }}>
+            <PlayIcon sx={{ mr: 2 }} fontSize="small" />
+            Resume Quiz
+          </MenuItem>
+        )}
+        <MenuItem onClick={handleRetakeQuiz} sx={{ py: 1.5 }}>
+          <RetakeIcon sx={{ mr: 2 }} fontSize="small" />
+          Retake Quiz
+        </MenuItem>
+      </Menu>
     </RecentQuizzesCard>
   );
 };
@@ -190,9 +267,11 @@ const QuizCard = ({ quiz, onQuizClick }) => {
 const RecentQuizzes = ({ 
   limit = 5, 
   onQuizClick, 
+  onResumeQuiz,
+  onRetakeQuiz,
   onViewAll, 
   showFilters = true,
-  isFullPage = false // Add this prop
+  isFullPage = false
 }) => {
   const { user } = useAuth();
   const [quizzes, setQuizzes] = useState([]);
@@ -212,33 +291,9 @@ const RecentQuizzes = ({
       setError(null);
       
       try {
-        // Fetch user's quizzes from Firestore
-        const quizQuery = query(
-          collection(db, 'quizzes'),
-          where('userId', '==', user.uid)
-        );
-
-        const querySnapshot = await getDocs(quizQuery);
-        const fetchedQuizzes = [];
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          fetchedQuizzes.push({
-            id: doc.id,
-            ...data,
-          });
-        });
-
-        // Sort by date (most recent first) in JavaScript since we can't use orderBy with where without index
-        fetchedQuizzes.sort((a, b) => {
-          const dateA = a.completedAt?.toDate ? a.completedAt.toDate() : new Date(a.completedAt || a.timestamp);
-          const dateB = b.completedAt?.toDate ? b.completedAt.toDate() : new Date(b.completedAt || b.timestamp);
-          return dateB - dateA;
-        });
-
-        // Limit the results
-        const limitedQuizzes = fetchedQuizzes.slice(0, limit);
-        setQuizzes(limitedQuizzes);
+        // Use QuizManager to get quiz history
+        const quizHistory = await QuizManager.getQuizHistory(limit);
+        setQuizzes(quizHistory);
 
       } catch (error) {
         console.error('Failed to fetch recent quizzes:', error);
@@ -408,6 +463,8 @@ const RecentQuizzes = ({
               key={quiz.id}
               quiz={quiz}
               onQuizClick={onQuizClick}
+              onResumeQuiz={onResumeQuiz}
+              onRetakeQuiz={onRetakeQuiz}
             />
           ))
         ) : (

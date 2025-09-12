@@ -1,4 +1,4 @@
-// src/App.jsx - Optimized with safe route-based code splitting
+// src/App.jsx - Optimized with safe route-based code splitting and quiz persistence
 import { useState, useEffect, lazy, Suspense } from 'react';
 import {
 	BrowserRouter as Router,
@@ -6,6 +6,7 @@ import {
 	Route,
 	Navigate,
 	useNavigate,
+	useParams,
 } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline, Box, Typography } from '@mui/material';
@@ -14,6 +15,7 @@ import { styled } from '@mui/material/styles';
 import theme from './theme';
 import { useAuth } from './context/AuthContext';
 import ShareQuizModal from './components/ShareQuizModal/ShareQuizModal';
+import { QuizManager, initializeQuizManager } from './utils/quizManager';
 
 // Loader
 const OptimizedLoader = styled(Box)(({ theme }) => ({
@@ -109,12 +111,18 @@ const AppContainer = styled(Box)({
 });
 
 // Wrapper components for better code splitting
-const FileUploadWrapper = ({ questions, setQuestions, apiKey, baseUrl }) => {
+const FileUploadWrapper = ({ apiKey, baseUrl }) => {
 	const navigate = useNavigate();
 
-	const handleFileUpload = (uploadedQuestions) => {
-		setQuestions(uploadedQuestions);
-		navigate('/quiz');
+	const handleFileUpload = (uploadedQuestions, isAI, options) => {
+		// Create new quiz session with uploaded questions
+		const quiz = QuizManager.createQuiz(uploadedQuestions, {
+			title: options?.title || 'New Quiz',
+			aiGenerated: isAI,
+			source: options?.source || 'File Upload'
+		});
+		
+		navigate(`/quiz/${quiz.id}`);
 	};
 
 	return (
@@ -129,16 +137,75 @@ const FileUploadWrapper = ({ questions, setQuestions, apiKey, baseUrl }) => {
 	);
 };
 
-const QuizEngineWrapper = ({ questions, setQuizResults, setShowResults }) => {
+const QuizEngineWrapper = () => {
 	const navigate = useNavigate();
+	const { quizId } = useParams();
+	const [quiz, setQuiz] = useState(null);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
+
+	useEffect(() => {
+		const loadQuiz = async () => {
+			try {
+				setLoading(true);
+				let currentQuiz;
+				
+				if (quizId) {
+					// Load quiz by ID
+					currentQuiz = await QuizManager.getQuizById(quizId);
+					if (!currentQuiz) {
+						setError('Quiz not found');
+						return;
+					}
+				} else {
+					// Load current active quiz
+					currentQuiz = QuizManager.getCurrentQuiz();
+					if (!currentQuiz) {
+						navigate('/dashboard');
+						return;
+					}
+				}
+				
+				setQuiz(currentQuiz);
+			} catch (err) {
+				console.error('Failed to load quiz:', err);
+				setError('Failed to load quiz');
+			} finally {
+				setLoading(false);
+			}
+		};
+		
+		loadQuiz();
+	}, [quizId, navigate]);
 
 	const handleQuizFinish = (results) => {
-		setQuizResults(results);
-		setShowResults(true);
-		navigate('/results');
+		// Complete the quiz and get results
+		if (quiz) {
+			quiz.complete();
+			navigate(`/results/${quiz.id}`);
+		}
 	};
 
-	if (!questions) {
+	if (loading) {
+		return <LoadingFallback text='Loading Quiz...' />;
+	}
+
+	if (error) {
+		return (
+			<OptimizedLoader>
+				<Typography variant='h6' color='error'>
+					{error}
+				</Typography>
+				<Typography variant='body2' sx={{ mt: 2 }}>
+					<button onClick={() => navigate('/dashboard')} style={{ padding: '8px 16px', cursor: 'pointer' }}>
+						Go to Dashboard
+					</button>
+				</Typography>
+			</OptimizedLoader>
+		);
+	}
+
+	if (!quiz) {
 		navigate('/dashboard');
 		return null;
 	}
@@ -146,29 +213,103 @@ const QuizEngineWrapper = ({ questions, setQuizResults, setShowResults }) => {
 	return (
 		<Suspense fallback={<LoadingFallback text='Loading Quiz...' />}>
 			<ModernQuizEngine
-				questions={questions}
+				quizSession={quiz}
 				onFinish={handleQuizFinish}
 				showTimer={true}
-				timeLimit={1800}
 			/>
 		</Suspense>
 	);
 };
 
-const ResultPageWrapper = ({
-	questions,
-	quizResults,
-	showResults,
-	resetQuiz,
-}) => {
+const ResultPageWrapper = () => {
 	const navigate = useNavigate();
+	const { quizId } = useParams();
+	const [quiz, setQuiz] = useState(null);
+	const [results, setResults] = useState(null);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
+
+	useEffect(() => {
+		const loadResults = async () => {
+			try {
+				setLoading(true);
+				let currentQuiz;
+				
+				if (quizId) {
+					// Load quiz by ID
+					currentQuiz = await QuizManager.getQuizById(quizId);
+					if (!currentQuiz) {
+						// Try to get results from history
+						const savedResults = QuizManager.getQuizResults(quizId);
+						if (savedResults) {
+							setResults(savedResults);
+							return;
+						}
+						setError('Quiz results not found');
+						return;
+					}
+				} else {
+					// Load current active quiz
+					currentQuiz = QuizManager.getCurrentQuiz();
+					if (!currentQuiz || currentQuiz.status !== 'completed') {
+						navigate('/dashboard');
+						return;
+					}
+				}
+				
+				setQuiz(currentQuiz);
+				// Get or generate results
+				const quizResults = currentQuiz.getResults();
+				setResults(quizResults);
+			} catch (err) {
+				console.error('Failed to load quiz results:', err);
+				setError('Failed to load results');
+			} finally {
+				setLoading(false);
+			}
+		};
+		
+		loadResults();
+	}, [quizId, navigate]);
 
 	const handleNewQuiz = () => {
-		resetQuiz();
+		// Clear current quiz session
+		QuizManager.clearCurrentQuiz();
 		navigate('/dashboard');
 	};
 
-	if (!showResults || !quizResults) {
+	const handleRetakeQuiz = () => {
+		if (quiz) {
+			// Create new quiz session with same questions
+			const newQuiz = QuizManager.createQuiz(quiz.questions, {
+				title: `Retake: ${quiz.title}`,
+				aiGenerated: quiz.aiGenerated,
+				source: quiz.source
+			});
+			navigate(`/quiz/${newQuiz.id}`);
+		}
+	};
+
+	if (loading) {
+		return <LoadingFallback text='Loading Results...' />;
+	}
+
+	if (error) {
+		return (
+			<OptimizedLoader>
+				<Typography variant='h6' color='error'>
+					{error}
+				</Typography>
+				<Typography variant='body2' sx={{ mt: 2 }}>
+					<button onClick={() => navigate('/dashboard')} style={{ padding: '8px 16px', cursor: 'pointer' }}>
+						Go to Dashboard
+					</button>
+				</Typography>
+			</OptimizedLoader>
+		);
+	}
+
+	if (!results) {
 		navigate('/dashboard');
 		return null;
 	}
@@ -176,9 +317,10 @@ const ResultPageWrapper = ({
 	return (
 		<Suspense fallback={<LoadingFallback text='Loading Results...' />}>
 			<ModernResultPage
-				questions={questions}
-				userAnswers={quizResults.answers}
+				results={results}
+				quiz={quiz}
 				onNewQuiz={handleNewQuiz}
+				onRetakeQuiz={handleRetakeQuiz}
 			/>
 		</Suspense>
 	);
@@ -187,11 +329,31 @@ const ResultPageWrapper = ({
 const DashboardWrapper = () => {
 	const navigate = useNavigate();
 
+	const handleViewResults = (quiz) => {
+		navigate(`/results/${quiz.id}`);
+	};
+
+	const handleResumeQuiz = (quiz) => {
+		navigate(`/quiz/${quiz.id}`);
+	};
+
+	const handleRetakeQuiz = (quiz) => {
+		// Create new quiz session with same questions
+		const newQuiz = QuizManager.createQuiz(quiz.questions, {
+			title: `Retake: ${quiz.title}`,
+			aiGenerated: quiz.aiGenerated,
+			source: quiz.source
+		});
+		navigate(`/quiz/${newQuiz.id}`);
+	};
+
 	return (
 		<Suspense fallback={<LoadingFallback text='Loading Dashboard...' />}>
 			<Dashboard
 				onCreateQuiz={() => navigate('/upload')}
-				onViewResults={(quiz) => navigate(`/results/${quiz.id}`)}
+				onViewResults={handleViewResults}
+				onResumeQuiz={handleResumeQuiz}
+				onRetakeQuiz={handleRetakeQuiz}
 				onUploadFile={() => navigate('/upload')}
 			/>
 		</Suspense>
@@ -206,28 +368,19 @@ const HeaderWrapper = ({ onProfileClick, onApiConfigClick, showApiConfig }) => (
 			showApiConfig={showApiConfig}
 		/>
 	</Suspense>
-);const handleFileUpload = (uploadedQuestions) => {
-	setQuestions(uploadedQuestions);
-
-	// Persist for refresh
-	try {
-		localStorage.setItem('quiz_questions', JSON.stringify(uploadedQuestions));
-	} catch (err) {
-		console.warn('Failed to save questions to localStorage:', err);
-	}
-
-	navigate('/quiz');
-};
+);
 
 
 // Main App
 const App = () => {
 	const { user, loading } = useAuth();
 	const [showUserInfo, setShowUserInfo] = useState(false);
-	const [questions, setQuestions] = useState(null);
-	const [quizResults, setQuizResults] = useState(null);
-	const [showResults, setShowResults] = useState(false);
 	const [showApiConfig, setShowApiConfig] = useState(false);
+
+	// Initialize quiz manager on app load
+	useEffect(() => {
+		initializeQuizManager();
+	}, []);
 
 	const [apiKey, setApiKey] = useState(() => {
 		try {
@@ -241,11 +394,6 @@ const App = () => {
 	});
 	const [baseUrl] = useState(import.meta.env.VITE_DEFAULT_BASE_URL);
 
-	const resetQuiz = () => {
-		setQuestions(null);
-		setQuizResults(null);
-		setShowResults(false);
-	};
 
 	// Optimized API Key fetching with error handling
 	useEffect(() => {
@@ -278,18 +426,6 @@ const App = () => {
 				}
 			}
 		};
-useEffect(() => {
-	if (!questions) {
-		const savedQuestions = localStorage.getItem('quiz_questions');
-		if (savedQuestions) {
-			try {
-				setQuestions(JSON.parse(savedQuestions));
-			} catch (err) {
-				console.warn('Failed to parse saved questions:', err);
-			}
-		}
-	}
-}, []);
 
 		const timeoutId = setTimeout(fetchApiKey, 100);
 		return () => {
@@ -368,8 +504,6 @@ useEffect(() => {
 										showApiConfig={showApiConfig}
 									/>
 									<FileUploadWrapper
-										questions={questions}
-										setQuestions={setQuestions}
 										apiKey={apiKey}
 										baseUrl={baseUrl}
 									/>
@@ -378,7 +512,7 @@ useEffect(() => {
 						/>
 
 						<Route
-							path='/quiz'
+							path='/quiz/:quizId?'
 							element={
 								<>
 									<HeaderWrapper
@@ -386,17 +520,13 @@ useEffect(() => {
 										onApiConfigClick={() => setShowApiConfig(true)}
 										showApiConfig={showApiConfig}
 									/>
-									<QuizEngineWrapper
-										questions={questions}
-										setQuizResults={setQuizResults}
-										setShowResults={setShowResults}
-									/>
+									<QuizEngineWrapper />
 								</>
 							}
 						/>
 
 						<Route
-							path='/results'
+							path='/results/:quizId?'
 							element={
 								<>
 									<HeaderWrapper
@@ -404,12 +534,7 @@ useEffect(() => {
 										onApiConfigClick={() => setShowApiConfig(true)}
 										showApiConfig={showApiConfig}
 									/>
-									<ResultPageWrapper
-										questions={questions}
-										quizResults={quizResults}
-										showResults={showResults}
-										resetQuiz={resetQuiz}
-									/>
+									<ResultPageWrapper />
 								</>
 							}
 						/>

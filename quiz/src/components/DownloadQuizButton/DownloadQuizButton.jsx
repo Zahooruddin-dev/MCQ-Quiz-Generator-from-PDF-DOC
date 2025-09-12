@@ -9,21 +9,15 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  Box,
-  Typography,
   Fade,
   Zoom
 } from '@mui/material';
 import {
   GetAppOutlined as DownloadIcon,
   PictureAsPdfOutlined as PdfIcon,
-  TableChartOutlined as CsvIcon,
-  DescriptionOutlined as TxtIcon,
-  QuizOutlined as QuizIcon,
   ArticleOutlined as DocxIcon,
 } from '@mui/icons-material';
 
-// Import for DOCX generation
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
 
 const DownloadQuizButton = ({ 
@@ -1066,10 +1060,6 @@ const DownloadQuizButton = ({
             secondary="Quiz + Answer Key (Combined)"
           />
         </MenuItem>
-        
-       
-
-       
 
         <Divider />
 

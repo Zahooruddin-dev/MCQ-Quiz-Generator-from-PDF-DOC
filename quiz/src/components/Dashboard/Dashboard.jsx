@@ -282,7 +282,7 @@ const ProgressView = React.memo(({ userId, onBack }) => (
 
 ProgressView.displayName = 'ProgressView';
 
-const RecentQuizzesView = React.memo(({ onBack, onViewResults }) => (
+const RecentQuizzesView = React.memo(({ onBack, onViewResults, onResumeQuiz, onRetakeQuiz }) => (
   <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
     <Stack spacing={3}>
       <Button
@@ -300,9 +300,12 @@ const RecentQuizzesView = React.memo(({ onBack, onViewResults }) => (
       </Button>
       <Suspense fallback={<ComponentLoader />}>
         <RecentQuizzes
-          limit={10}
+          limit={50}
           showFilters={true}
+          isFullPage={true}
           onQuizClick={onViewResults}
+          onResumeQuiz={onResumeQuiz}
+          onRetakeQuiz={onRetakeQuiz}
         />
       </Suspense>
     </Stack>
@@ -312,7 +315,7 @@ const RecentQuizzesView = React.memo(({ onBack, onViewResults }) => (
 RecentQuizzesView.displayName = 'RecentQuizzesView';
 
 // Main Dashboard Component
-const Dashboard = ({ onCreateQuiz, onViewResults }) => {
+const Dashboard = ({ onCreateQuiz, onViewResults, onResumeQuiz, onRetakeQuiz }) => {
   const { user, credits, isPremium } = useAuth();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState('dashboard');
@@ -377,7 +380,14 @@ const Dashboard = ({ onCreateQuiz, onViewResults }) => {
       return <ProgressView userId={userId} onBack={showDashboard} />;
     
     case 'recent':
-      return <RecentQuizzesView onBack={showDashboard} onViewResults={onViewResults} />;
+      return (
+        <RecentQuizzesView 
+          onBack={showDashboard} 
+          onViewResults={onViewResults}
+          onResumeQuiz={onResumeQuiz}
+          onRetakeQuiz={onRetakeQuiz}
+        />
+      );
     
     default:
       return (
