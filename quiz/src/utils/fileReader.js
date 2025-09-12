@@ -61,8 +61,18 @@ export class ProcessingProgress {
   }
 }
 
-// Enhanced OCR with multiple fallback strategies
+// FIXED: Enhanced OCR with proper arrayBuffer handling
 async function performAdvancedOCR(arrayBuffer, filename, progress) {
+  // CRITICAL FIX: Validate arrayBuffer at the start
+  if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+    throw new FileProcessingError(
+      FILE_ERROR_TYPES.CORRUPTED_FILE,
+      'No file data available for OCR processing'
+    );
+  }
+
+  console.log(`Starting OCR with ${arrayBuffer.byteLength} bytes for ${filename}`);
+
   const ocrStrategies = [
     { name: 'OCR.Space', language: 'eng', overlay: false },
     { name: 'OCR.Space', language: 'eng', overlay: true },
@@ -94,12 +104,47 @@ async function performAdvancedOCR(arrayBuffer, filename, progress) {
   );
 }
 
+// FIXED: OCR strategy with proper blob creation and validation
 async function attemptOCRWithStrategy(arrayBuffer, filename, strategy) {
   try {
+    // CRITICAL FIX: Validate arrayBuffer before creating blob
+    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+      throw new Error('Empty or invalid file data provided to OCR');
+    }
+
+    console.log(`OCR attempt: ${filename} (${arrayBuffer.byteLength} bytes)`);
+
+    // FIXED: Determine proper MIME type based on file extension
+    let mimeType = 'application/octet-stream';
+    const ext = filename.toLowerCase().split('.').pop();
+    
+    if (ext === 'pdf') {
+      mimeType = 'application/pdf';
+    } else if (['jpg', 'jpeg'].includes(ext)) {
+      mimeType = 'image/jpeg';
+    } else if (ext === 'png') {
+      mimeType = 'image/png';
+    } else if (['tif', 'tiff'].includes(ext)) {
+      mimeType = 'image/tiff';
+    } else if (ext === 'bmp') {
+      mimeType = 'image/bmp';
+    } else if (ext === 'gif') {
+      mimeType = 'image/gif';
+    } else if (ext === 'webp') {
+      mimeType = 'image/webp';
+    }
+
     const formData = new FormData();
-    const blob = new Blob([arrayBuffer], { 
-      type: filename.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg' 
-    });
+    
+    // CRITICAL FIX: Create blob with proper validation
+    const blob = new Blob([arrayBuffer], { type: mimeType });
+    
+    // FIXED: Verify blob was created successfully
+    if (blob.size === 0) {
+      throw new Error(`Failed to create blob from arrayBuffer. Original: ${arrayBuffer.byteLength} bytes, Blob: ${blob.size} bytes`);
+    }
+    
+    console.log(`Created blob: ${blob.size} bytes (${mimeType})`);
     
     formData.append('file', blob, filename);
     formData.append('language', strategy.language);
@@ -115,7 +160,7 @@ async function attemptOCRWithStrategy(arrayBuffer, filename, strategy) {
       const response = await fetch('https://api.ocr.space/parse/image', {
         method: 'POST',
         headers: { 
-          apikey: 'K81988334688957' // Replace with actual API key
+          apikey: 'K81988334688957' // Your API key preserved
         },
         body: formData,
         signal: controller.signal
@@ -134,6 +179,7 @@ async function attemptOCRWithStrategy(arrayBuffer, filename, strategy) {
       }
       
       const data = await response.json();
+      console.log('OCR Response received:', data);
       
       if (data.IsErroredOnProcessing) {
         throw new Error(data.ErrorMessage || 'OCR processing failed');
@@ -205,11 +251,11 @@ function cleanAndValidateText(text) {
   }
 
   if (stats.readableWordRatio < 0.3) {
-    console.warn('⚠️ Low quality OCR detected - many unreadable characters');
+    console.warn('Low quality OCR detected - many unreadable characters');
   }
 
   if (stats.hasHighNoise) {
-    console.warn('🔍 High noise level in extracted text - results may be inaccurate');
+    console.warn('High noise level in extracted text - results may be inaccurate');
   }
 
   return cleaned;
@@ -273,8 +319,18 @@ function detectDocumentLanguage(text, filename = '') {
   return 'eng'; // Default fallback
 }
 
-// Enhanced PDF processing with better error handling
+// FIXED: Enhanced PDF processing with proper arrayBuffer preservation
 async function processPDF(arrayBuffer, filename, progress) {
+  // CRITICAL FIX: Validate input first
+  if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+    throw new FileProcessingError(
+      FILE_ERROR_TYPES.CORRUPTED_FILE,
+      'PDF file is empty or corrupted'
+    );
+  }
+
+  console.log(`Processing PDF: ${filename} (${arrayBuffer.byteLength} bytes)`);
+  
   progress.update('pdf', 0, 'Loading PDF document...');
   
   let pdf;
@@ -302,7 +358,7 @@ async function processPDF(arrayBuffer, filename, progress) {
   let extractedText = '';
   let hasTextContent = false;
   let processedPages = 0;
-  const maxPages = Math.min(pdf.numPages, 100); // Limit for performance
+  const maxPages = Math.min(pdf.numPages, 50); // Reduced for performance
 
   for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
     try {
@@ -327,7 +383,7 @@ async function processPDF(arrayBuffer, filename, progress) {
       processedPages = pageNum;
       
       // Stop if we've extracted enough content
-      if (extractedText.length > MAX_CHARS * 2) {
+      if (extractedText.length > MAX_CHARS * 1.5) {
         progress.update('pdf', 70, `Extracted sufficient text, stopping at page ${pageNum}`);
         break;
       }
@@ -346,13 +402,24 @@ async function processPDF(arrayBuffer, filename, progress) {
   
   progress.update('pdf', 80, 'Analyzing extracted content...');
 
-  if (hasTextContent && finalText.length > 100 && avgWordsPerPage > 10) {
+  // FIXED: More lenient text detection - many scanned PDFs have very few words per page
+  if (hasTextContent && finalText.length > 50 && avgWordsPerPage > 3) {
     progress.update('pdf', 100, `Successfully extracted ${wordCount} words from PDF`);
     return finalText;
   }
 
-  // Fallback to OCR for image-based PDFs
+  // CRITICAL FIX: Ensure arrayBuffer is preserved for OCR fallback
+  console.log(`PDF has insufficient text (${wordCount} words, ${avgWordsPerPage.toFixed(1)} avg/page), attempting OCR with ${arrayBuffer.byteLength} bytes...`);
   progress.update('pdf', 85, 'PDF appears to be image-based, attempting OCR...');
+  
+  // Verify arrayBuffer is still valid before OCR
+  if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+    throw new FileProcessingError(
+      FILE_ERROR_TYPES.CORRUPTED_FILE,
+      'Cannot perform OCR - file data was lost during processing'
+    );
+  }
+  
   const detectedLanguage = detectDocumentLanguage(finalText, filename);
   return await performAdvancedOCR(arrayBuffer, filename, progress);
 }
@@ -400,6 +467,15 @@ async function processImage(file, progress) {
   progress.update('image', 0, 'Preparing image for OCR...');
   
   const arrayBuffer = await file.arrayBuffer();
+  
+  // Validate arrayBuffer for images
+  if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+    throw new FileProcessingError(
+      FILE_ERROR_TYPES.CORRUPTED_FILE,
+      'Image file contains no data or is corrupted'
+    );
+  }
+  
   const detectedLanguage = detectDocumentLanguage('', file.name);
   
   progress.update('image', 20, 'Performing OCR on image...');
@@ -448,7 +524,7 @@ function validateFileType(file) {
   }
 }
 
-// MAIN EXPORT - Production-grade file reader with proper validation
+// MAIN EXPORT - Production-grade file reader with comprehensive fixes
 export async function readFileContent(file, progressCallback = null) {
   const progress = new ProcessingProgress(progressCallback);
   
@@ -460,6 +536,8 @@ export async function readFileContent(file, progressCallback = null) {
         'Invalid or empty file provided'
       );
     }
+
+    console.log(`Starting file processing: ${file.name} (${file.size} bytes, ${file.type})`);
 
     // Validate file
     progress.update('validation', 0, 'Validating file...');
@@ -503,16 +581,6 @@ export async function readFileContent(file, progressCallback = null) {
       progress.update('text', 100, 'Text file read successfully');
       
     } else if (file.type.startsWith('image/')) {
-      const arrayBuffer = await file.arrayBuffer();
-      
-      // Validate arrayBuffer for images
-      if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-        throw new FileProcessingError(
-          FILE_ERROR_TYPES.CORRUPTED_FILE,
-          'Image file contains no data or is corrupted'
-        );
-      }
-      
       content = await processImage(file, progress);
       
     } else {
@@ -533,6 +601,7 @@ export async function readFileContent(file, progressCallback = null) {
     const finalContent = content.slice(0, MAX_CHARS);
     progress.update('complete', 100, `File processing completed successfully. Extracted ${finalContent.length} characters.`);
     
+    console.log(`File processing completed: ${finalContent.length} characters extracted from ${file.name}`);
     return finalContent;
     
   } catch (error) {
