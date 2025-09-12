@@ -10,27 +10,28 @@ import {
   Alert,
   Button,
   Collapse,
-  Chip,
-  Tooltip,
-  Divider,
 } from "@mui/material";
-import { Settings, Zap, Clock, CheckCircle } from "lucide-react";
+import { Settings } from "lucide-react";
 
 const ConfigPanel = ({
-  hasAI,
+  hasAI = false,
   apiKey,
   loading = false,
-  initialOptions = { 
-    numQuestions: 10, 
-    difficulty: "medium", 
-    questionType: "mixed",
-    fastMode: true // Default to fast mode
-  },
+  initialOptions = {},
   onOptionsChange,
   onReconfigure,
 }) => {
-  const [useAI, setUseAI] = useState(hasAI);
-  const [aiOptions, setAiOptions] = useState(initialOptions);
+  // Ensure all values are defined to prevent controlled/uncontrolled issues
+  const defaultOptions = {
+    numQuestions: 10,
+    difficulty: "medium",
+    questionType: "mixed",
+    useAI: false,
+    ...initialOptions // Allow overrides
+  };
+
+  const [useAI, setUseAI] = useState(hasAI || false);
+  const [aiOptions, setAiOptions] = useState(defaultOptions);
 
   // Toggle AI
   const handleToggleAI = useCallback(
@@ -38,17 +39,6 @@ const ConfigPanel = ({
       const checked = e.target.checked;
       setUseAI(checked);
       onOptionsChange?.({ ...aiOptions, useAI: checked });
-    },
-    [aiOptions, onOptionsChange]
-  );
-
-  // Toggle Fast Mode
-  const handleToggleFastMode = useCallback(
-    (e) => {
-      const checked = e.target.checked;
-      const newOptions = { ...aiOptions, fastMode: checked };
-      setAiOptions(newOptions);
-      onOptionsChange?.(newOptions);
     },
     [aiOptions, onOptionsChange]
   );
@@ -114,7 +104,7 @@ const ConfigPanel = ({
         <FormControlLabel
           control={
             <Switch
-              checked={useAI}
+              checked={useAI || false}
               onChange={handleToggleAI}
               disabled={loading}
             />
@@ -125,116 +115,11 @@ const ConfigPanel = ({
         {/* AI Options */}
         <Collapse in={useAI}>
           <Stack spacing={3}>
-            {/* Fast Mode Toggle */}
-            <Box>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={aiOptions.fastMode}
-                    onChange={handleToggleFastMode}
-                    disabled={loading}
-                    color="success"
-                  />
-                }
-                label={
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <Typography>Fast Generation Mode</Typography>
-                    {aiOptions.fastMode && (
-                      <Chip
-                        icon={<Zap size={14} />}
-                        label="ACTIVE"
-                        size="small"
-                        color="success"
-                        variant="filled"
-                        sx={{ 
-                          height: 20, 
-                          fontSize: '0.7rem',
-                          fontWeight: 600
-                        }}
-                      />
-                    )}
-                  </Stack>
-                }
-              />
-
-              {/* Mode Description */}
-              <Box sx={{ ml: 5, mt: 1 }}>
-                {aiOptions.fastMode ? (
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                    <Zap size={16} color="#22c55e" />
-                    <Typography variant="body2" color="success.main" sx={{ fontWeight: 500 }}>
-                      Quick results with good quality (Recommended)
-                    </Typography>
-                  </Stack>
-                ) : (
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                    <Clock size={16} color="#f59e0b" />
-                    <Typography variant="body2" color="warning.main" sx={{ fontWeight: 500 }}>
-                      Slower processing with maximum quality
-                    </Typography>
-                  </Stack>
-                )}
-
-                {/* Feature Comparison */}
-                <Box sx={{ 
-                  p: 2, 
-                  borderRadius: 2, 
-                  bgcolor: aiOptions.fastMode ? 'success.50' : 'warning.50',
-                  border: 1,
-                  borderColor: aiOptions.fastMode ? 'success.200' : 'warning.200'
-                }}>
-                  <Stack spacing={1}>
-                    {aiOptions.fastMode ? (
-                      <>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <CheckCircle size={14} color="#22c55e" />
-                          <Typography variant="caption">~50% faster processing</Typography>
-                        </Stack>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <CheckCircle size={14} color="#22c55e" />
-                          <Typography variant="caption">Essential quality checks</Typography>
-                        </Stack>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <CheckCircle size={14} color="#22c55e" />
-                          <Typography variant="caption">Self-contained questions</Typography>
-                        </Stack>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <CheckCircle size={14} color="#22c55e" />
-                          <Typography variant="caption">Good for most content types</Typography>
-                        </Stack>
-                      </>
-                    ) : (
-                      <>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <CheckCircle size={14} color="#f59e0b" />
-                          <Typography variant="caption">Deep content analysis</Typography>
-                        </Stack>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <CheckCircle size={14} color="#f59e0b" />
-                          <Typography variant="caption">Comprehensive quality validation</Typography>
-                        </Stack>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <CheckCircle size={14} color="#f59e0b" />
-                          <Typography variant="caption">Educational standards compliance</Typography>
-                        </Stack>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <CheckCircle size={14} color="#f59e0b" />
-                          <Typography variant="caption">Best for complex academic content</Typography>
-                        </Stack>
-                      </>
-                    )}
-                  </Stack>
-                </Box>
-              </Box>
-            </Box>
-
-            <Divider />
-
             {/* Number of Questions */}
             <TextField
               label="Number of Questions"
               type="number"
-              value={aiOptions.numQuestions}
+              value={aiOptions.numQuestions || 10}
               onChange={handleNumQuestionsChange}
               onBlur={handleNumQuestionsBlur}
               inputProps={{ min: 5, max: 50 }}
@@ -242,36 +127,6 @@ const ConfigPanel = ({
               helperText="Generate between 5-50 questions"
               sx={{ flex: 1 }}
             />
-
-            {/* Performance Tip */}
-            {!(aiOptions.fastMode || false) && (aiOptions.numQuestions || 0) > 15 && (
-              <Alert 
-                severity="info" 
-                icon={<Clock size={20} />}
-                sx={{ 
-                  bgcolor: 'info.50',
-                  border: 1,
-                  borderColor: 'info.200'
-                }}
-              >
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <Typography variant="body2">
-                    Large requests in enhanced mode may take several minutes
-                  </Typography>
-                  <Tooltip title="Switch to fast mode for quicker results">
-                    <Button 
-                      size="small" 
-                      variant="outlined" 
-                      startIcon={<Zap size={14} />}
-                      onClick={() => handleToggleFastMode({ target: { checked: true } })}
-                      sx={{ ml: 1, minWidth: 'auto' }}
-                    >
-                      Use Fast Mode
-                    </Button>
-                  </Tooltip>
-                </Stack>
-              </Alert>
-            )}
 
             {/* API Key Warning */}
             {!apiKey && (
