@@ -146,6 +146,13 @@ const ModernQuizEngine = ({
     }
   }, [currentQuestion, questions.length, transitionToQuestion]);
 
+  // Clamp current question if questions array changes (e.g., regenerate)
+  useEffect(() => {
+    if (currentQuestion >= questions.length) {
+      setCurrentQuestion(Math.max(0, questions.length - 1));
+    }
+  }, [questions.length]);
+
   const goToPrevQuestion = useCallback(() => {
     if (currentQuestion > 0) {
       transitionToQuestion(currentQuestion - 1);
@@ -319,7 +326,9 @@ const ModernQuizEngine = ({
       // Call onFinish with results
       await onFinish?.(results);
 
-      // Background save is now handled by QuizSession.complete()
+      // Reset submit state after successful finish to avoid stuck backdrop
+      setIsSubmitting(false);
+      setSubmitStatus(null);
 
     } catch (error) {
       console.error("Error finishing quiz:", error);
@@ -423,17 +432,16 @@ useEffect(() => {
 
   return (
     <>
-// Add this to your ModernQuizEngine component's return statement
-// Replace the existing QuizContainer with this version:
-
-<Fade in={isInitialized} timeout={600}>
-  <QuizContainer 
-    maxWidth="lg" 
-    sx={{ 
-      px: { xs: 2, sm: 3, md: 4 },
-      pb: { xs: 12, sm: 6 }, // Extra bottom padding on mobile for fixed navigation
-    }}
-  >
+      {/* ModernQuizEngine main container with entrance animation */}
+      <Fade in={isInitialized} timeout={600}>
+        <QuizContainer 
+          maxWidth="lg" 
+          sx={{ 
+            px: { xs: 2, sm: 3, md: 4 },
+            // Extra bottom padding on mobile for fixed navigation
+            pb: { xs: 12, sm: 6 },
+          }}
+        >
     <Stack spacing={{ xs: 3, sm: 4, md: 5 }}>
       <QuizHeader
         quizTitle={quizTitle}
