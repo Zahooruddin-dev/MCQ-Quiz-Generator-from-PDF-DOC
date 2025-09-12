@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
 	Box,
 	Container,
@@ -14,6 +14,8 @@ import {
 	Collapse,
 	Divider,
 	Avatar,
+	Grid,
+	useTheme,
 } from '@mui/material';
 import { styled, keyframes } from '@mui/material/styles';
 import {
@@ -31,6 +33,7 @@ import {
 	Share2,
 	Download,
 } from 'lucide-react';
+
 import ShareQuizModal from '../ShareQuizModal/ShareQuizModal';
 
 // Animations
@@ -45,24 +48,28 @@ const scaleIn = keyframes`
   }
 `;
 
-const rotate = keyframes`
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-`;
-
 // Styled Components
 const ResultsContainer = styled(Container)(({ theme }) => ({
 	paddingTop: theme.spacing(4),
-	paddingBottom: theme.spacing(4),
+	paddingBottom: theme.spacing(8),
+	[theme.breakpoints.up('md')]: {
+		paddingTop: theme.spacing(6),
+		paddingBottom: theme.spacing(10),
+	},
 }));
 
 const HeroCard = styled(Card)(({ theme }) => ({
 	background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
 	color: 'white',
-	borderRadius: theme.shape.borderRadius * 3,
-	marginBottom: theme.spacing(4),
+	borderRadius: theme.spacing(3),
+	marginBottom: theme.spacing(5),
 	position: 'relative',
 	overflow: 'hidden',
+	boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+	[theme.breakpoints.down('sm')]: {
+		borderRadius: theme.spacing(2),
+		marginBottom: theme.spacing(4),
+	},
 	'&::before': {
 		content: '""',
 		position: 'absolute',
@@ -74,55 +81,82 @@ const HeroCard = styled(Card)(({ theme }) => ({
 			'radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, transparent 70%)',
 		pointerEvents: 'none',
 	},
+	'&::after': {
+		content: '""',
+		position: 'absolute',
+		bottom: -50,
+		left: -50,
+		width: 150,
+		height: 150,
+		borderRadius: '50%',
+		background: 'rgba(255, 255, 255, 0.05)',
+		pointerEvents: 'none',
+	},
 }));
 
-const ScoreCircle = styled(Box)(({ theme }) => ({
-	width: 120,
-	height: 120,
+const ScoreCircle = styled(Box)(({ theme, score }) => ({
+	width: 140,
+	height: 140,
 	borderRadius: '50%',
 	background: 'rgba(255, 255, 255, 0.2)',
 	backdropFilter: 'blur(10px)',
-	border: '3px solid rgba(255, 255, 255, 0.3)',
+	border: '3px solid rgba(255, 255, 255, 0.4)',
 	display: 'flex',
 	alignItems: 'center',
 	justifyContent: 'center',
+	flexShrink: 0,
 	animation: `${scaleIn} 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55)`,
 	position: 'relative',
+	overflow: 'hidden',
+	boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+
 	'&::before': {
 		content: '""',
 		position: 'absolute',
-		top: -3,
-		left: -3,
-		right: -3,
-		bottom: -3,
+		top: 0,
+		left: 0,
+		width: '100%',
+		height: '100%',
 		borderRadius: '50%',
-		background:
-			'conic-gradient(from 0deg, rgba(255, 255, 255, 0.5), transparent, rgba(255, 255, 255, 0.5))',
-		animation: `${rotate} 3s linear infinite`,
+		background: `conic-gradient(${
+			score >= 70
+				? theme.palette.success.light
+				: score >= 50
+				? theme.palette.warning.light
+				: theme.palette.error.light
+		} ${score * 3.6}deg, rgba(255, 255, 255, 0.1) 0deg)`,
 		zIndex: -1,
 	},
-}));
-
-const StatsCard = styled(Card)(({ theme }) => ({
-	height: '100%',
-	borderRadius: theme.shape.borderRadius * 2,
-	border: '1px solid',
-	borderColor: theme.palette.grey[200],
-	transition: 'all 0.3s ease',
-	'&:hover': {
-		transform: 'translateY(-4px)',
-		boxShadow: theme.shadows[8],
+	[theme.breakpoints.down('sm')]: {
+		width: 100,
+		height: 100,
 	},
 }));
 
-const QuestionCard = styled(Card)(({ theme }) => ({
-	marginBottom: theme.spacing(2),
-	borderRadius: theme.shape.borderRadius * 2,
-	border: '1px solid',
-	borderColor: theme.palette.grey[200],
-	transition: 'all 0.3s ease',
+const StyledCard = styled(Card)(({ theme }) => ({
+	borderRadius: theme.spacing(2.5),
+	border: `1px solid ${theme.palette.divider}`,
+	boxShadow: theme.shadows[1],
+	transition: 'all 0.2s ease-in-out',
 	'&:hover': {
 		boxShadow: theme.shadows[4],
+		transform: 'translateY(-2px)',
+	},
+	[theme.breakpoints.down('sm')]: {
+		borderRadius: theme.spacing(1.5),
+	},
+}));
+
+const QuestionHeader = styled(Stack)(({ theme }) => ({
+	cursor: 'pointer',
+	padding: theme.spacing(2.5, 3),
+	borderRadius: theme.spacing(2),
+	transition: 'background-color 0.2s ease',
+	'&:hover': {
+		backgroundColor: theme.palette.action.hover,
+	},
+	[theme.breakpoints.down('sm')]: {
+		padding: theme.spacing(2),
 	},
 }));
 
@@ -131,26 +165,122 @@ const OptionItem = styled(Box, {
 		prop !== 'isCorrect' && prop !== 'isUserAnswer' && prop !== 'isWrong',
 })(({ theme, isCorrect, isUserAnswer, isWrong }) => ({
 	padding: theme.spacing(1.5, 2),
-	borderRadius: theme.shape.borderRadius,
+	borderRadius: theme.spacing(1),
 	marginBottom: theme.spacing(1),
 	border: '1px solid',
-	borderColor: theme.palette.grey[200],
-	background: 'white',
+	transition: 'all 0.2s ease-in-out',
+	fontWeight: 500,
+	position: 'relative',
+	overflow: 'hidden',
+	borderColor: theme.palette.grey[300],
+	background: theme.palette.background.paper,
+	color: theme.palette.text.primary,
+
 	...(isCorrect && {
 		borderColor: theme.palette.success.main,
-		background: `linear-gradient(135deg, ${theme.palette.success.main}08 0%, ${theme.palette.success.light}08 100%)`,
+		background: theme.palette.success.light + '1A',
+		color: theme.palette.success.dark,
+		'& .MuiTypography-root': {
+			fontWeight: 600,
+		},
 	}),
 	...(isWrong && {
 		borderColor: theme.palette.error.main,
-		background: `linear-gradient(135deg, ${theme.palette.error.main}08 0%, ${theme.palette.error.light}08 100%)`,
+		background: theme.palette.error.light + '1A',
+		color: theme.palette.error.dark,
+		'& .MuiTypography-root': {
+			fontWeight: 600,
+		},
+	}),
+	...(isUserAnswer && {
+		boxShadow: theme.shadows[2],
+	}),
+}));
+
+const ExplanationPaper = styled(Paper)(({ theme, type = 'info' }) => ({
+	padding: theme.spacing(2),
+	borderRadius: theme.spacing(1.5),
+	marginBottom: theme.spacing(2),
+	fontSize: '0.9rem',
+	borderLeft: `5px solid`,
+	backgroundColor: theme.palette.grey[50],
+	...(type === 'context' && {
+		borderLeftColor: theme.palette.info.main,
+		backgroundColor: theme.palette.info.light + '1A',
+		color: theme.palette.info.dark,
+	}),
+	...(type === 'explanation' && {
+		borderLeftColor: theme.palette.success.main,
+		backgroundColor: theme.palette.success.light + '1A',
+		color: theme.palette.success.dark,
 	}),
 }));
 
 const ModernResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
 	const [expandedQuestions, setExpandedQuestions] = useState([]);
-	const [openShare, setOpenShare] = useState(false); // ✅ moved inside
+	const [openShare, setOpenShare] = useState(false);
+	const theme = useTheme();
 
-	if (!questions || !userAnswers) {
+	const calculateResults = useCallback(() => {
+		if (!questions || questions.length === 0) {
+			return { correct: 0, wrong: 0, unattempted: 0, score: 0, accuracy: 0 };
+		}
+
+		let correct = 0,
+			wrong = 0,
+			unattempted = 0;
+		questions.forEach((q, i) => {
+			const userAnswer = userAnswers[i];
+			if (userAnswer === null || userAnswer === undefined) {
+				unattempted++;
+			} else if (userAnswer === q.correctAnswer) {
+				correct++;
+			} else {
+				wrong++;
+			}
+		});
+
+		const attemptedQuestions = questions.length - unattempted;
+		const score = Math.round((correct / questions.length) * 100);
+		const accuracy =
+			attemptedQuestions > 0
+				? Math.round((correct / attemptedQuestions) * 100)
+				: 0;
+
+		return {
+			correct,
+			wrong,
+			unattempted,
+			score,
+			accuracy,
+		};
+	}, [questions, userAnswers]);
+
+	const results = calculateResults();
+
+	const toggleQuestion = useCallback((index) => {
+		setExpandedQuestions((prev) =>
+			prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+		);
+	}, []);
+
+	const toggleAllQuestions = useCallback(() => {
+		if (expandedQuestions.length === questions.length) {
+			setExpandedQuestions([]);
+		} else {
+			setExpandedQuestions(questions.map((_, i) => i));
+		}
+	}, [expandedQuestions.length, questions]);
+
+	const getScoreMessage = useCallback((score) => {
+		if (score >= 90) return 'Exceptional! A true master of the content!';
+		if (score >= 80) return "Fantastic work! You're doing great!";
+		if (score >= 70) return 'Well done! Solid understanding.';
+		if (score >= 60) return 'Good effort! Keep reviewing the material.';
+		return "Room for growth. Let's learn from this and improve!";
+	}, []);
+
+	if (!questions || !userAnswers || questions.length === 0) {
 		return (
 			<ResultsContainer maxWidth='md'>
 				<Box sx={{ textAlign: 'center', py: 8 }}>
@@ -165,383 +295,225 @@ const ModernResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
 		);
 	}
 
-	const calculateResults = () => {
-		let correct = 0,
-			wrong = 0,
-			unattempted = 0;
-		userAnswers.forEach((answer, i) => {
-			if (answer === null || answer === undefined) unattempted++;
-			else if (answer === questions[i].correctAnswer) correct++;
-			else wrong++;
-		});
-		return {
-			correct,
-			wrong,
-			unattempted,
-			score: Math.round((correct / questions.length) * 100),
-			accuracy:
-				questions.length > 0
-					? Math.round((correct / (questions.length - unattempted)) * 100)
-					: 0,
-		};
-	};
-
-	const results = calculateResults();
-
-	const toggleQuestion = (index) => {
-		setExpandedQuestions((prev) =>
-			prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
-		);
-	};
-
-	const toggleAllQuestions = () => {
-		if (expandedQuestions.length === questions.length) {
-			setExpandedQuestions([]);
-		} else {
-			setExpandedQuestions(questions.map((_, i) => i));
-		}
-	};
-
 	return (
 		<ResultsContainer maxWidth='lg'>
-			<Stack spacing={4}>
-				{/* Hero Section */}
-				<HeroCard>
-					<CardContent sx={{ p: 4 }}>
-						<Stack
-							direction={{ xs: 'column', md: 'row' }}
-							spacing={4}
-							alignItems='center'
-						>
-							<Box sx={{ textAlign: { xs: 'center', md: 'left' }, flex: 1 }}>
-								<Typography variant='h3' sx={{ fontWeight: 800, mb: 2 }}>
-									Quiz Complete!
-								</Typography>
-								<Typography variant='h6' sx={{ opacity: 0.9, mb: 3 }}>
-									{results.score >= 90
-										? 'Excellent! Outstanding performance!'
-										: results.score >= 80
-										? 'Great job! Well done!'
-										: results.score >= 70
-										? 'Good work! Keep it up!'
-										: results.score >= 60
-										? 'Not bad! Room for improvement.'
-										: 'Keep practicing! You can do better!'}
-								</Typography>
-								<Stack
-									direction='row'
-									spacing={2}
-									justifyContent={{ xs: 'center', md: 'flex-start' }}
-								>
-									<Chip
-										label={fileName || 'Quiz Results'}
-										sx={{
-											background: 'rgba(255, 255, 255, 0.2)',
-											color: 'white',
-											fontWeight: 600,
-										}}
-									/>
-									<Chip
-										icon={<FileText size={16} />}
-										label={`${questions.length} Questions`}
-										sx={{
-											background: 'rgba(255, 255, 255, 0.2)',
-											color: 'white',
-											fontWeight: 600,
-										}}
-									/>
-								</Stack>
-							</Box>
-
-							<Box sx={{ textAlign: 'center' }}>
-								<ScoreCircle>
-									<Stack alignItems='center' spacing={0.5}>
-										<Typography
-											variant='h3'
-											sx={{ fontWeight: 800, lineHeight: 1 }}
-										>
-											{results.score}%
-										</Typography>
-										<Typography
-											variant='caption'
-											sx={{ opacity: 0.8, fontWeight: 500 }}
-										>
-											SCORE
-										</Typography>
-									</Stack>
-								</ScoreCircle>
-								<Typography variant='body2' sx={{ mt: 2, opacity: 0.8 }}>
-									{results.correct} out of {questions.length} correct
-								</Typography>
-							</Box>
-						</Stack>
-					</CardContent>
-				</HeroCard>
-
-				{/* Question Review */}
-				<Card sx={{ borderRadius: 3 }}>
-					<CardContent sx={{ p: 4 }}>
-						<Stack
-							direction='row'
-							justifyContent='space-between'
-							alignItems='center'
-							sx={{ mb: 3 }}
-						>
-							<Typography variant='h5' sx={{ fontWeight: 600 }}>
-								Question Review
+			{/* Hero Section */}
+			<HeroCard>
+				<CardContent>
+					<Stack
+						direction={{ xs: 'column', sm: 'row' }}
+						alignItems='center'
+						justifyContent='space-between'
+						spacing={4}
+					>
+						<ScoreCircle score={results.score}>
+							<Typography variant='h4' fontWeight='bold' color='white'>
+								{results.score}%
 							</Typography>
-							<Button
-								variant='outlined'
-								onClick={toggleAllQuestions}
-								startIcon={
-									expandedQuestions.length === questions.length ? (
-										<ChevronUp size={16} />
-									) : (
-										<ChevronDown size={16} />
-									)
-								}
-								size='small'
-							>
-								{expandedQuestions.length === questions.length
-									? 'Collapse All'
-									: 'Expand All'}
-							</Button>
-						</Stack>
+						</ScoreCircle>
+						<Box textAlign={{ xs: 'center', sm: 'left' }}>
+							<Typography variant='h4' fontWeight='bold' gutterBottom>
+								Your Results
+							</Typography>
+							<Typography variant='body1' sx={{ maxWidth: 400, opacity: 0.9 }}>
+								{getScoreMessage(results.score)}
+							</Typography>
+							{fileName && (
+								<Chip
+									icon={<FileText size={16} />}
+									label={fileName}
+									sx={{
+										mt: 2,
+										backgroundColor: 'rgba(255,255,255,0.2)',
+										color: 'white',
+									}}
+								/>
+							)}
+						</Box>
+					</Stack>
+				</CardContent>
+			</HeroCard>
 
-						<Stack spacing={2}>
-							{questions.map((question, index) => {
-								const userAnswer = userAnswers[index];
-								const isCorrect = userAnswer === question.correctAnswer;
-								const isAttempted =
-									userAnswer !== null && userAnswer !== undefined;
+			{/* Stats */}
+			<Grid container spacing={3} sx={{ mb: 5 }}>
+				{[
+					{
+						title: 'Correct',
+						value: results.correct,
+						icon: <CheckCircle color={theme.palette.success.main} />,
+					},
+					{
+						title: 'Wrong',
+						value: results.wrong,
+						icon: <XCircle color={theme.palette.error.main} />,
+					},
+					{
+						title: 'Unattempted',
+						value: results.unattempted,
+						icon: <Clock color={theme.palette.warning.main} />,
+					},
+					{
+						title: 'Accuracy',
+						value: `${results.accuracy}%`,
+						icon: <Target color={theme.palette.info.main} />,
+					},
+				].map((stat, idx) => (
+					<Grid item xs={12} sm={6} md={3} key={idx}>
+						<StyledCard>
+							<CardContent>
+								<Stack direction='row' spacing={2} alignItems='center'>
+									<Avatar
+										sx={{
+											bgcolor: 'transparent',
+											border: `2px solid ${theme.palette.divider}`,
+										}}
+									>
+										{stat.icon}
+									</Avatar>
+									<Box>
+										<Typography variant='h6'>{stat.value}</Typography>
+										<Typography
+											variant='body2'
+											color='text.secondary'
+											sx={{ textTransform: 'uppercase', fontWeight: 500 }}
+										>
+											{stat.title}
+										</Typography>
+									</Box>
+								</Stack>
+							</CardContent>
+						</StyledCard>
+					</Grid>
+				))}
+			</Grid>
 
-								return (
-									<QuestionCard key={index}>
-										<CardContent sx={{ p: 3 }}>
-											<Stack
-												direction='row'
-												justifyContent='space-between'
-												alignItems='center'
-												sx={{ cursor: 'pointer' }}
-												onClick={() => toggleQuestion(index)}
-											>
-												<Stack
-													direction='row'
-													spacing={2}
-													alignItems='center'
-													sx={{ flex: 1 }}
-												>
-													<Avatar
-														sx={{
-															width: 32,
-															height: 32,
-															background: !isAttempted
-																? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
-																: isCorrect
-																? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-																: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
-															fontSize: '0.875rem',
-															fontWeight: 600,
-														}}
-													>
-														{index + 1}
-													</Avatar>
-
-													<Box sx={{ flex: 1 }}>
-														<Typography
-															variant='body1'
-															sx={{ fontWeight: 500, mb: 0.5 }}
-														>
-															{question.question}
-														</Typography>
-														<Stack direction='row' spacing={1}>
-															<Chip
-																size='small'
-																label={
-																	!isAttempted
-																		? 'Unattempted'
-																		: isCorrect
-																		? 'Correct'
-																		: 'Wrong'
-																}
-																color={
-																	!isAttempted
-																		? 'warning'
-																		: isCorrect
-																		? 'success'
-																		: 'error'
-																}
-																sx={{ fontWeight: 500 }}
-															/>
-														</Stack>
-													</Box>
-												</Stack>
-
-												<IconButton size='small'>
-													{expandedQuestions.includes(index) ? (
-														<ChevronUp size={16} />
-													) : (
-														<ChevronDown size={16} />
-													)}
-												</IconButton>
-											</Stack>
-
-											<Collapse in={expandedQuestions.includes(index)}>
-												<Box sx={{ mt: 3 }}>
-													<Divider sx={{ mb: 3 }} />
-
-													{question.context && (
-														<Paper sx={{ p: 2, mb: 2, background: 'grey.50' }}>
-															<Typography
-																variant='body2'
-																sx={{ fontStyle: 'italic' }}
-															>
-																Context: {question.context}
-															</Typography>
-														</Paper>
-													)}
-
-													{question.explanation && (
-														<Paper
-															sx={{
-																p: 2,
-																mb: 2,
-																background: 'success.light',
-																opacity: 0.9,
-															}}
-														>
-															<Typography
-																variant='body2'
-																sx={{ fontStyle: 'italic', color: 'green' }}
-															>
-																💡 Explanation: {question.explanation}
-															</Typography>
-														</Paper>
-													)}
-
-													<Stack spacing={1}>
-														{question.options?.map((option, optionIndex) => {
-															const isCorrectOption =
-																optionIndex === question.correctAnswer;
-															const isUserSelection =
-																optionIndex === userAnswer;
-															const isWrongSelection =
-																isUserSelection && !isCorrectOption;
-
-															return (
-																<OptionItem
-																	key={optionIndex}
-																	isCorrect={isCorrectOption}
-																	isUserAnswer={isUserSelection}
-																	isWrong={isWrongSelection}
-																>
-																	<Stack
-																		direction='row'
-																		alignItems='center'
-																		spacing={2}
-																	>
-																		<Box
-																			sx={{
-																				width: 20,
-																				height: 20,
-																				borderRadius: '50%',
-																				display: 'flex',
-																				alignItems: 'center',
-																				justifyContent: 'center',
-																				fontSize: '0.75rem',
-																				fontWeight: 600,
-																				background: isCorrectOption
-																					? 'success.main'
-																					: isWrongSelection
-																					? 'error.main'
-																					: 'grey.300',
-																				color:
-																					isCorrectOption || isWrongSelection
-																						? 'white'
-																						: 'text.secondary',
-																			}}
-																		>
-																			{String.fromCharCode(65 + optionIndex)}
-																		</Box>
-
-																		<Typography
-																			variant='body2'
-																			sx={{
-																				fontWeight:
-																					isCorrectOption || isUserSelection
-																						? 600
-																						: 400,
-																				flex: 1,
-																			}}
-																		>
-																			{option}
-																		</Typography>
-
-																		{isCorrectOption && (
-																			<CheckCircle size={16} color='#10B981' />
-																		)}
-																		{isWrongSelection && (
-																			<XCircle size={16} color='#EF4444' />
-																		)}
-																	</Stack>
-																</OptionItem>
-															);
-														})}
-													</Stack>
-												</Box>
-											</Collapse>
-										</CardContent>
-									</QuestionCard>
-								);
-							})}
-						</Stack>
-					</CardContent>
-				</Card>
-
-				{/* Action Buttons */}
+			{/* Question Review */}
+			<Box sx={{ mb: 5 }}>
 				<Stack
-					direction={{ xs: 'column', sm: 'row' }}
-					spacing={2}
-					justifyContent='center'
+					direction='row'
+					alignItems='center'
+					justifyContent='space-between'
+					sx={{ mb: 2 }}
 				>
-					<Button
-						variant='contained'
-						size='large'
-						startIcon={<RotateCcw size={20} />}
-						onClick={onNewQuiz}
-						sx={{
-							px: 4,
-							py: 1.5,
-							background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-							'&:hover': {
-								background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
-							},
-						}}
-					>
-						Start New Quiz
+					<Typography variant='h5'>Review Questions</Typography>
+					<Button onClick={toggleAllQuestions} size='small'>
+						{expandedQuestions.length === questions.length
+							? 'Collapse All'
+							: 'Expand All'}
 					</Button>
-
-					{/* ⬇️ Put your Share Quiz button + modal here */}
-					<Button
-						variant='outlined'
-						size='large'
-						startIcon={<Share2 size={20} />}
-						sx={{ px: 4, py: 1.5 }}
-						onClick={() => setOpenShare(true)} // ✅ toggles modal
-					>
-						Share Quiz
-					</Button>
-
-					<ShareQuizModal
-						open={openShare}
-						onClose={() => setOpenShare(false)} // ✅ close handler
-						quizData={{ questions, fileName }} // ✅ instead of undefined quizData
-						userResults={userAnswers} // ✅ instead of undefined userResults
-					/>
 				</Stack>
+
+				{questions.map((q, index) => {
+					const userAnswer = userAnswers[index];
+					const isCorrect = userAnswer === q.correctAnswer;
+
+					return (
+						<StyledCard key={index} sx={{ mb: 2 }}>
+							<QuestionHeader
+								direction='row'
+								alignItems='center'
+								justifyContent='space-between'
+								onClick={() => toggleQuestion(index)}
+							>
+								<Stack direction='row' spacing={2} alignItems='center'>
+									{isCorrect ? (
+										<CheckCircle color={theme.palette.success.main} />
+									) : userAnswer === null || userAnswer === undefined ? (
+										<Clock color={theme.palette.warning.main} />
+									) : (
+										<XCircle color={theme.palette.error.main} />
+									)}
+									<Typography variant='subtitle1' fontWeight={600}>
+										Question {index + 1}
+									</Typography>
+								</Stack>
+								<IconButton size='small'>
+									{expandedQuestions.includes(index) ? (
+										<ChevronUp />
+									) : (
+										<ChevronDown />
+									)}
+								</IconButton>
+							</QuestionHeader>
+							<Collapse in={expandedQuestions.includes(index)}>
+								<Divider />
+								<CardContent>
+									<Typography variant='body1' sx={{ mb: 2, fontWeight: 500 }}>
+										{q.question}
+									</Typography>
+									{q.options.map((option, i) => {
+										const isUserAnswer = userAnswer === i;
+										const isCorrect = q.correctAnswer === i;
+										const isWrong = isUserAnswer && !isCorrect;
+										return (
+											<OptionItem
+												key={i}
+												isCorrect={isCorrect}
+												isWrong={isWrong}
+												isUserAnswer={isUserAnswer}
+											>
+												<Typography variant='body2'>{option}</Typography>
+											</OptionItem>
+										);
+									})}
+									{q.context && (
+										<ExplanationPaper type='context'>
+											<Typography variant='subtitle2' gutterBottom>
+												Context
+											</Typography>
+											<Typography variant='body2'>{q.context}</Typography>
+										</ExplanationPaper>
+									)}
+									{q.explanation && (
+										<ExplanationPaper type='explanation'>
+											<Typography variant='subtitle2' gutterBottom>
+												Explanation
+											</Typography>
+											<Typography variant='body2'>{q.explanation}</Typography>
+										</ExplanationPaper>
+									)}
+								</CardContent>
+							</Collapse>
+						</StyledCard>
+					);
+				})}
+			</Box>
+
+			{/* Action Buttons */}
+			<Stack direction='row' justifyContent='center' spacing={2} sx={{ mt: 4 }}>
+				<Button
+					variant='contained'
+					startIcon={<RotateCcw />}
+					onClick={() => {
+						// safe: only runs when user clicks
+						onNewQuiz();
+					}}
+				>
+					Try Again
+				</Button>
+
+				<Button
+					variant='outlined'
+					startIcon={<Share2 />}
+					onClick={() => setOpenShare(true)}
+				>
+					Share
+				</Button>
+				{/*      <Button variant="outlined" startIcon={<Download />}>
+          Download Report
+        </Button> */}
 			</Stack>
+
+			{/* Share Modal */}
+
+			<ShareQuizModal
+				open={openShare}
+				onClose={() => setOpenShare(false)} // ✅ close handler
+				quizData={{ questions, fileName }} // ✅ instead of undefined quizData
+				userResults={userAnswers} // ✅ instead of undefined userResults
+			/>
 		</ResultsContainer>
 	);
 };
 
-export default ModernResultPage;
+export default React.memo(ModernResultPage);
