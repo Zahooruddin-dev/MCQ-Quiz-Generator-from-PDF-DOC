@@ -518,6 +518,12 @@ REMEMBER: Teachers need questions they can use confidently in their classrooms. 
     return validateQuestions(questions);
   }
 
+  // Quick generation method for faster results
+  async generateQuizQuestionsFast(fileOrText, options = {}) {
+    console.log('⚡ Using fast generation mode for quicker results');
+    return this.generateQuizQuestions(fileOrText, { ...options, fastMode: true });
+  }
+
   // Method to get service statistics
   getServiceStats() {
     return {
