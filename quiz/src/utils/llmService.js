@@ -342,13 +342,46 @@ REMEMBER: Teachers need questions they can use confidently in their classrooms. 
 
       console.log(`📥 Received ${rawText.length} characters from AI model`);
       
-      const extractedData = extractJson(rawText);
+      // Enhanced JSON extraction with better error handling
+      let extractedData;
+      try {
+        extractedData = extractJson(rawText);
+      } catch (error) {
+        console.warn('⚠️ Initial JSON extraction failed, trying alternative methods:', error.message);
+        
+        // Try to clean and extract JSON manually
+        try {
+          // Look for JSON patterns in the response
+          const jsonMatch = rawText.match(/\{[\s\S]*"questions"[\s\S]*\]/);
+          if (jsonMatch) {
+            const cleanedJson = jsonMatch[0];
+            extractedData = JSON.parse(cleanedJson);
+          } else {
+            // Try to find questions array directly
+            const questionsMatch = rawText.match(/"questions"\s*:\s*\[[\s\S]*\]/);
+            if (questionsMatch) {
+              const questionsJson = `{${questionsMatch[0]}}`;
+              extractedData = JSON.parse(questionsJson);
+            } else {
+              throw new Error('No recognizable JSON structure found');
+            }
+          }
+        } catch (secondError) {
+          console.error('❌ All JSON extraction attempts failed');
+          console.log('Raw AI response:', rawText.substring(0, 500) + '...');
+          throw new Error(`Failed to parse AI response as JSON: ${secondError.message}`);
+        }
+      }
+      
       const questions = extractedData?.questions || [];
       
       if (!Array.isArray(questions) || questions.length === 0) {
+        console.error('❌ No valid questions found in response');
+        console.log('Extracted data:', extractedData);
         throw new Error('AI model did not return valid questions. Please try again.');
       }
 
+      console.log(`✅ Successfully extracted ${questions.length} questions from AI response`);
       return questions;
     } finally {
       clearTimeout(timeout);
