@@ -35,9 +35,10 @@ const FileDropZone = ({
   setError,
 }) => {
   const getFileIcon = (type) => {
-    if (type.includes("pdf")) return <FileType size={40} />;
-    if (type.includes("word") || type.includes("document")) return <FileText size={40} />;
-    if (type.includes("text")) return <Type size={40} />;
+    const t = (type || '').toLowerCase();
+    if (t.includes("pdf")) return <FileType size={40} />;
+    if (t.includes("word") || t.includes("document") || t.includes("msword")) return <FileText size={40} />;
+    if (t.includes("text") || t.includes("plain")) return <Type size={40} />;
     return <File size={40} />;
   };
 
@@ -74,6 +75,7 @@ const FileDropZone = ({
 
   const StageIcon = getStageIcon(loadingStage);
   const stageColor = getStageColor(loadingStage);
+  const safeDetails = processingDetails || { textExtracted: 0, ocrConfidence: null, questionsGenerated: 0 };
 
   return (
     <DropZone
@@ -84,6 +86,15 @@ const FileDropZone = ({
       onDragLeave={onDragLeave}
       onClick={() => {
         if (!fileName) fileInputRef.current?.click();
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={!fileName ? "Upload file by clicking or dragging" : `File selected: ${fileName}`}
+      onKeyDown={(e) => {
+        if (!fileName && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          fileInputRef.current?.click();
+        }
       }}
       sx={{ position: "relative" }}
     >
@@ -133,10 +144,10 @@ const FileDropZone = ({
           </Typography>
           
           {/* Processing details */}
-          {(processingDetails.textExtracted > 0 || processingDetails.ocrConfidence || processingDetails.questionsGenerated > 0) && (
+          {(safeDetails.textExtracted > 0 || safeDetails.ocrConfidence || safeDetails.questionsGenerated > 0) && (
             <Box sx={{ mb: 2, textAlign: 'center' }}>
               <Stack direction="row" spacing={2} justifyContent="center" flexWrap="wrap">
-                {processingDetails.textExtracted > 0 && (
+                {safeDetails.textExtracted > 0 && (
                   <Typography variant="caption" sx={{ 
                     bgcolor: 'rgba(255,255,255,0.1)', 
                     px: 1, 
@@ -144,10 +155,10 @@ const FileDropZone = ({
                     borderRadius: 1,
                     color: 'white'
                   }}>
-                    📄 {processingDetails.textExtracted} chars extracted
+                    📄 {safeDetails.textExtracted} chars extracted
                   </Typography>
                 )}
-                {processingDetails.ocrConfidence && (
+                {typeof safeDetails.ocrConfidence === 'number' && (
                   <Typography variant="caption" sx={{ 
                     bgcolor: 'rgba(255,255,255,0.1)', 
                     px: 1, 
@@ -155,10 +166,10 @@ const FileDropZone = ({
                     borderRadius: 1,
                     color: 'white'
                   }}>
-                    👁️ {Math.round(processingDetails.ocrConfidence)}% confidence
+                    👁️ {Math.round(safeDetails.ocrConfidence)}% confidence
                   </Typography>
                 )}
-                {processingDetails.questionsGenerated > 0 && (
+                {safeDetails.questionsGenerated > 0 && (
                   <Typography variant="caption" sx={{ 
                     bgcolor: 'rgba(255,255,255,0.1)', 
                     px: 1, 
@@ -166,7 +177,7 @@ const FileDropZone = ({
                     borderRadius: 1,
                     color: 'white'
                   }}>
-                    🧠 {processingDetails.questionsGenerated} questions created
+                    🧠 {safeDetails.questionsGenerated} questions created
                   </Typography>
                 )}
               </Stack>
@@ -206,7 +217,13 @@ const FileDropZone = ({
           <Typography variant="body2" sx={{ mb: 3, color: "text.secondary" }}>
             Supports PDF, DOCX, TXT, HTML (Max {formatBytes(MAX_FILE_SIZE)})
           </Typography>
-          <Button variant="contained" startIcon={<Upload />} sx={{ borderRadius: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<Upload />}
+            sx={{ borderRadius: 2 }}
+            aria-label="Browse files to upload"
+            onClick={() => fileInputRef.current?.click()}
+          >
             Browse Files
           </Button>
         </Box>
@@ -252,6 +269,8 @@ const FileDropZone = ({
         style={{ display: "none" }}
         onChange={(e) => e.target.files?.[0] && onFileSelect(e.target.files[0])}
         accept=".pdf,.doc,.docx,.txt,.html"
+        aria-hidden="true"
+        tabIndex={-1}
       />
 
       {/* Error Popup */}
@@ -269,4 +288,5 @@ const FileDropZone = ({
   );
 };
 
-export default FileDropZone;
+
+export default React.memo(FileDropZone);
