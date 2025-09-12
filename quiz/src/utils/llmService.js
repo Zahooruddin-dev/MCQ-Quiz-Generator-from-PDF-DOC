@@ -468,8 +468,29 @@ REMEMBER: Teachers need questions they can use confidently in their classrooms. 
   }
 
   static generateCacheKey(content, options) {
-    const contentHash = content.slice(0, 200) + content.slice(-100); // First 200 + last 100 chars
-    return `quiz_${btoa(contentHash + JSON.stringify(options)).slice(0, 32)}`;
+    try {
+      const contentHash = content.slice(0, 200) + content.slice(-100); // First 200 + last 100 chars
+      const combined = contentHash + JSON.stringify(options);
+      
+      // Use TextEncoder to handle Unicode characters safely
+      const encoder = new TextEncoder();
+      const data = encoder.encode(combined);
+      
+      // Create a simple hash from the encoded data
+      let hash = 0;
+      for (let i = 0; i < Math.min(data.length, 1000); i++) {
+        hash = ((hash << 5) - hash + data[i]) & 0xffffffff;
+      }
+      
+      // Convert to positive number and base36 for compact representation
+      const hashStr = Math.abs(hash).toString(36);
+      return `quiz_${hashStr}_${Date.now().toString(36).slice(-4)}`;
+      
+    } catch (error) {
+      console.warn('⚠️ Cache key generation fallback used:', error);
+      // Fallback: use content length and timestamp
+      return `quiz_fallback_${content.length}_${Date.now().toString(36)}`;
+    }
   }
 
   // Utility methods (maintained for compatibility)
