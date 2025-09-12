@@ -67,7 +67,7 @@ const ExportButton = ({ onExport, data }) => {
       ['Average Score', `${(data.avgScore || 0).toFixed(1)}%`],
       ['Best Score', `${data.bestScore || 0}%`],
       ['Current Streak', data.streak || 0],
-      ...data.topicPerformance.map(topic => [`${topic.topic} Average`, `${topic.avgScore.toFixed(1)}%`]),
+      ...((data.topicPerformance || []).map(topic => [`${topic.topic} Average`, `${topic.avgScore.toFixed(1)}%`])),
     ];
     
     const csvContent = csvData.map(row => row.join(',')).join('\n');
@@ -76,7 +76,9 @@ const ExportButton = ({ onExport, data }) => {
     const link = document.createElement('a');
     link.href = url;
     link.download = 'quiz-analytics.csv';
+    document.body.appendChild(link);
     link.click();
+    link.remove();
     window.URL.revokeObjectURL(url);
     
     if (onExport) onExport(data);
@@ -351,6 +353,7 @@ const AnalyticsDashboard = ({
   onDataExport 
 }) => {
   const { user } = useAuth();
+  const targetUserId = userId || user?.uid;
   const [analyticsData, setAnalyticsData] = useState(null);
   const [recentQuizzes, setRecentQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -360,13 +363,20 @@ const AnalyticsDashboard = ({
   const getDateFilter = (period) => {
     const now = new Date();
     switch (period) {
-      case TimePeriod.THIS_WEEK:
-        const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-        return weekStart;
+      case TimePeriod.THIS_WEEK: {
+        const d = new Date(now);
+        const diff = d.getDay(); // 0 (Sun) - 6 (Sat)
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() - diff);
+        return d;
+      }
       case TimePeriod.THIS_MONTH:
         return new Date(now.getFullYear(), now.getMonth(), 1);
-      case TimePeriod.LAST_30_DAYS:
-        return new Date(now.setDate(now.getDate() - 30));
+      case TimePeriod.LAST_30_DAYS: {
+        const d = new Date(now);
+        d.setDate(d.getDate() - 30);
+        return d;
+      }
       default:
         return null; // ALL_TIME
     }
@@ -423,7 +433,10 @@ const AnalyticsDashboard = ({
       monthlyData[monthKey].avgScore = monthlyData[monthKey].totalScore / monthlyData[monthKey].quizzes;
     });
 
-    const monthlyStats = Object.values(monthlyData).slice(-6); // Last 6 months
+    const monthlyStats = Object.keys(monthlyData)
+      .sort() // 'YYYY-MM' string sort respects chronological order
+      .map(k => monthlyData[k])
+      .slice(-6); // Last 6 months
 
     // Topic performance
     const topicData = {};
@@ -481,35 +494,49 @@ const AnalyticsDashboard = ({
 
   useEffect(() => {
     const fetchAnalyticsData = async () => {
-      if (!user) return;
+      if (!targetUserId) return;
       
       setLoading(true);
       setError(null);
       
       try {
-        // Fetch ALL user's quizzes first (this avoids the composite index requirement)
-        const quizQuery = query(
-          collection(db, 'quizzes'),
-          where('userId', '==', user.uid)
-        );
-
-        const quizSnapshot = await getDocs(quizQuery);
-        let allQuizzes = quizSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        // Sort by date in JavaScript (since we can't use orderBy with where clause without index)
-        allQuizzes.sort((a, b) => {
-          const dateA = a.completedAt?.toDate ? a.completedAt.toDate() : new Date(a.completedAt);
-          const dateB = b.completedAt?.toDate ? b.completedAt.toDate() : new Date(b.completedAt);
-          return dateB - dateA; // Most recent first
-        });
-
-        // Apply date filter in JavaScript if needed
         const dateFilter = getDateFilter(timePeriod);
+
+        // Try efficient query with index: by userId and completedAt desc
+        let allQuizzes = [];
+        try {
+          const baseConstraints = [
+            where('userId', '==', targetUserId),
+          ];
+          // If filtering by date, push where('completedAt', '>=', dateFilter)
+          if (dateFilter) {
+            baseConstraints.push(where('completedAt', '>=', dateFilter));
+          }
+          baseConstraints.push(orderBy('completedAt', 'desc'));
+
+          const indexedQuery = query(
+            collection(db, 'quizzes'),
+            ...baseConstraints,
+          );
+          const snapshot = await getDocs(indexedQuery);
+          allQuizzes = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch (idxErr) {
+          // Fallback: no index, do basic query by userId and sort/filter client-side
+          const fallbackQuery = query(
+            collection(db, 'quizzes'),
+            where('userId', '==', targetUserId)
+          );
+          const snapshot = await getDocs(fallbackQuery);
+          allQuizzes = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          allQuizzes.sort((a, b) => {
+            const dateA = a.completedAt?.toDate ? a.completedAt.toDate() : new Date(a.completedAt);
+            const dateB = b.completedAt?.toDate ? b.completedAt.toDate() : new Date(b.completedAt);
+            return dateB - dateA;
+          });
+        }
+
+        // Apply client-side date filtering if needed and not already filtered
         let filteredQuizzes = allQuizzes;
-        
         if (dateFilter) {
           filteredQuizzes = allQuizzes.filter(quiz => {
             const quizDate = quiz.completedAt?.toDate ? quiz.completedAt.toDate() : new Date(quiz.completedAt);
@@ -517,7 +544,7 @@ const AnalyticsDashboard = ({
           });
         }
 
-        // Get recent quizzes for trend chart (last 10)
+        // Recent 10 for trend chart
         const recent = allQuizzes.slice(0, 10);
         setRecentQuizzes(recent);
 
@@ -534,7 +561,7 @@ const AnalyticsDashboard = ({
     };
 
     fetchAnalyticsData();
-  }, [user, timePeriod]);
+  }, [targetUserId, timePeriod]);
 
   if (loading) {
     return (

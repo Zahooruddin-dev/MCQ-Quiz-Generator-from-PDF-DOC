@@ -30,9 +30,6 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { QuizManager } from '../../utils/quizManager';
-import { Firestore } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore';
-const db = getFirestore();
 
 const RecentQuizzesCard = styled(Card)(({ theme }) => ({
   transition: 'all 0.2s ease',
@@ -207,7 +204,7 @@ const QuizCard = ({ quiz, onQuizClick, onResumeQuiz, onRetakeQuiz }) => {
             </Stack>
             <LinearProgress
               variant="determinate"
-              value={Math.min(quiz.score || 0, 100)}
+              value={Math.min((isInProgress ? ((quiz.correctAnswers || 0) / Math.max(quiz.totalQuestions || 1, 1)) * 100 : (quiz.score || 0)), 100)}
               sx={{
                 height: 6,
                 borderRadius: 3,
@@ -302,29 +299,34 @@ const RecentQuizzes = ({
   const [sortBy, setSortBy] = useState('date');
 
   useEffect(() => {
+    let isMounted = true; // prevent state updates after unmount
+
     const fetchQuizzes = async () => {
       if (!user) {
-        setLoading(false);
+        if (isMounted) setLoading(false);
         return;
       }
       
-      setLoading(true);
-      setError(null);
+      if (isMounted) {
+        setLoading(true);
+        setError(null);
+      }
       
       try {
         // Use QuizManager to get quiz history
         const quizHistory = await QuizManager.getQuizHistory(limit);
-        setQuizzes(quizHistory);
+        if (isMounted) setQuizzes(quizHistory || []);
 
       } catch (error) {
         console.error('Failed to fetch recent quizzes:', error);
-        setError('Failed to load recent quizzes. Please try again.');
+        if (isMounted) setError('Failed to load recent quizzes. Please try again.');
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchQuizzes();
+    return () => { isMounted = false; };
   }, [user, limit]);
 
   const filteredAndSortedQuizzes = React.useMemo(() => {
@@ -363,6 +365,18 @@ const RecentQuizzes = ({
         default:
           return 0;
       }
+    });
+
+    // De-duplicate by (id || quizId) + timestamp
+    const seen = new Set();
+    filtered = filtered.filter(q => {
+      const base = q.id || q.quizId || 'quiz';
+      const d = q.completedAt?.toDate ? q.completedAt.toDate() : new Date(q.completedAt || q.timestamp || q.createdAt || 0);
+      const ts = isNaN(d?.getTime?.()) ? 0 : d.getTime();
+      const key = `${base}-${ts}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
     
     return filtered;
@@ -479,15 +493,20 @@ const RecentQuizzes = ({
             </CardContent>
           </Card>
         ) : filteredAndSortedQuizzes.length > 0 ? (
-          filteredAndSortedQuizzes.map((quiz, index) => (
-            <QuizCard
-              key={`${quiz.id}-${index}`}
-              quiz={quiz}
-              onQuizClick={onQuizClick}
-              onResumeQuiz={onResumeQuiz}
-              onRetakeQuiz={onRetakeQuiz}
-            />
-          ))
+          filteredAndSortedQuizzes.map((quiz, index) => {
+            const d = quiz.completedAt?.toDate ? quiz.completedAt.toDate() : new Date(quiz.completedAt || quiz.timestamp || quiz.createdAt || 0);
+            const ts = isNaN(d?.getTime?.()) ? 0 : d.getTime();
+            const stableKey = `${quiz.id || quiz.quizId || 'quiz'}-${ts}`;
+            return (
+              <QuizCard
+                key={stableKey}
+                quiz={quiz}
+                onQuizClick={onQuizClick}
+                onResumeQuiz={onResumeQuiz}
+                onRetakeQuiz={onRetakeQuiz}
+              />
+            );
+          })
         ) : (
           <Card>
             <CardContent sx={{ textAlign: 'center', py: 4 }}>
