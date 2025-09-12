@@ -43,12 +43,13 @@ const ModernFileUpload = ({
 
 	const effectiveLoading = isLoading || loadingFromParent;
 
-	// ----- NEW: Call preloadApiConfig on component mount -----
+	// ----- Call preloadApiConfig on component mount -----
 	useEffect(() => {
 		LLMService.preloadApiConfig().catch(console.error);
 	}, []); // Empty dependency array ensures it runs only once on mount
-	// ---------------------------------------------------------
+	// ---------------------------------------------------
 
+	// Stage-based loading helpers
 	const startLoading = useCallback((stage = 'reading', message = 'Reading file...') => {
 		setError(null);
 		setIsLoading(true);
@@ -115,67 +116,77 @@ const ModernFileUpload = ({
 
 				// Stage 1: Start file reading
 				startLoading('reading', `Reading ${file.name}...`);
-				
+
 				try {
 					const llmService = new LLMService();
-					
+
 					// Stage 2: File processing with enhanced feedback
 					updateLoadingStage('processing', 'Extracting text from document...', 20);
-					
+
 					// Read file content with progress tracking
 					let extractedText;
 					try {
 						extractedText = await llmService.readFileContent(file, (progressInfo) => {
 							if (progressInfo.stage === 'ocr') {
-								updateLoadingStage('ocr', 
-									progressInfo.message || 'Using OCR to extract text from image...', 
-									20 + (progressInfo.progress * 0.4),
+								updateLoadingStage(
+									'ocr',
+									progressInfo.message || 'Using OCR to extract text from image...',
+									20 + progressInfo.progress * 0.4,
 									{ ocrConfidence: progressInfo.confidence }
 								);
 							} else {
-								updateLoadingStage('processing', 
-									progressInfo.message || 'Processing document...', 
-									20 + (progressInfo.progress * 0.4)
+								updateLoadingStage(
+									'processing',
+									progressInfo.message || 'Processing document...',
+									20 + progressInfo.progress * 0.4
 								);
 							}
 						});
 					} catch (fileError) {
 						// Enhanced error messages based on error type
 						let userFriendlyMessage = 'Failed to process the file.';
-						
+
 						if (fileError.message.includes('OCR')) {
-							userFriendlyMessage = 'Could not extract text from this image. Please ensure the image is clear and contains readable text.';
+							userFriendlyMessage =
+								'Could not extract text from this image. Please ensure the image is clear and contains readable text.';
 						} else if (fileError.message.includes('PDF')) {
-							userFriendlyMessage = 'Could not read this PDF file. It may be password-protected or corrupted.';
+							userFriendlyMessage =
+								'Could not read this PDF file. It may be password-protected or corrupted.';
 						} else if (fileError.message.includes('DOCX')) {
-							userFriendlyMessage = 'Could not read this Word document. The file may be corrupted.';
+							userFriendlyMessage =
+								'Could not read this Word document. The file may be corrupted.';
 						} else if (fileError.message.includes('size')) {
 							userFriendlyMessage = 'File is too large. Please use a smaller file.';
 						} else if (fileError.message.includes('format')) {
-							userFriendlyMessage = 'Unsupported file format. Please use PDF, DOCX, TXT, HTML, or image files.';
+							userFriendlyMessage =
+								'Unsupported file format. Please use PDF, DOCX, TXT, HTML, or image files.';
 						}
-						
+
 						throw new Error(userFriendlyMessage);
 					}
-					
+
+					// Stage 3: Analyzing
 					updateLoadingStage('analyzing', 'Analyzing content...', 60, {
-						textExtracted: extractedText?.length || 0
+						textExtracted: extractedText?.length || 0,
 					});
-					
-					// Stage 3: AI question generation
+
+					// Stage 4: AI question generation
 					updateLoadingStage('generating', 'AI is generating quiz questions...', 70);
-					
+
 					const questions = await llmService.generateQuizQuestions(
 						extractedText,
 						aiOptions
 					);
 
-					updateLoadingStage('finalizing', 
-						`Generated ${questions.length} questions successfully!`, 
-						95, 
+					// Stage 5: Finalizing
+					updateLoadingStage(
+						'finalizing',
+						`Generated ${questions.length} questions successfully!`,
+						95,
 						{ questionsGenerated: questions.length }
 					);
 
+					// Stage 6: Complete
 					setTimeout(() => {
 						updateLoadingStage('complete', 'Quiz ready!', 100);
 						setTimeout(() => {
@@ -183,25 +194,27 @@ const ModernFileUpload = ({
 							stopLoading();
 						}, 500);
 					}, 800);
-					
 				} catch (err) {
 					throw err;
 				}
 			} catch (err) {
 				console.error('Error processing file:', err);
-				
+
 				// Enhanced error handling
 				let userMessage = err?.message || 'Failed to process file. Please try again.';
-				
+
 				// Add helpful suggestions based on error type
 				if (userMessage.includes('API key')) {
 					userMessage += ' Go to Settings to configure your AI provider.';
-				} else if (userMessage.includes('network') || userMessage.includes('timeout')) {
+				} else if (
+					userMessage.includes('network') ||
+					userMessage.includes('timeout')
+				) {
 					userMessage += ' Check your internet connection and try again.';
 				} else if (userMessage.includes('image') || userMessage.includes('OCR')) {
 					userMessage += ' Try using a higher quality image or a different file format.';
 				}
-				
+
 				setError(userMessage);
 				stopLoading();
 			}
@@ -265,14 +278,17 @@ const ModernFileUpload = ({
 		}
 	}, []);
 
-	const handleKeyDown = useCallback((e) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			if (fileInputRef.current && !effectiveLoading) {
-				fileInputRef.current.click();
+	const handleKeyDown = useCallback(
+		(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				if (fileInputRef.current && !effectiveLoading) {
+					fileInputRef.current.click();
+				}
 			}
-		}
-	}, [effectiveLoading]);
+		},
+		[effectiveLoading]
+	);
 
 	return (
 		<UploadContainer maxWidth='lg'>
