@@ -30,7 +30,8 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { QuizManager } from '../../utils/quizManager';
-
+import { Firestore } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 const db = getFirestore();
 
 const RecentQuizzesCard = styled(Card)(({ theme }) => ({
