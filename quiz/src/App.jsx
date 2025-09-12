@@ -317,10 +317,10 @@ const ResultPageWrapper = () => {
 	return (
 		<Suspense fallback={<LoadingFallback text='Loading Results...' />}>
 			<ModernResultPage
-				results={results}
-				quiz={quiz}
+				questions={quiz ? quiz.questions : results?.questions}
+				userAnswers={quiz ? quiz.answers : results?.answers}
+				fileName={quiz ? quiz.source || quiz.title : results?.title}
 				onNewQuiz={handleNewQuiz}
-				onRetakeQuiz={handleRetakeQuiz}
 			/>
 		</Suspense>
 	);

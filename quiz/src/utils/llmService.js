@@ -5,7 +5,7 @@ import {
   getLanguagePrompt,
   analyzeContext,
 } from './languageUtils.js';
-import { trimForPrompt, extractJson } from './textUtils.js';
+import { trimForPrompt, extractJson, extractKeyFacts } from './textUtils.js';
 import { readFileContent } from './fileReader.js';
 import {
   saveQuizResults,
@@ -185,14 +185,10 @@ export class LLMService {
 
         this.language = detectLanguage(sourceText);
         const text = trimForPrompt(sourceText);
+        const keyFacts = extractKeyFacts(sourceText);
         const contextAnalysis = analyzeContext(sourceText);
-        const languagePrompt = getLanguagePrompt(
-          this.language,
-          numQuestions,
-          difficulty,
-          contextAnalysis
-        );
-        const prompt = this._buildPrompt(languagePrompt, text);
+        
+        const prompt = this._buildImprovedPrompt(text, keyFacts, numQuestions, difficulty, this.language);
 
         console.log(`🔧 Making API request to: ${this.baseUrl}`);
         const questions = await this._makeApiRequest(prompt, this.controller.signal);
@@ -229,21 +225,57 @@ export class LLMService {
     });
   }
 
-  _buildPrompt(languagePrompt, text) {
-    return `${languagePrompt}
+  _buildImprovedPrompt(text, keyFacts, numQuestions, difficulty, language) {
+    const difficultyInstructions = {
+      easy: "Focus on direct facts, definitions, and basic recall questions.",
+      medium: "Include application questions and simple analysis of relationships.",
+      hard: "Create questions requiring synthesis, evaluation, and complex reasoning."
+    };
 
-IMPORTANT: For "context", use a direct quote from the source text, NOT a reference to "the passage" or "the text".
+    const contextGuidance = keyFacts.length > 0 
+      ? `\nKey facts from the content to base questions on:\n${keyFacts.map((fact, i) => `${i+1}. ${fact}`).join('\n')}\n`
+      : '';
 
-Create self-contained questions that include all necessary information within the question itself.
+    return `You are creating ${numQuestions} high-quality multiple choice questions based on the provided content.
 
-Format:
+QUALITY REQUIREMENTS:
+- Each question MUST be completely self-contained with all necessary information
+- NEVER reference "the passage", "the text", "the document", or "according to the above"
+- Questions must test understanding of the ACTUAL content provided, not generic scenarios
+- Base questions on specific facts, concepts, and details from the content
+- The "context" field should contain a direct quote (max 150 characters) that supports the answer
+
+DIFFICULTY LEVEL: ${difficulty}
+${difficultyInstructions[difficulty] || difficultyInstructions.medium}
+
+AVOID:
+- Generic scenarios ("X company", "Y graph", "Z passage")
+- Questions that could apply to any content
+- Vague references to unnamed charts, graphs, or figures
+- Questions that require information not in the content
+
+CREATE QUESTIONS ABOUT:
+- Specific names, dates, numbers, and facts from the content
+- Actual concepts, processes, and relationships described
+- Cause-and-effect relationships mentioned in the text
+- Definitions and explanations provided in the content
+- Comparisons and contrasts made in the text
+
+${contextGuidance}
+Required JSON format:
 {
   "questions": [
-    { "question": "string", "options": ["string","string","string","string"], "correctAnswer": 0, "explanation": "string", "context": "string" }
+    {
+      "question": "Self-contained question with all necessary context included",
+      "options": ["Correct answer based on content", "Plausible wrong answer", "Another plausible wrong answer", "Third plausible wrong answer"],
+      "correctAnswer": 0,
+      "explanation": "Clear explanation of why this answer is correct",
+      "context": "Direct quote from content (max 150 chars)"
+    }
   ]
 }
 
-Content:
+CONTENT:
 ${text}`;
   }
 
@@ -368,6 +400,22 @@ ${text}`;
       throw new Error(`Question ${index + 1} is missing required fields`);
     }
 
+    // Check for bad question patterns
+    const questionText = q.question.toString().trim();
+    const badPatterns = [
+      /(according to|in|from) (the|this) (passage|text|document|article)/gi,
+      /\b(the above|aforementioned)\b/gi,
+      /\b(x|y|z)\s+(company|graph|chart|table|passage)/gi, // Generic scenarios
+      /\bwhich\s+of\s+the\s+following.*passage/gi
+    ];
+    
+    for (const pattern of badPatterns) {
+      if (pattern.test(questionText)) {
+        console.warn(`Question ${index + 1} contains bad reference pattern: ${questionText.substring(0, 100)}...`);
+        // Don't throw error, but log warning
+      }
+    }
+
     const options = [...q.options];
     const cleanOptions = this._cleanAndValidateOptions(options, index);
     const correctAnswer = parseInt(q.correctAnswer);
@@ -380,7 +428,7 @@ ${text}`;
     const shuffledOptions = this.shuffleArray([...cleanOptions]);
 
     return {
-      question: q.question.toString().trim(),
+      question: questionText,
       options: shuffledOptions,
       correctAnswer: shuffledOptions.indexOf(correctOption),
       explanation: (q.explanation || 'No explanation provided').toString().trim(),
@@ -409,11 +457,25 @@ ${text}`;
   _cleanContext(context) {
     if (!context) return 'Context not available';
     
-    return context
-      .toString()
-      .trim()
-      .replace(/(according to|in|from) (the|this) (passage|text|document|article)/gi, '')
-      .replace(/\b(the above|aforementioned)\b/gi, '')
-      .trim() || 'Context not available';
+    let cleaned = context.toString().trim();
+    
+    // Remove bad references to source document
+    cleaned = cleaned
+      .replace(/(according to|in|from|as mentioned in) (the|this) (passage|text|document|article|above|following)/gi, '')
+      .replace(/\b(the above|aforementioned|as stated|as shown|as described)\b/gi, '')
+      .replace(/^(in|from|according to)\s+/gi, '')
+      .trim();
+    
+    // If context is too short or generic after cleaning, return fallback
+    if (cleaned.length < 10 || /^(context|information|data)\s*(not\s*)?(available|found)$/gi.test(cleaned)) {
+      return 'Context not available';
+    }
+    
+    // Truncate if too long
+    if (cleaned.length > 150) {
+      cleaned = cleaned.substring(0, 147) + '...';
+    }
+    
+    return cleaned;
   }
 }

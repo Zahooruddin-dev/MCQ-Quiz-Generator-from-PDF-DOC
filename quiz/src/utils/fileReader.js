@@ -252,22 +252,21 @@ function cleanAndValidateText(text) {
     );
   }
 
-  // Remove common OCR artifacts
+  // Clean text while preserving structure for better MCQ generation
   let cleaned = text
-    // Remove excessive whitespace
-    .replace(/\s+/g, ' ')
-    .replace(/\n\s*\n\s*\n/g, '\n\n')
+    // Normalize whitespace but preserve paragraph breaks
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n/g, '\n\n')
+    .replace(/\n{3,}/g, '\n\n')
     // Remove obvious OCR noise (repeated single characters)
-    .replace(/\b[il1|O0]{3,}\b/gi, '')
-    // Remove garbled text patterns
-    .replace(/[^\w\s\.,;:!?'"()\-\[\]{}@#$%&*+=<>/\\|`~]/g, ' ')
-    // Fix common OCR character mistakes
-    .replace(/\bl\b/g, 'I') // lowercase L often mistaken for I
-    .replace(/\b0\b/g, 'O') // zero often mistaken for O in words
-    // Remove URLs and emails that are often garbled
-    .replace(/https?:\/\/[^\s]+/gi, '')
-    .replace(/www\.[^\s]+/gi, '')
-    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-Z.-]+\.[a-zA-Z]{2,}/gi, '')
+    .replace(/\b[il1|O0]{4,}\b/gi, '') // More conservative removal
+    // Clean garbled text but preserve punctuation important for context
+    .replace(/[^\w\s\.,;:!?'"()\-\[\]{}@#$%&*+=<>/\\|`~\n]/g, ' ')
+    // Fix common OCR mistakes more carefully
+    .replace(/\bl(?=\s)/g, 'I') // Only replace isolated l's
+    .replace(/\b0(?=\s)/g, 'O') // Only replace isolated 0's
+    // Clean up multiple spaces
+    .replace(/  +/g, ' ')
     .trim();
 
   // Validate text quality
@@ -280,7 +279,7 @@ function cleanAndValidateText(text) {
     );
   }
 
-  if (stats.readableWordRatio < 0.3) {
+  if (stats.readableWordRatio < 0.2) { // More lenient threshold
     console.warn('Low quality OCR detected - many unreadable characters');
   }
 
@@ -399,11 +398,20 @@ async function processPDF(arrayBuffer, filename, progress) {
       const textContent = await page.getTextContent();
       
       if (textContent.items && textContent.items.length > 0) {
-        const pageText = textContent.items
-          .map(item => item.str)
-          .join(' ')
-          .trim();
+        // Preserve more structure from PDF for better context
+        let pageText = '';
+        let lastY = null;
         
+        textContent.items.forEach(item => {
+          // Add line break if significant vertical position change
+          if (lastY !== null && lastY - item.transform[5] > 5) {
+            pageText += '\n';
+          }
+          pageText += item.str + ' ';
+          lastY = item.transform[5];
+        });
+        
+        pageText = pageText.trim();
         if (pageText.length > 0) {
           extractedText += pageText + '\n\n';
           hasTextContent = true;

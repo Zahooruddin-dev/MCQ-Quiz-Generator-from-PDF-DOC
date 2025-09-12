@@ -209,13 +209,13 @@ function generateContextualInstructions(type, structure, complexity) {
     ];
 
     const typeSpecific = {
-        academic: "Focus on research findings, methodologies, and theoretical frameworks",
-        scientific: "Test understanding of processes, cause-effect relationships, and scientific principles",
-        historical: "Emphasize chronology, cause-effect relationships, and historical significance",
-        technical: "Test procedural knowledge and system understanding",
-        mathematical: "Focus on problem-solving and conceptual understanding",
-        literary: "Test analysis of themes, character development, and literary devices",
-        business: "Emphasize strategic thinking and real-world applications"
+        academic: "Focus on specific research findings, exact methodologies, and actual theoretical frameworks mentioned",
+        scientific: "Test understanding of specific processes, precise cause-effect relationships, and concrete scientific principles from the content",
+        historical: "Emphasize specific dates, actual chronology, real cause-effect relationships, and historical significance of events mentioned",
+        technical: "Test specific procedural knowledge and actual system details described in the content",
+        mathematical: "Focus on actual problem-solving examples and specific conceptual understanding from the material",
+        literary: "Test analysis of specific themes, actual character names, and particular literary devices mentioned",
+        business: "Emphasize specific strategic decisions, real company names, and actual business applications described"
     };
 
     const complexityAdjustments = {
@@ -244,11 +244,13 @@ export function generateSmartPrompt(language, numQuestions, difficulty, contextA
     const QUALITY_REQUIREMENTS = [
         "Each question MUST be completely self-contained with all necessary context",
         "NEVER reference 'the text', 'the passage', 'the document', or 'according to the above'",
-        "Questions must test understanding, not just memory",
+        "Questions must test understanding of the ACTUAL content provided, not hypothetical scenarios",
+        "AVOID generic scenarios like 'X company', 'Y graph', 'Z study' - use real names and data from content",
         "All options must be plausible to someone with partial knowledge",
         "Correct answers must be definitively correct based on the content",
         "Distractors should represent common misconceptions or partial understanding",
-        "Use specific examples, names, dates, and details from the content"
+        "Use specific examples, names, dates, numbers, and details from the actual content",
+        "Focus on facts, concepts, and relationships explicitly mentioned in the provided material"
     ];
 
     const LANGUAGE_PROMPTS = {

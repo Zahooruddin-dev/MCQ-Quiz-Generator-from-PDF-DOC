@@ -4,16 +4,49 @@ import { MAX_CHARS } from './constants.js';
 export function trimForPrompt(text) {
 	if (!text) return '';
 	if (text.length <= MAX_CHARS) return text;
-	const paragraphs = text.split(/\n\s*\n/);
+	
+	// Split into sentences for better context preservation
+	const sentences = text.match(/[^.!?]*[.!?]+/g) || [text];
 	let trimmedText = '';
-	for (const paragraph of paragraphs) {
-		if ((trimmedText + paragraph).length <= MAX_CHARS) {
-			trimmedText += paragraph + '\n\n';
+	
+	for (const sentence of sentences) {
+		if ((trimmedText + sentence).length <= MAX_CHARS) {
+			trimmedText += sentence + ' ';
 		} else break;
 	}
+	
 	return trimmedText.length > 0
-		? trimmedText + '\n\n[CONTENT TRUNCATED]'
-		: text.slice(0, MAX_CHARS) + '\n\n[CONTENT TRUNCATED]';
+		? trimmedText.trim() + '\n\n[CONTENT TRUNCATED FOR LENGTH]'
+		: text.slice(0, MAX_CHARS) + '\n\n[CONTENT TRUNCATED FOR LENGTH]';
+}
+
+// Extract key facts and concepts from text for better MCQ generation
+export function extractKeyFacts(text) {
+	if (!text) return [];
+	
+	// Find sentences with numbers, dates, names, and key concepts
+	const sentences = text.match(/[^.!?]*[.!?]+/g) || [];
+	const keyFacts = [];
+	
+	sentences.forEach(sentence => {
+		const s = sentence.trim();
+		if (s.length < 20) return; // Too short
+		
+		// Look for sentences with specific information
+		if (
+			/\b\d{4}\b/.test(s) || // Years
+			/\b\d+(\.\d+)?%/.test(s) || // Percentages
+			/\$\d+/.test(s) || // Money
+			/\b[A-Z][a-z]+ [A-Z][a-z]+\b/.test(s) || // Proper names
+			/\b(is|was|are|were)\b.*\b(the|a|an)\b/.test(s) || // Definitions
+			/\b(because|since|due to|resulted|caused)\b/.test(s) || // Cause-effect
+			/\b(first|second|third|finally|next|then)\b/.test(s) // Sequence
+		) {
+			keyFacts.push(s);
+		}
+	});
+	
+	return keyFacts.slice(0, 10); // Return top 10
 }
 
 export function extractJson(text) {
