@@ -279,14 +279,28 @@ const ResultPageWrapper = () => {
 	};
 
 	const handleRetakeQuiz = () => {
-		if (quiz) {
+		try {
+			// Get questions from the quiz or results
+			let questions = quiz?.questions || results?.questions;
+			
+			if (!questions || !Array.isArray(questions) || questions.length === 0) {
+				console.error('No questions found for retake:', { quiz, results });
+				alert('Unable to retake quiz: No questions found.');
+				return;
+			}
+
 			// Create new quiz session with same questions
-			const newQuiz = QuizManager.createQuiz(quiz.questions, {
-				title: `Retake: ${quiz.title}`,
-				aiGenerated: quiz.aiGenerated,
-				source: quiz.source
+			const newQuiz = QuizManager.createQuiz(questions, {
+				title: `Retake: ${quiz?.title || results?.title || 'Quiz'}`,
+				aiGenerated: quiz?.aiGenerated || false,
+				source: quiz?.source || quiz?.title || results?.title || 'Retake'
 			});
+			
+			console.log('Created new quiz for retake from results page:', newQuiz);
 			navigate(`/quiz/${newQuiz.id}`);
+		} catch (error) {
+			console.error('Error creating retake quiz from results:', error);
+			alert('Unable to retake quiz. Please try again.');
 		}
 	};
 
@@ -321,6 +335,7 @@ const ResultPageWrapper = () => {
 				userAnswers={quiz ? quiz.answers : results?.answers}
 				fileName={quiz ? quiz.source || quiz.title : results?.title}
 				onNewQuiz={handleNewQuiz}
+				onRetakeQuiz={handleRetakeQuiz}
 			/>
 		</Suspense>
 	);
@@ -330,21 +345,58 @@ const DashboardWrapper = () => {
 	const navigate = useNavigate();
 
 	const handleViewResults = (quiz) => {
+		console.log('Viewing results for quiz:', quiz);
+		if (!quiz || !quiz.id) {
+			console.error('Invalid quiz data for view results:', quiz);
+			return;
+		}
 		navigate(`/results/${quiz.id}`);
 	};
 
 	const handleResumeQuiz = (quiz) => {
+		console.log('Resuming quiz:', quiz);
+		if (!quiz || !quiz.id) {
+			console.error('Invalid quiz data for resume:', quiz);
+			return;
+		}
 		navigate(`/quiz/${quiz.id}`);
 	};
 
 	const handleRetakeQuiz = (quiz) => {
-		// Create new quiz session with same questions
-		const newQuiz = QuizManager.createQuiz(quiz.questions, {
-			title: `Retake: ${quiz.title}`,
-			aiGenerated: quiz.aiGenerated,
-			source: quiz.source
-		});
-		navigate(`/quiz/${newQuiz.id}`);
+		console.log('Retaking quiz:', quiz);
+		if (!quiz) {
+			console.error('No quiz data provided for retake');
+			return;
+		}
+
+		try {
+			// Get questions from the quiz data
+			let questions = quiz.questions;
+			
+			// If questions aren't directly available, check if they're in results
+			if (!questions && quiz.results && quiz.results.questions) {
+				questions = quiz.results.questions;
+			}
+
+			if (!questions || !Array.isArray(questions) || questions.length === 0) {
+				console.error('No questions found in quiz data:', quiz);
+				alert('Unable to retake quiz: No questions found.');
+				return;
+			}
+
+			// Create new quiz session with same questions
+			const newQuiz = QuizManager.createQuiz(questions, {
+				title: `Retake: ${quiz.title || quiz.quizTitle || 'Quiz'}`,
+				aiGenerated: quiz.aiGenerated || false,
+				source: quiz.source || quiz.title || 'Retake'
+			});
+			
+			console.log('Created new quiz for retake:', newQuiz);
+			navigate(`/quiz/${newQuiz.id}`);
+		} catch (error) {
+			console.error('Error creating retake quiz:', error);
+			alert('Unable to retake quiz. Please try again.');
+		}
 	};
 
 	return (

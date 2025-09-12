@@ -24,58 +24,86 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userDataLoading, setUserDataLoading] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
+          // Set user immediately for faster UI response
           setUser(firebaseUser);
+          setLoading(false); // Set loading false early so dashboard shows
+          setUserDataLoading(true); // But show that user data is still loading
 
-          // 🔹 Check admin claim
-          const tokenResult = await firebaseUser.getIdTokenResult();
-          const isAdminClaim = tokenResult.claims.admin === true;
-          setIsAdmin(isAdminClaim);
+          // Load user data asynchronously without blocking UI
+          const loadUserData = async () => {
+            try {
+              // Parallel execution for better performance
+              const [tokenResult, userDoc] = await Promise.all([
+                firebaseUser.getIdTokenResult(),
+                getDoc(doc(db, "users", firebaseUser.uid))
+              ]);
 
-          const userRef = doc(db, "users", firebaseUser.uid);
-          const snap = await getDoc(userRef);
+              const isAdminClaim = tokenResult.claims.admin === true;
+              setIsAdmin(isAdminClaim);
 
-          if (snap.exists()) {
-            const data = snap.data();
+              if (userDoc.exists()) {
+                const data = userDoc.data();
+                const userIsPremium = data.isPremium || isAdminClaim;
+                
+                // Set premium status immediately
+                setIsPremium(userIsPremium);
 
-            if (isAdminClaim) {
-              setCredits(3000);
-              setIsPremium(true); // treat admins as premium
-            } else {
-              await handleCreditReset(userRef, data);
+                if (isAdminClaim) {
+                  setCredits(3000);
+                } else if (userIsPremium) {
+                  // For premium users, set unlimited credits (show as high number)
+                  setCredits(999);
+                } else {
+                  // Handle credit reset for non-premium users
+                  await handleCreditReset(doc(db, "users", firebaseUser.uid), data);
+                }
+              } else {
+                // First-time user → initialize in Firestore
+                const newUser = {
+                  displayName: firebaseUser.displayName || "",
+                  email: firebaseUser.email || "",
+                  credits: isAdminClaim ? 3000 : 5,
+                  lastReset: Date.now(),
+                  isPremium: false,
+                  requestedPremium: false,
+                  createdAt: serverTimestamp(),
+                };
+                await setDoc(doc(db, "users", firebaseUser.uid), newUser);
+                setCredits(newUser.credits);
+                setIsPremium(isAdminClaim);
+              }
+            } catch (error) {
+              console.error('Error loading user data:', error);
+              // Set fallback values so user can still use the app
+              setCredits(5);
+              setIsPremium(false);
+              setIsAdmin(false);
+            } finally {
+              setUserDataLoading(false);
             }
+          };
 
-            setIsPremium(data.isPremium || false);
-          } else {
-            // 🔹 First-time user → initialize in Firestore
-            const newUser = {
-              displayName: firebaseUser.displayName || "",
-              email: firebaseUser.email || "",
-              credits: isAdminClaim ? 3000 : 5,
-              lastReset: Date.now(),
-              isPremium: false,
-              requestedPremium: false,
-              createdAt: serverTimestamp(),
-            };
-            await setDoc(userRef, newUser);
-            setCredits(newUser.credits);
-            setIsPremium(newUser.isPremium);
-          }
+          // Load user data without blocking
+          loadUserData();
         } else {
-          // 🔹 No user logged in
+          // No user logged in
           setUser(null);
           setCredits(0);
           setIsPremium(false);
           setIsAdmin(false);
+          setUserDataLoading(false);
+          setLoading(false);
         }
       } catch (err) {
         console.error("Auth state error:", err);
-      } finally {
         setLoading(false);
+        setUserDataLoading(false);
       }
     });
 
@@ -137,6 +165,7 @@ export const AuthProvider = ({ children }) => {
         isPremium,
         isAdmin,
         loading,
+        userDataLoading,
         loginWithGoogle,
         logout,
         useCredit,

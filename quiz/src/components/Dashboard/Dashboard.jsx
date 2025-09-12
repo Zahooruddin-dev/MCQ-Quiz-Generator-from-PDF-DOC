@@ -19,6 +19,7 @@ import {
   Brain,
   BarChart3,
   Zap,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -64,7 +65,7 @@ const getUserInitials = (name) => {
     .slice(0, 2);
 };
 
-const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) => {
+const WelcomeSection = React.memo(({ user, credits, isPremium, userDataLoading, onCreateQuiz }) => {
   const userInitials = useMemo(() => getUserInitials(user?.displayName), [user?.displayName]);
   const firstName = useMemo(() => user?.displayName?.split(' ')[0] || 'User', [user?.displayName]);
 
@@ -136,8 +137,8 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
               sx={{ flex: 1 }}
             >
               <Chip
-                icon={isPremium ? <Award size={18} /> : <Users size={18} />}
-                label={isPremium ? 'Premium Member' : `${credits} Credits Available`}
+                icon={userDataLoading ? <Loader2 size={18} style={{animation: 'spin 1s linear infinite'}} /> : (isPremium ? <Award size={18} /> : <Users size={18} />)}
+                label={userDataLoading ? 'Loading...' : (isPremium ? 'Premium Member' : `${credits} Credits Available`)}
                 sx={{
                   background: 'rgba(255, 255, 255, 0.25)',
                   color: 'white',
@@ -149,6 +150,10 @@ const WelcomeSection = React.memo(({ user, credits, isPremium, onCreateQuiz }) =
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                   '& .MuiChip-icon': {
                     color: 'white',
+                  },
+                  '@keyframes spin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' },
                   },
                 }}
               />
@@ -316,7 +321,7 @@ RecentQuizzesView.displayName = 'RecentQuizzesView';
 
 // Main Dashboard Component
 const Dashboard = ({ onCreateQuiz, onViewResults, onResumeQuiz, onRetakeQuiz }) => {
-  const { user, credits, isPremium } = useAuth();
+  const { user, credits, isPremium, userDataLoading } = useAuth();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState('dashboard');
 
@@ -403,6 +408,7 @@ const Dashboard = ({ onCreateQuiz, onViewResults, onResumeQuiz, onRetakeQuiz }) 
                 user={user}
                 credits={credits}
                 isPremium={isPremium}
+                userDataLoading={userDataLoading}
                 onCreateQuiz={onCreateQuiz}
               />
 

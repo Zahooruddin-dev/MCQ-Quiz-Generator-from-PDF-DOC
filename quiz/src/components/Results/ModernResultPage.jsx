@@ -32,6 +32,7 @@ import {
 	FileText,
 	Share2,
 	Download,
+	ArrowRight,
 } from 'lucide-react';
 
 import ShareQuizModal from '../ShareQuizModal/ShareQuizModal';
@@ -216,7 +217,7 @@ const ExplanationPaper = styled(Paper)(({ theme, type = 'info' }) => ({
 	}),
 }));
 
-const ModernResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
+const ModernResultPage = ({ questions, userAnswers, onNewQuiz, onRetakeQuiz, fileName }) => {
 	const [expandedQuestions, setExpandedQuestions] = useState([]);
 	const [openShare, setOpenShare] = useState(false);
 	const theme = useTheme();
@@ -485,11 +486,24 @@ const ModernResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
 					variant='contained'
 					startIcon={<RotateCcw />}
 					onClick={() => {
-						// safe: only runs when user clicks
+						if (onRetakeQuiz) {
+							onRetakeQuiz();
+						} else {
+							onNewQuiz();
+						}
+					}}
+				>
+					Retake Quiz
+				</Button>
+
+				<Button
+					variant='outlined'
+					startIcon={<ArrowRight />}
+					onClick={() => {
 						onNewQuiz();
 					}}
 				>
-					Try Again
+					New Quiz
 				</Button>
 
 				<Button
@@ -499,9 +513,6 @@ const ModernResultPage = ({ questions, userAnswers, onNewQuiz, fileName }) => {
 				>
 					Share
 				</Button>
-				{/*      <Button variant="outlined" startIcon={<Download />}>
-          Download Report
-        </Button> */}
 			</Stack>
 
 			{/* Share Modal */}
