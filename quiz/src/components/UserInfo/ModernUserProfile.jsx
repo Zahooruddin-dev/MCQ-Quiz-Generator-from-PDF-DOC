@@ -315,7 +315,7 @@ const ModernUserProfile = ({ user, onClose, isAdmin }) => {
                       variant="h4"
                       sx={{ fontWeight: 800, color: "success.main" }}
                     >
-                      {userStats.averageScore}%
+                      {Number(userStats.averageScore || 0).toFixed(1)}%
                     </Typography>
                     <Typography variant="caption" sx={{ color: "text.secondary" }}>
                       Average Score
