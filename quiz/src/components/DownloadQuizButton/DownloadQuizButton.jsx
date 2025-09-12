@@ -704,72 +704,7 @@ const DownloadQuizButton = ({
   };
 
   // Generate CSV format
-  const generateCSV = async () => {
-    setLoadingFormat('csv');
-    handleMenuClose();
-    
-    try {
-      // Quiz Sheet CSV
-      const quizCsvData = [
-        ['Question Number', 'Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Context'],
-        ...questions.map((question, index) => [
-          index + 1,
-          question.question,
-          question.options[0] || '',
-          question.options[1] || '',
-          question.options[2] || '',
-          question.options[3] || '',
-          question.context || ''
-        ])
-      ];
-      
-      // Answer Key CSV
-      const answerCsvData = [
-        ['Question Number', 'Question', 'Correct Answer', 'Correct Option', 'Explanation'],
-        ...questions.map((question, index) => [
-          index + 1,
-          question.question,
-          String.fromCharCode(65 + question.correctAnswer),
-          question.options[question.correctAnswer],
-          question.explanation || ''
-        ])
-      ];
-      
-      // Download Quiz Sheet CSV
-      const quizCsvContent = quizCsvData.map(row => 
-        row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
-      ).join('\n');
-      
-      const quizBlob = new Blob([quizCsvContent], { type: 'text/csv;charset=utf-8;' });
-      const quizLink = document.createElement('a');
-      quizLink.href = URL.createObjectURL(quizBlob);
-      quizLink.download = `${quizData?.title || 'quiz'}-sheet.csv`;
-      quizLink.click();
-      URL.revokeObjectURL(quizLink.href);
-      
-      // Download Answer Key CSV (with delay)
-      setTimeout(() => {
-        const answerCsvContent = answerCsvData.map(row => 
-          row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
-        ).join('\n');
-        
-        const answerBlob = new Blob([answerCsvContent], { type: 'text/csv;charset=utf-8;' });
-        const answerLink = document.createElement('a');
-        answerLink.href = URL.createObjectURL(answerBlob);
-        answerLink.download = `${quizData?.title || 'quiz'}-answer-key.csv`;
-        answerLink.click();
-        URL.revokeObjectURL(answerLink.href);
-        
-        showSnackbar('CSV files downloaded! Quiz sheet and answer key saved separately.');
-        setLoadingFormat(null);
-      }, 1000);
-    } catch (error) {
-      console.error('CSV generation failed:', error);
-      showSnackbar('Failed to generate CSV files', 'error');
-      setLoadingFormat(null);
-    }
-  };
-
+  
   const handlePDFDownload = async () => {
     setLoadingFormat('pdf');
     handleMenuClose();
@@ -785,23 +720,7 @@ const DownloadQuizButton = ({
     }
   };
 
-  const handleTXTDownload = async () => {
-    setLoadingFormat('txt');
-    handleMenuClose();
-    
-    try {
-      generateQuizSheet('txt');
-      setTimeout(() => {
-        generateAnswerKey('txt');
-        showSnackbar('Text files downloaded! Quiz sheet and answer key saved separately.');
-        setLoadingFormat(null);
-      }, 1000);
-    } catch (error) {
-      console.error('TXT generation failed:', error);
-      showSnackbar('Failed to generate text files', 'error');
-      setLoadingFormat(null);
-    }
-  };
+ 
 
   const handleDOCXDownload = async () => {
     setLoadingFormat('docx');
@@ -1148,25 +1067,9 @@ const DownloadQuizButton = ({
           />
         </MenuItem>
         
-        <MenuItem onClick={handleTXTDownload} disabled={isLoading('txt')}>
-          <ListItemIcon>
-            {isLoading('txt') ? <CircularProgress size={20} /> : <TxtIcon color="info" />}
-          </ListItemIcon>
-          <ListItemText 
-            primary="Download as Text" 
-            secondary="Quiz + Answer Key (Separate)"
-          />
-        </MenuItem>
+       
 
-        <MenuItem onClick={generateCSV} disabled={isLoading('csv')}>
-          <ListItemIcon>
-            {isLoading('csv') ? <CircularProgress size={20} /> : <CsvIcon color="success" />}
-          </ListItemIcon>
-          <ListItemText 
-            primary="Download as CSV" 
-            secondary="Quiz + Answer Key (Separate)"
-          />
-        </MenuItem>
+       
 
         <Divider />
 
@@ -1176,7 +1079,7 @@ const DownloadQuizButton = ({
           </ListItemIcon>
           <ListItemText 
             primary="Download as DOCX" 
-            secondary="Quiz"
+            secondary="Quiz + Answer Key (Separate)"
             primaryTypographyProps={{ fontWeight: 'bold' }}
           />
         </MenuItem>
