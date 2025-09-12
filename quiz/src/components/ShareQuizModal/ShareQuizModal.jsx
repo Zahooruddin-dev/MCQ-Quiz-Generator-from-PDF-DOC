@@ -26,9 +26,7 @@ import {
 	ContentCopyOutlined as CopyIcon,
 	CloseOutlined as CloseIcon,
 	FacebookOutlined as FacebookIcon,
-	PictureAsPdf as PictureAsPdf,
-	Twitter as TwitterIcon, // <-- ✅ just Twitter
-	LinkedIn as LinkedInIcon, // <-- ✅ LinkedIn instead of LinkedInOutlined
+	Instagram as Instagramicon, // <-- ✅ just instagram
 	WhatsApp as WhatsAppIcon, // <-- ✅ WhatsApp instead of WhatsAppOutlined
 } from '@mui/icons-material';
 
@@ -117,8 +115,8 @@ const ShareQuizModal = ({ open, onClose, quizData, userResults }) => {
 
 		let shareLink = '';
 		switch (platform) {
-			case 'twitter':
-				shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+			case 'instagram':
+				shareLink = `https://instagram.com/intent/tweet?text=${encodeURIComponent(
 					text
 				)}&url=${encodeURIComponent(url)}`;
 				break;
@@ -126,11 +124,6 @@ const ShareQuizModal = ({ open, onClose, quizData, userResults }) => {
 				shareLink = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
 					url
 				)}&quote=${encodeURIComponent(text)}`;
-				break;
-			case 'linkedin':
-				shareLink = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
-					url
-				)}&summary=${encodeURIComponent(text)}`;
 				break;
 			case 'whatsapp':
 				shareLink = `https://wa.me/?text=${encodeURIComponent(
@@ -308,18 +301,18 @@ const ShareQuizModal = ({ open, onClose, quizData, userResults }) => {
 
 								{/* Social Media */}
 								<Stack direction='row' spacing={2}>
-									<Tooltip title='Share on Twitter'>
+									<Tooltip title='Share on instagram'>
 										<ShareOption
-											onClick={() => handleSocialShare('twitter')}
+											onClick={() => handleSocialShare('instagram')}
 											elevation={0}
 											sx={{ flex: 1, textAlign: 'center' }}
 										>
-											<TwitterIcon sx={{ color: '#1DA1F2' }} />
+											<Instagramicon sx={{ color: '#791df2ff' }} />
 											<Typography
 												variant='caption'
 												sx={{ display: 'block', mt: 1 }}
 											>
-												Twitter
+												Instagram
 											</Typography>
 										</ShareOption>
 									</Tooltip>
@@ -340,21 +333,7 @@ const ShareQuizModal = ({ open, onClose, quizData, userResults }) => {
 										</ShareOption>
 									</Tooltip>
 
-									<Tooltip title='Share on LinkedIn'>
-										<ShareOption
-											onClick={() => handleSocialShare('linkedin')}
-											elevation={0}
-											sx={{ flex: 1, textAlign: 'center' }}
-										>
-											<LinkedInIcon sx={{ color: '#0077B5' }} />
-											<Typography
-												variant='caption'
-												sx={{ display: 'block', mt: 1 }}
-											>
-												LinkedIn
-											</Typography>
-										</ShareOption>
-									</Tooltip>
+								
 
 									<Tooltip title='Share on WhatsApp'>
 										<ShareOption
