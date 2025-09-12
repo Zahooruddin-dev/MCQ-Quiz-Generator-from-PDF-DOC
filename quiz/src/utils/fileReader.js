@@ -448,11 +448,19 @@ function validateFileType(file) {
   }
 }
 
-// MAIN EXPORT - Production-grade file reader
+// MAIN EXPORT - Production-grade file reader with proper validation
 export async function readFileContent(file, progressCallback = null) {
   const progress = new ProcessingProgress(progressCallback);
   
   try {
+    // Validate file object first
+    if (!file || !file.size) {
+      throw new FileProcessingError(
+        FILE_ERROR_TYPES.EMPTY_CONTENT,
+        'Invalid or empty file provided'
+      );
+    }
+
     // Validate file
     progress.update('validation', 0, 'Validating file...');
     validateFileType(file);
@@ -463,6 +471,15 @@ export async function readFileContent(file, progressCallback = null) {
     // Process based on file type
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
       const arrayBuffer = await file.arrayBuffer();
+      
+      // Validate arrayBuffer before processing
+      if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+        throw new FileProcessingError(
+          FILE_ERROR_TYPES.CORRUPTED_FILE,
+          'PDF file contains no data or is corrupted'
+        );
+      }
+      
       content = await processPDF(arrayBuffer, file.name, progress);
       
     } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
@@ -475,9 +492,27 @@ export async function readFileContent(file, progressCallback = null) {
                file.name.toLowerCase().endsWith('.htm')) {
       progress.update('text', 0, 'Reading text file...');
       content = await file.text();
+      
+      if (!content || content.trim().length === 0) {
+        throw new FileProcessingError(
+          FILE_ERROR_TYPES.EMPTY_CONTENT,
+          'Text file is empty or contains no readable content'
+        );
+      }
+      
       progress.update('text', 100, 'Text file read successfully');
       
     } else if (file.type.startsWith('image/')) {
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Validate arrayBuffer for images
+      if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+        throw new FileProcessingError(
+          FILE_ERROR_TYPES.CORRUPTED_FILE,
+          'Image file contains no data or is corrupted'
+        );
+      }
+      
       content = await processImage(file, progress);
       
     } else {
@@ -496,21 +531,30 @@ export async function readFileContent(file, progressCallback = null) {
     }
     
     const finalContent = content.slice(0, MAX_CHARS);
-    progress.update('complete', 100, 'File processing completed successfully');
+    progress.update('complete', 100, `File processing completed successfully. Extracted ${finalContent.length} characters.`);
     
     return finalContent;
     
   } catch (error) {
+    // Enhanced error logging
+    console.error('File processing error:', {
+      fileName: file?.name,
+      fileSize: file?.size,
+      fileType: file?.type,
+      error: error.message,
+      stack: error.stack
+    });
+    
     // Ensure all errors are FileProcessingError instances
     if (error instanceof FileProcessingError) {
       throw error;
     }
     
-    // Wrap unexpected errors
+    // Wrap unexpected errors with more context
     throw new FileProcessingError(
       FILE_ERROR_TYPES.PROCESSING_FAILED,
-      'An unexpected error occurred while processing the file',
-      error.message
+      `File processing failed: ${error.message}`,
+      `File: ${file?.name || 'unknown'}\nSize: ${file?.size || 0} bytes\nType: ${file?.type || 'unknown'}\nError: ${error.message}`
     );
   }
 }
