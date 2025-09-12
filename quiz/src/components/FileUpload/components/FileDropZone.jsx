@@ -9,7 +9,7 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
-import { Upload, FileText, Brain, X, File, FileType, Type, Sparkles } from "lucide-react";
+import { Upload, FileText, Brain, X, File, FileType, Type, Sparkles, Eye, Settings, RefreshCw } from "lucide-react";
 import { DropZone, FileIcon, LoadingOverlay, pulse } from "../ModernFileUpload.styles";
 import { formatBytes, MAX_FILE_SIZE } from "../utils";
 
@@ -21,6 +21,9 @@ const FileDropZone = ({
   useAI,
   effectiveLoading,
   uploadProgress,
+  loadingStage,
+  stageMessage,
+  processingDetails,
   fileInputRef,
   onDrop,
   onDragOver,
@@ -42,6 +45,36 @@ const FileDropZone = ({
     setError(null);
   };
 
+  // Get stage-specific icon and color
+  const getStageIcon = (stage) => {
+    switch (stage) {
+      case 'reading': return FileText;
+      case 'processing': return Settings;
+      case 'ocr': return Eye;
+      case 'analyzing': return RefreshCw;
+      case 'generating': return Brain;
+      case 'finalizing': return Sparkles;
+      case 'complete': return Sparkles;
+      default: return FileText;
+    }
+  };
+
+  const getStageColor = (stage) => {
+    switch (stage) {
+      case 'reading': return '#3b82f6';
+      case 'processing': return '#f59e0b';
+      case 'ocr': return '#8b5cf6';
+      case 'analyzing': return '#10b981';
+      case 'generating': return '#6366f1';
+      case 'finalizing': return '#06b6d4';
+      case 'complete': return '#10b981';
+      default: return '#6366f1';
+    }
+  };
+
+  const StageIcon = getStageIcon(loadingStage);
+  const stageColor = getStageColor(loadingStage);
+
   return (
     <DropZone
       isDragActive={dragOver}
@@ -58,27 +91,89 @@ const FileDropZone = ({
         <LoadingOverlay>
           <Box
             sx={{
-              width: 60,
-              height: 60,
+              width: 80,
+              height: 80,
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)",
+              background: `linear-gradient(135deg, ${stageColor} 0%, #6366F1 100%)`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: "white",
-              mb: 2,
+              mb: 3,
               animation: `${pulse} 1.5s infinite`,
             }}
           >
-            <Sparkles size={24} />
+            <StageIcon size={32} />
           </Box>
-          <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-            Processing Your Content
+          
+          <Typography variant="h6" sx={{ mb: 1, fontWeight: 600, textAlign: 'center' }}>
+            {loadingStage === 'reading' && 'Reading Document'}
+            {loadingStage === 'processing' && 'Processing Content'}
+            {loadingStage === 'ocr' && 'Extracting Text'}
+            {loadingStage === 'analyzing' && 'Analyzing Content'}
+            {loadingStage === 'generating' && 'Generating Questions'}
+            {loadingStage === 'finalizing' && 'Finalizing Quiz'}
+            {loadingStage === 'complete' && 'Complete!'}
+            {!loadingStage && 'Processing Your Content'}
           </Typography>
-          <Typography variant="body2" sx={{ color: "text.secondary", mb: 3 }}>
-            AI is analyzing and generating questions...
+          
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: "text.secondary", 
+              mb: 3, 
+              textAlign: 'center',
+              minHeight: '2.5em',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {stageMessage || 'Please wait while we process your file...'}
           </Typography>
-          <Box sx={{ width: "100%", maxWidth: 300 }}>
+          
+          {/* Processing details */}
+          {(processingDetails.textExtracted > 0 || processingDetails.ocrConfidence || processingDetails.questionsGenerated > 0) && (
+            <Box sx={{ mb: 2, textAlign: 'center' }}>
+              <Stack direction="row" spacing={2} justifyContent="center" flexWrap="wrap">
+                {processingDetails.textExtracted > 0 && (
+                  <Typography variant="caption" sx={{ 
+                    bgcolor: 'rgba(255,255,255,0.1)', 
+                    px: 1, 
+                    py: 0.5, 
+                    borderRadius: 1,
+                    color: 'white'
+                  }}>
+                    📄 {processingDetails.textExtracted} chars extracted
+                  </Typography>
+                )}
+                {processingDetails.ocrConfidence && (
+                  <Typography variant="caption" sx={{ 
+                    bgcolor: 'rgba(255,255,255,0.1)', 
+                    px: 1, 
+                    py: 0.5, 
+                    borderRadius: 1,
+                    color: 'white'
+                  }}>
+                    👁️ {Math.round(processingDetails.ocrConfidence)}% confidence
+                  </Typography>
+                )}
+                {processingDetails.questionsGenerated > 0 && (
+                  <Typography variant="caption" sx={{ 
+                    bgcolor: 'rgba(255,255,255,0.1)', 
+                    px: 1, 
+                    py: 0.5, 
+                    borderRadius: 1,
+                    color: 'white'
+                  }}>
+                    🧠 {processingDetails.questionsGenerated} questions created
+                  </Typography>
+                )}
+              </Stack>
+            </Box>
+          )}
+          
+          <Box sx={{ width: "100%", maxWidth: 400 }}>
             <LinearProgress
               variant="determinate"
               value={uploadProgress}
@@ -86,15 +181,15 @@ const FileDropZone = ({
                 height: 8,
                 borderRadius: 4,
                 "& .MuiLinearProgress-bar": {
-                  background: "linear-gradient(90deg, #6366F1 0%, #8B5CF6 100%)",
+                  background: `linear-gradient(90deg, ${stageColor} 0%, #6366F1 100%)`,
                 },
               }}
             />
             <Typography
               variant="caption"
-              sx={{ mt: 1, display: "block", textAlign: "center" }}
+              sx={{ mt: 1, display: "block", textAlign: "center", color: 'white', fontWeight: 500 }}
             >
-              {Math.round(uploadProgress)}%
+              {Math.round(uploadProgress)}% Complete
             </Typography>
           </Box>
         </LoadingOverlay>

@@ -31,6 +31,9 @@ const UploadMainCard = ({
   fileType,
   useAI,
   uploadProgress,
+  loadingStage,
+  stageMessage,
+  processingDetails,
   fileInputRef,
   handleDrop,
   handleDragOver,
@@ -169,6 +172,9 @@ const UploadMainCard = ({
           useAI={useAI}
           effectiveLoading={effectiveLoading}
           uploadProgress={uploadProgress}
+          loadingStage={loadingStage}
+          stageMessage={stageMessage}
+          processingDetails={processingDetails}
           fileInputRef={fileInputRef}
           onDrop={handleDrop}
           onDragOver={handleDragOver}

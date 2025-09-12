@@ -61,9 +61,8 @@ export class ProcessingProgress {
   }
 }
 
-// FIXED: Enhanced OCR with proper arrayBuffer handling
+// Enhanced OCR with better user feedback
 async function performAdvancedOCR(arrayBuffer, filename, progress) {
-  // CRITICAL FIX: Validate arrayBuffer at the start
   if (!arrayBuffer || arrayBuffer.byteLength === 0) {
     throw new FileProcessingError(
       FILE_ERROR_TYPES.CORRUPTED_FILE,
@@ -71,41 +70,63 @@ async function performAdvancedOCR(arrayBuffer, filename, progress) {
     );
   }
 
+  progress.update('ocr', 5, 'Preparing image for text extraction...');
   console.log(`Starting OCR with ${arrayBuffer.byteLength} bytes for ${filename}`);
 
   const ocrStrategies = [
-    { name: 'OCR.Space', language: 'eng', overlay: false },
-    { name: 'OCR.Space', language: 'eng', overlay: true },
-    { name: 'OCR.Space', language: 'auto', overlay: false }
+    { name: 'Standard OCR', language: 'eng', overlay: false, description: 'Using standard text recognition' },
+    { name: 'Enhanced OCR', language: 'eng', overlay: true, description: 'Using enhanced recognition with overlay detection' },
+    { name: 'Auto-detect OCR', language: 'auto', overlay: false, description: 'Using automatic language detection' }
   ];
 
   for (let i = 0; i < ocrStrategies.length; i++) {
     const strategy = ocrStrategies[i];
-    progress.update('ocr', (i / ocrStrategies.length) * 100, 
-      `Attempting OCR strategy ${i + 1}/${ocrStrategies.length}: ${strategy.name}`);
+    const baseProgress = 10 + (i / ocrStrategies.length) * 80;
+    
+    progress.update('ocr', baseProgress, strategy.description, {
+      confidence: null
+    });
 
     try {
-      const result = await attemptOCRWithStrategy(arrayBuffer, filename, strategy);
-      if (result && result.length > 50) { // Minimum viable content
-        progress.update('ocr', 100, 'OCR completed successfully');
+      const result = await attemptOCRWithStrategy(arrayBuffer, filename, strategy, (subProgress) => {
+        progress.update('ocr', baseProgress + (subProgress * 0.8 / ocrStrategies.length), 
+          strategy.description, {
+            confidence: subProgress > 50 ? 75 + (subProgress - 50) : null
+          }
+        );
+      });
+      
+      if (result && result.length > 50) {
+        const wordCount = result.split(/\s+/).filter(w => w.length > 0).length;
+        progress.update('ocr', 100, 
+          `Successfully extracted ${wordCount} words from ${filename}`, {
+            confidence: 85
+          }
+        );
         return result;
       }
     } catch (error) {
       console.warn(`OCR strategy ${i + 1} failed:`, error.message);
       if (i === ocrStrategies.length - 1) {
-        throw error; // Last strategy failed
+        throw new FileProcessingError(
+          FILE_ERROR_TYPES.OCR_FAILED,
+          'Could not extract readable text from this image. The image may be too blurry, have low contrast, or the text may be too small to read.'
+        );
       }
+      // Try next strategy
+      progress.update('ocr', baseProgress + 20, 
+        `${strategy.description} failed, trying alternative method...`);
     }
   }
 
   throw new FileProcessingError(
     FILE_ERROR_TYPES.OCR_FAILED,
-    'All OCR strategies failed to extract readable text'
+    'All text extraction methods failed. Please try with a higher quality image or a different file format.'
   );
 }
 
-// FIXED: OCR strategy with proper blob creation and validation
-async function attemptOCRWithStrategy(arrayBuffer, filename, strategy) {
+// OCR strategy with proper blob creation and validation
+async function attemptOCRWithStrategy(arrayBuffer, filename, strategy, progressCallback = null) {
   try {
     // CRITICAL FIX: Validate arrayBuffer before creating blob
     if (!arrayBuffer || arrayBuffer.byteLength === 0) {
@@ -113,6 +134,7 @@ async function attemptOCRWithStrategy(arrayBuffer, filename, strategy) {
     }
 
     console.log(`OCR attempt: ${filename} (${arrayBuffer.byteLength} bytes)`);
+    if (progressCallback) progressCallback(10);
 
     // FIXED: Determine proper MIME type based on file extension
     let mimeType = 'application/octet-stream';
@@ -145,6 +167,7 @@ async function attemptOCRWithStrategy(arrayBuffer, filename, strategy) {
     }
     
     console.log(`Created blob: ${blob.size} bytes (${mimeType})`);
+    if (progressCallback) progressCallback(30);
     
     formData.append('file', blob, filename);
     formData.append('language', strategy.language);
@@ -153,10 +176,13 @@ async function attemptOCRWithStrategy(arrayBuffer, filename, strategy) {
     formData.append('scale', 'true');
     formData.append('OCREngine', '2'); // Use newer engine
     
+    if (progressCallback) progressCallback(40);
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
     
     try {
+      if (progressCallback) progressCallback(50);
       const response = await fetch('https://api.ocr.space/parse/image', {
         method: 'POST',
         headers: { 
@@ -167,6 +193,7 @@ async function attemptOCRWithStrategy(arrayBuffer, filename, strategy) {
       });
       
       clearTimeout(timeoutId);
+      if (progressCallback) progressCallback(80);
       
       if (!response.ok) {
         if (response.status === 429) {
@@ -189,6 +216,8 @@ async function attemptOCRWithStrategy(arrayBuffer, filename, strategy) {
         throw new Error('No text extraction results returned');
       }
       
+      if (progressCallback) progressCallback(90);
+      
       let extractedText = '';
       for (const result of data.ParsedResults) {
         if (result.ParsedText) {
@@ -196,6 +225,7 @@ async function attemptOCRWithStrategy(arrayBuffer, filename, strategy) {
         }
       }
       
+      if (progressCallback) progressCallback(100);
       return cleanAndValidateText(extractedText);
       
     } finally {
