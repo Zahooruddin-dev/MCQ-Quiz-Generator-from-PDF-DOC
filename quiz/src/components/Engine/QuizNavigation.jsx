@@ -352,7 +352,8 @@ const QuizNavigation = ({
             px: 3,
             py: 1.5,
             fontWeight: 600,
-            textTransform: 'none',              margin: 5,
+            textTransform: 'none',         
+                 margin: 5,
 
             minWidth: 120,
             transition: 'all 0.2s ease',
@@ -382,7 +383,8 @@ const QuizNavigation = ({
               py: 1.5,
               fontWeight: 600,
               textTransform: 'none',
-              minWidth: 120,              margin: 5,
+              minWidth: 120,
+                            margin: 5,
 
               transition: 'all 0.2s ease',
               '&:hover': {
@@ -408,6 +410,8 @@ const QuizNavigation = ({
               fontWeight: 600,
               textTransform: 'none',
               minWidth: 120,
+                                          margin: 5,
+
               transition: 'all 0.2s ease',
               '&:hover:not(:disabled)': {
                 transform: 'translateY(-1px)',
