@@ -23,7 +23,25 @@ const QuizContent = ({
   handleAnswerSelect,
   isTransitioning = false,
 }) => (
-  <CardContent sx={{ p: { xs: 3, sm: 4, md: 5 } }}>
+  <CardContent 
+    sx={{ 
+      p: { xs: 3, sm: 4, md: 5 },
+      // CRITICAL: Mobile layout fixes to prevent spacing collapse
+      '@media (max-width: 600px)': {
+        // Prevent layout shifts during option selection
+        contain: 'layout style',
+        // Ensure stable bottom margin
+        paddingBottom: '2rem !important',
+        // Force stable container height
+        minHeight: 'fit-content',
+        // Prevent content reflow
+        '& *': {
+          backfaceVisibility: 'hidden',
+          transform: 'translateZ(0)',
+        },
+      },
+    }}
+  >
     {/* Context Section */}
     {currentQ?.context && (
       <Fade in={!isTransitioning} timeout={400}>
@@ -176,13 +194,44 @@ const QuizContent = ({
         </Box>
 
         {/* Answer Options */}
-        <FormControl component="fieldset" sx={{ width: '100%' }}>
+        <FormControl 
+          component="fieldset" 
+          sx={{ 
+            width: '100%',
+            // CRITICAL: Prevent option selection from causing layout shifts
+            '@media (max-width: 600px)': {
+              // Stable container for options
+              '& .MuiRadioGroup-root': {
+                // Consistent spacing that doesn't collapse
+                '& > div': {
+                  marginBottom: '16px !important',
+                },
+                '& > div:last-child': {
+                  marginBottom: '0 !important',
+                },
+              },
+            },
+          }}
+        >
           <RadioGroup
             value={userAnswers[currentQuestion] ?? ""}
             onChange={(e) => handleAnswerSelect(parseInt(e.target.value))}
             aria-labelledby={`question-${currentQuestion}-label`}
           >
-            <Stack spacing={{ xs: 2, sm: 2.5 }}>
+            <Stack 
+              spacing={{ xs: 2, sm: 2.5 }}
+              sx={{
+                // MOBILE: Prevent spacing collapse during interactions
+                '@media (max-width: 600px)': {
+                  '& > *': {
+                    marginBottom: '16px !important',
+                  },
+                  '& > *:last-child': {
+                    marginBottom: '0 !important',
+                  },
+                },
+              }}
+            >
               {currentQ?.options?.map((option, index) => (
                 <Grow
                   key={index}
@@ -206,7 +255,23 @@ const QuizContent = ({
                         '&:active': {
                           transform: 'scale(0.98)',
                         },
-                        // Enhanced mobile touch targets
+                        // CRITICAL: Mobile-specific fixes to prevent layout shift
+                        '@media (max-width: 600px)': {
+                          // Disable problematic transforms on mobile
+                          '&:hover': {
+                            transform: 'none !important',
+                          },
+                          '&:active': {
+                            transform: 'scale(0.95)',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                          },
+                          // Force GPU compositing to prevent reflow
+                          transform: 'translateZ(0)',
+                          willChange: 'background-color, border-color',
+                          // Prevent layout calculations
+                          contain: 'layout style',
+                        },
+                        // Enhanced mobile touch targets for non-hover devices
                         '@media (hover: none)': {
                           '&:hover': {
                             transform: 'none',
@@ -255,6 +320,10 @@ const QuizContent = ({
                                 fontSize: { xs: '0.8rem', sm: '0.9rem' },
                                 flexShrink: 0,
                                 transition: 'all 0.2s ease',
+                                // Mobile: Force compositing to prevent reflow
+                                '@media (max-width: 600px)': {
+                                  transform: 'translateZ(0)',
+                                },
                               }}
                             >
                               {String.fromCharCode(65 + index)}

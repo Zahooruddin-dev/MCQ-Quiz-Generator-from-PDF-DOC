@@ -437,7 +437,6 @@ useEffect(() => {
           maxWidth="lg" 
           sx={{ 
             px: { xs: 2, sm: 3, md: 4 },
-            // Removed mobile bottom padding since navigation is no longer fixed
             pb: { xs: 4, sm: 6 },
           }}
         >
@@ -457,7 +456,28 @@ useEffect(() => {
         totalQuestions={questions.length}
       />
 
-      <QuizCard>
+      {/* CRITICAL: Mobile layout fixes for the main card */}
+      <QuizCard
+        sx={{
+          // Existing styles preserved...
+          // CRITICAL: Mobile-specific layout fixes
+          '@media (max-width: 600px)': {
+            // Prevent layout shifts during option selection
+            contain: 'layout style',
+            // Ensure stable positioning between content and navigation
+            '& > *:last-child': {
+              marginTop: '2rem !important', // Force consistent spacing for navigation
+            },
+            // Prevent content reflow during interactions
+            '& *': {
+              backfaceVisibility: 'hidden',
+              transform: 'translateZ(0)',
+            },
+            // Stable container height
+            minHeight: 'fit-content',
+          },
+        }}
+      >
         <QuizContent
           currentQ={currentQ}
           currentQuestion={currentQuestion}
