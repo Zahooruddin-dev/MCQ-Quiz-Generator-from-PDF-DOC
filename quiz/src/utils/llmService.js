@@ -52,13 +52,21 @@ export class LLMService {
   }
 
   async ensureEndpoint() {
-    if (!this.baseUrl) {
-      const config = await getGlobalApiConfig();
-      if (!config?.baseUrl) throw new Error('No API endpoint (baseUrl) configured in Firestore.');
+    // Always fetch the latest config so updates in Firestore take effect immediately
+    const config = await getGlobalApiConfig();
+    if (!config?.baseUrl) throw new Error('No API endpoint (baseUrl) configured in Firestore.');
+
+    const cached = sessionStorage.getItem('llm_baseUrl');
+    if (config.baseUrl !== this.baseUrl || config.baseUrl !== cached) {
       this.baseUrl = config.baseUrl;
       sessionStorage.setItem('llm_baseUrl', this.baseUrl);
-      console.log(`✅ Dynamic endpoint loaded (preloaded): ${this.baseUrl}`);
+      console.log(`✅ Dynamic endpoint loaded or updated: ${this.baseUrl}`);
+    } else if (!this.baseUrl) {
+      // Initialize from session if present
+      this.baseUrl = cached;
+      console.log(`ℹ️ Using cached endpoint: ${this.baseUrl}`);
     }
+
     return this.baseUrl;
   }
 
