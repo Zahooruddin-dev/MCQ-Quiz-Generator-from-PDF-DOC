@@ -356,7 +356,6 @@ const ModernQuizEngine = ({
   const cancelFinish = useCallback(() => {
     setShowFinishConfirm(false);
   }, []);
-// Inside your ModernQuizEngine component
 
 // Timer countdown effect
 useEffect(() => {
@@ -438,8 +437,8 @@ useEffect(() => {
           maxWidth="lg" 
           sx={{ 
             px: { xs: 2, sm: 3, md: 4 },
-            // Extra bottom padding on mobile for fixed navigation
-            pb: { xs: 12, sm: 6 },
+            // Removed mobile bottom padding since navigation is no longer fixed
+            pb: { xs: 4, sm: 6 },
           }}
         >
     <Stack spacing={{ xs: 3, sm: 4, md: 5 }}>
