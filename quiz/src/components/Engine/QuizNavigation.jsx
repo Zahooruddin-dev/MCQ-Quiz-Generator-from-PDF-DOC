@@ -155,36 +155,12 @@ const QuizNavigation = ({
             overflow: 'hidden',
           }}
         >
-          {/* Progress Bar */}
-          <Box
-            sx={{
-              height: 6,
-              bgcolor: 'grey.100',
-              width: '100%',
-            }}
-          >
-            <Box
-              sx={{
-                width: `${((currentQuestion + 1) / totalQuestions) * 100}%`,
-                height: '100%',
-                bgcolor: 'primary.main',
-                transition: 'width 0.3s ease',
-              }}
-            />
-          </Box>
+ 
 
           {/* Navigation Controls */}
           <Box sx={{ p: 3 }}>
             {/* Question Info */}
-            <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                Question {currentQuestion + 1} of {totalQuestions}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {answeredCount} answered • {totalQuestions - answeredCount} remaining
-              </Typography>
-            </Box>
-
+     
             {/* Navigation Buttons */}
             <Stack direction="row" spacing={2}>
               <Button
