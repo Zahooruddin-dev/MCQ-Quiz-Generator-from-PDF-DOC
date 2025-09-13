@@ -115,6 +115,7 @@ const ModernAuthForm = () => {
 
   const handleAuth = async (e) => {
     e.preventDefault();
+    if (loading) return; // prevent double submit
     setError('');
     setSuccessMsg('');
     if (!validateForm()) return;
@@ -301,6 +302,8 @@ const ModernAuthForm = () => {
                 inputRef={emailRef}
                 aria-required="true"
                 aria-describedby={error ? 'auth-error' : undefined}
+                inputMode='email'
+                spellCheck={false}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -331,6 +334,10 @@ const ModernAuthForm = () => {
                 inputRef={passwordRef}
                 autoComplete={isSignup ? 'new-password' : 'current-password'}
                 aria-required="true"
+                inputProps={{
+                  'aria-invalid': Boolean(error) || undefined,
+                  minLength: 6,
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleAuth(e);
                 }}
@@ -356,7 +363,13 @@ const ModernAuthForm = () => {
                 }}
               />
 
-              <GradientButton type='submit' fullWidth size='large' disabled={loading}>
+              <GradientButton
+                type='submit'
+                fullWidth
+                size='large'
+                disabled={loading}
+                aria-busy={loading}
+              >
                 {loading ? 'Please wait...' : isSignup ? 'Create Account' : 'Sign In'}
               </GradientButton>
             </Stack>
