@@ -14,8 +14,14 @@ export const slideIn = keyframes`
 `;
 
 export const AdminContainer = styled(Container)(({ theme }) => ({
-  paddingTop: theme.spacing(4),
+  paddingTop: theme.spacing(3),
   paddingBottom: theme.spacing(4),
+  [theme.breakpoints.down('sm')]: {
+    paddingTop: theme.spacing(2),
+    paddingBottom: theme.spacing(3),
+    paddingLeft: theme.spacing(1),
+    paddingRight: theme.spacing(1),
+  },
 }));
 
 export const HeaderCard = styled(Card)(({ theme }) => ({

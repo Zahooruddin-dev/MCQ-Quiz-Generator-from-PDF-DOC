@@ -45,8 +45,8 @@ const RequestCard = ({ request, setSelectedRequest, handleAction, actionLoading 
             </Box>
             <StatusChip status={request.status} />
           </Stack>
-          <Stack direction="row" spacing={1}>
-            <IconButton size="small" onClick={() => setSelectedRequest(request)} sx={{ color: "primary.main" }}>
+          <Stack direction="row" spacing={{ xs: 0.5, sm: 1 }}>
+            <IconButton size="small" onClick={() => setSelectedRequest(request)} sx={{ color: "primary.main" }} aria-label="View details">
               <Eye size={16} />
             </IconButton>
             {request.status === "pending" && (
@@ -56,6 +56,7 @@ const RequestCard = ({ request, setSelectedRequest, handleAction, actionLoading 
                   onClick={() => handleAction("approve", request.id, request.uid)}
                   disabled={actionLoading}
                   sx={{ color: "success.main" }}
+                  aria-label="Approve"
                 >
                   <UserCheck size={16} />
                 </IconButton>
@@ -64,6 +65,7 @@ const RequestCard = ({ request, setSelectedRequest, handleAction, actionLoading 
                   onClick={() => handleAction("reject", request.id, request.uid)}
                   disabled={actionLoading}
                   sx={{ color: "error.main" }}
+                  aria-label="Reject"
                 >
                   <UserX size={16} />
                 </IconButton>
@@ -75,6 +77,7 @@ const RequestCard = ({ request, setSelectedRequest, handleAction, actionLoading 
                 onClick={() => handleAction("terminate", request.id, request.uid)}
                 disabled={actionLoading}
                 sx={{ color: "error.main" }}
+                aria-label="Terminate"
               >
                 <Trash2 size={16} />
               </IconButton>
