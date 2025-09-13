@@ -46,6 +46,63 @@ const FileDropZone = ({
     setError(null);
   };
 
+  // Fixed click handler to prevent event bubbling
+  const handleDropZoneClick = (e) => {
+    // Don't trigger file input if we have a file or if loading
+    if (fileName || effectiveLoading) {
+      e.stopPropagation();
+      return;
+    }
+    
+    // Don't trigger if clicking on buttons or other interactive elements
+    if (e.target.closest('button') || e.target.closest('input')) {
+      e.stopPropagation();
+      return;
+    }
+    
+    e.stopPropagation();
+    fileInputRef.current?.click();
+  };
+
+  // Fixed file input change handler
+  const handleFileInputChange = (e) => {
+    e.stopPropagation();
+    const file = e.target.files?.[0];
+    if (file) {
+      onFileSelect(file);
+    }
+    // Reset the input value to allow selecting the same file again if needed
+    e.target.value = '';
+  };
+
+  // Fixed drag handlers
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDrop(e);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDragOver(e);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDragLeave(e);
+  };
+
+  // Fixed keyboard handler
+  const handleKeyDown = (e) => {
+    if (!fileName && !effectiveLoading && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      e.stopPropagation();
+      fileInputRef.current?.click();
+    }
+  };
+
   // Get stage-specific icon and color
   const getStageIcon = (stage) => {
     switch (stage) {
@@ -81,22 +138,18 @@ const FileDropZone = ({
     <DropZone
       isDragActive={dragOver}
       hasFile={!!fileName}
-      onDrop={onDrop}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onClick={() => {
-        if (!fileName) fileInputRef.current?.click();
-      }}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onClick={handleDropZoneClick}
       role="button"
-      tabIndex={0}
+      tabIndex={fileName || effectiveLoading ? -1 : 0}
       aria-label={!fileName ? "Upload file by clicking or dragging" : `File selected: ${fileName}`}
-      onKeyDown={(e) => {
-        if (!fileName && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault();
-          fileInputRef.current?.click();
-        }
+      onKeyDown={handleKeyDown}
+      sx={{ 
+        position: "relative",
+        cursor: fileName || effectiveLoading ? 'default' : 'pointer'
       }}
-      sx={{ position: "relative" }}
     >
       {effectiveLoading && (
         <LoadingOverlay>
@@ -222,7 +275,10 @@ const FileDropZone = ({
             startIcon={<Upload />}
             sx={{ borderRadius: 2 }}
             aria-label="Browse files to upload"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
           >
             Browse Files
           </Button>
@@ -243,7 +299,10 @@ const FileDropZone = ({
               <Button
                 variant="contained"
                 startIcon={<Brain />}
-                onClick={onGenerateQuiz}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGenerateQuiz();
+                }}
                 disabled={effectiveLoading}
                 sx={{ borderRadius: 2 }}
               >
@@ -253,7 +312,10 @@ const FileDropZone = ({
             <Button
               variant="outlined"
               startIcon={<X />}
-              onClick={onClear}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClear();
+              }}
               disabled={effectiveLoading}
               sx={{ borderRadius: 2 }}
             >
@@ -267,7 +329,7 @@ const FileDropZone = ({
         type="file"
         ref={fileInputRef}
         style={{ display: "none" }}
-        onChange={(e) => e.target.files?.[0] && onFileSelect(e.target.files[0])}
+        onChange={handleFileInputChange}
         accept=".pdf,.doc,.docx,.txt,.html"
         aria-hidden="true"
         tabIndex={-1}
@@ -287,6 +349,5 @@ const FileDropZone = ({
     </DropZone>
   );
 };
-
 
 export default React.memo(FileDropZone);
