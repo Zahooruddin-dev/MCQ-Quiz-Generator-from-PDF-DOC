@@ -1,9 +1,9 @@
-// LLMService.js - Dynamic API key & baseUrl from Firestore - FIXED VERSION
+// LLMService.js - Enhanced MCQ Generation with Superior Prompts (Context Removed)
 import { REQUEST_TIMEOUT_MS } from './constants.js';
 import {
   detectLanguage,
-  getLanguagePrompt,
-  analyzeContext,
+  generateSmartPrompt,
+  analyzeContent,
 } from './languageUtils.js';
 import { trimForPrompt, extractJson, extractKeyFacts } from './textUtils.js';
 import { readFileContent } from './fileReader.js';
@@ -12,7 +12,7 @@ import {
   getDashboardData,
   saveChatMessage,
   getGlobalApiKey,
-  getGlobalApiConfig, // fetch baseUrl & apiKey
+  getGlobalApiConfig,
 } from './firebaseService.js';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -23,13 +23,14 @@ import { shuffleArray, validateQuestions } from './quizValidator.js';
 export class LLMService {
   static instance = null;
   static responseCache = new Map();
+  static MAX_CACHE_SIZE = 50; // Prevent memory bloat
 
   constructor() {
     this.baseUrl = sessionStorage.getItem('llm_baseUrl') || null;
     this.apiKey = sessionStorage.getItem('llm_apiKey') || null;
     this.language = 'en';
     this.controller = null;
-    console.log('✅ LLMService initialized (endpoint & API key will be fetched dynamically if missing)');
+    console.log('🚀 Enhanced LLMService initialized with superior MCQ generation');
   }
 
   static async preloadApiConfig() {
@@ -38,7 +39,7 @@ export class LLMService {
     }
     await LLMService.instance.ensureApiKey();
     await LLMService.instance.ensureEndpoint();
-    console.log('🚀 LLMService preloaded API key and endpoint in the background.');
+    console.log('⚡ LLMService preloaded with optimized configuration');
   }
 
   async ensureApiKey() {
@@ -46,13 +47,12 @@ export class LLMService {
       this.apiKey = sessionStorage.getItem('llm_apiKey') || (await getGlobalApiKey());
       if (!this.apiKey) throw new Error('No global API key configured in Firestore.');
       sessionStorage.setItem('llm_apiKey', this.apiKey);
-      console.log('✅ Global API key loaded successfully (preloaded)');
+      console.log('✅ API key loaded and cached');
     }
     return this.apiKey;
   }
 
   async ensureEndpoint() {
-    // Always fetch the latest config so updates in Firestore take effect immediately
     const config = await getGlobalApiConfig();
     if (!config?.baseUrl) throw new Error('No API endpoint (baseUrl) configured in Firestore.');
 
@@ -60,11 +60,9 @@ export class LLMService {
     if (config.baseUrl !== this.baseUrl || config.baseUrl !== cached) {
       this.baseUrl = config.baseUrl;
       sessionStorage.setItem('llm_baseUrl', this.baseUrl);
-      console.log(`✅ Dynamic endpoint loaded or updated: ${this.baseUrl}`);
+      console.log(`🔗 Endpoint loaded: ${this.baseUrl}`);
     } else if (!this.baseUrl) {
-      // Initialize from session if present
       this.baseUrl = cached;
-      console.log(`ℹ️ Using cached endpoint: ${this.baseUrl}`);
     }
 
     return this.baseUrl;
@@ -74,10 +72,11 @@ export class LLMService {
     this.apiKey = null;
     sessionStorage.removeItem('llm_apiKey');
     const newKey = await this.ensureApiKey();
-    console.log('🔄 API key refreshed');
+    console.log('🔄 API key refreshed successfully');
     return newKey;
   }
 
+  // Utility methods (unchanged)
   async saveQuizResults(quizData) {
     return saveQuizResults(quizData);
   }
@@ -102,25 +101,39 @@ export class LLMService {
     return validateQuestions(questions);
   }
 
-  // FIXED: Better cache key generation that handles Unicode
+  // Enhanced cache management
   static generateCacheKey(content, options) {
     try {
-      const shortContent = content.slice(0, 100);
-      const optionsStr = JSON.stringify(options);
-      // Use a simple hash instead of btoa for Unicode safety
+      const contentSample = content.slice(0, 200);
+      const optionsStr = `${options.numQuestions}-${options.difficulty}`;
+      
+      // Create a simple hash for Unicode safety
       let hash = 0;
-      const combined = shortContent + optionsStr;
-      for (let i = 0; i < Math.min(combined.length, 500); i++) {
+      const combined = contentSample + optionsStr;
+      for (let i = 0; i < Math.min(combined.length, 300); i++) {
         hash = ((hash << 5) - hash + combined.charCodeAt(i)) & 0xffffffff;
       }
-      return `quiz_${Math.abs(hash).toString(36)}_${Date.now().toString(36).slice(-4)}`;
+      
+      return `mcq_${Math.abs(hash).toString(36)}_${options.numQuestions}q_${options.difficulty}`;
     } catch (error) {
-      console.warn('Cache key fallback used:', error);
-      return `quiz_fallback_${content.length}_${Date.now().toString(36)}`;
+      console.warn('🟡 Cache key generation fallback used');
+      return `mcq_fallback_${content.length}_${Date.now()}`;
     }
   }
 
-  // Check if user has sufficient credits (additional safety check)
+  static manageCacheSize() {
+    if (LLMService.responseCache.size > LLMService.MAX_CACHE_SIZE) {
+      const entries = Array.from(LLMService.responseCache.entries());
+      // Remove oldest entries (keep newest half)
+      const toKeep = entries.slice(-Math.floor(LLMService.MAX_CACHE_SIZE / 2));
+      LLMService.responseCache.clear();
+      toKeep.forEach(([key, value]) => {
+        LLMService.responseCache.set(key, value);
+      });
+      console.log('🧹 Cache cleaned to prevent memory bloat');
+    }
+  }
+
   async checkUserCredits() {
     try {
       const auth = getAuth();
@@ -138,16 +151,13 @@ export class LLMService {
       const isPremium = userData.isPremium || false;
       const credits = userData.credits || 0;
       
-      // Check if user is admin
       const tokenResult = await user.getIdTokenResult();
       const isAdmin = tokenResult.claims.admin === true;
 
-      // Premium users and admins have unlimited credits
       if (isPremium || isAdmin) {
         return true;
       }
 
-      // Check if regular user has credits
       if (credits <= 0) {
         throw new Error('Insufficient credits. You need at least 1 credit to generate a quiz.');
       }
@@ -162,14 +172,12 @@ export class LLMService {
   async generateQuizQuestions(fileOrText, options = {}) {
     const { numQuestions = 10, difficulty = 'medium' } = options;
 
-    // Check credits first (safety check - UI should already handle this)
+    // Credit check (safety check - UI should handle this)
     await this.checkUserCredits();
-
     await this.ensureApiKey();
     await this.ensureEndpoint();
 
-    console.log(`🚀 Starting quiz generation at: ${this.baseUrl}`);
-    console.log('💳 Credit check passed - proceeding with generation');
+    console.log(`🎯 Starting enhanced MCQ generation for ${numQuestions} ${difficulty} questions`);
 
     return withRetry(async () => {
       if (this.controller) this.controller.abort();
@@ -181,39 +189,50 @@ export class LLMService {
           : await this.readFileContent(fileOrText);
 
         if (!sourceText?.trim() || sourceText.trim().length < 50) {
-          throw new Error('The document seems empty or too short.');
+          throw new Error('Content is empty or too short for meaningful quiz generation.');
         }
 
+        // Enhanced caching with better cache management
         const cacheKey = LLMService.generateCacheKey(sourceText, options);
         if (LLMService.responseCache.has(cacheKey)) {
-          console.log('📋 Using cached quiz questions');
-          const cached = LLMService.responseCache.get(cacheKey);
-          return cached;
+          console.log('⚡ Using cached high-quality questions');
+          return LLMService.responseCache.get(cacheKey);
         }
 
+        // Intelligent content analysis
         this.language = detectLanguage(sourceText);
-        const text = trimForPrompt(sourceText);
-        const keyFacts = extractKeyFacts(sourceText);
-        const contextAnalysis = analyzeContext(sourceText);
+        const processedText = trimForPrompt(sourceText);
+        const contentAnalysis = analyzeContent(sourceText);
+        const keyFacts = extractKeyFacts(sourceText, numQuestions * 2); // More facts for better questions
         
-        const prompt = this._buildImprovedPrompt(text, keyFacts, numQuestions, difficulty, this.language);
-
-        console.log(`🔧 Making API request to: ${this.baseUrl}`);
-        const questions = await this._makeApiRequest(prompt, this.controller.signal);
-
-        const processedQuestions = this._processQuestions(questions, numQuestions);
+        console.log(`📊 Content Analysis: ${contentAnalysis.type} (${contentAnalysis.complexity}) - ${contentAnalysis.wordCount} words`);
+        console.log(`🔍 Key Facts Extracted: ${keyFacts.length} important points identified`);
         
-        // Cache the processed questions
+        // Generate superior prompt using enhanced analysis
+        const prompt = this._buildSuperiorPrompt(
+          processedText, 
+          keyFacts, 
+          numQuestions, 
+          difficulty, 
+          this.language, 
+          contentAnalysis
+        );
+
+        console.log(`🚀 Making optimized API request with ${prompt.length} char prompt`);
+        const questions = await this._makeEnhancedApiRequest(prompt, this.controller.signal);
+
+        const processedQuestions = this._processHighQualityQuestions(questions, numQuestions);
+        
+        // Cache management and storage
+        LLMService.manageCacheSize();
         LLMService.responseCache.set(cacheKey, processedQuestions);
 
-        console.log(`✅ Quiz questions generated successfully - returning ${processedQuestions.length} questions`);
-        
-        // CRITICAL: Always return the questions array directly
+        console.log(`✅ Generated ${processedQuestions.length} high-quality MCQs`);
         return processedQuestions;
         
       } catch (error) {
         if (error?.name === 'AbortError') {
-          throw new Error('Request cancelled.');
+          throw new Error('Request was cancelled by user.');
         }
 
         if (error.message?.includes('API key') || 
@@ -221,74 +240,65 @@ export class LLMService {
             error.message?.includes('403')) {
           try {
             await this.refreshApiKey();
-            console.log('🔄 API key refreshed, retrying request...');
+            console.log('🔄 API key refreshed, retrying...');
           } catch (keyError) {
             console.error('❌ Failed to refresh API key:', keyError);
           }
         }
 
-        console.error('❌ Quiz generation error:', error);
+        console.error('❌ Enhanced MCQ generation failed:', error);
         throw error;
       }
     });
   }
 
-  _buildImprovedPrompt(text, keyFacts, numQuestions, difficulty, language) {
-    const difficultyInstructions = {
-      easy: "Focus on direct facts, definitions, and basic recall questions.",
-      medium: "Include application questions and simple analysis of relationships.",
-      hard: "Create questions requiring synthesis, evaluation, and complex reasoning."
-    };
-
-    const contextGuidance = keyFacts.length > 0 
-      ? `\nKey facts from the content to base questions on:\n${keyFacts.map((fact, i) => `${i+1}. ${fact}`).join('\n')}\n`
-      : '';
-
-    return `You are creating ${numQuestions} high-quality multiple choice questions based on the provided content.
-
-QUALITY REQUIREMENTS:
-- Each question MUST be completely self-contained with all necessary information
-- NEVER reference "the passage", "the text", "the document", or "according to the above"
-- Questions must test understanding of the ACTUAL content provided, not generic scenarios
-- Base questions on specific facts, concepts, and details from the content
-- The "context" field should contain a direct quote (max 150 characters) that supports the answer
-
-DIFFICULTY LEVEL: ${difficulty}
-${difficultyInstructions[difficulty] || difficultyInstructions.medium}
-
-AVOID:
-- Generic scenarios ("X company", "Y graph", "Z passage")
-- Questions that could apply to any content
-- Vague references to unnamed charts, graphs, or figures
-- Questions that require information not in the content
-
-CREATE QUESTIONS ABOUT:
-- Specific names, dates, numbers, and facts from the content
-- Actual concepts, processes, and relationships described
-- Cause-and-effect relationships mentioned in the text
-- Definitions and explanations provided in the content
-- Comparisons and contrasts made in the text
-
-${contextGuidance}
-Required JSON format:
-{
-  "questions": [
-    {
-      "question": "Self-contained question with all necessary context included",
-      "options": ["Correct answer based on content", "Plausible wrong answer", "Another plausible wrong answer", "Third plausible wrong answer"],
-      "correctAnswer": 0,
-      "explanation": "Clear explanation of why this answer is correct",
-      "context": "Direct quote from content (max 150 chars)"
+  _buildSuperiorPrompt(text, keyFacts, numQuestions, difficulty, language, contentAnalysis) {
+    const prompt = generateSmartPrompt(language, numQuestions, difficulty, contentAnalysis);
+    
+    // Add key facts guidance for better question generation
+    let enhancedPrompt = prompt;
+    
+    if (keyFacts.length > 0) {
+      enhancedPrompt += `\nKEY CONTENT INSIGHTS FOR QUESTION GENERATION:\n`;
+      keyFacts.slice(0, Math.min(10, numQuestions * 1.5)).forEach((fact, i) => {
+        enhancedPrompt += `${i + 1}. ${fact}\n`;
+      });
+      enhancedPrompt += `\nPRIORITIZE questions that test understanding of these specific insights and facts.\n\n`;
     }
-  ]
-}
 
-CONTENT:
-${text}`;
+    // Add content-specific optimization
+    enhancedPrompt += `CONTENT OPTIMIZATION NOTES:\n`;
+    enhancedPrompt += `- Content complexity: ${contentAnalysis.complexity} (adjust question depth accordingly)\n`;
+    enhancedPrompt += `- Primary structure: ${contentAnalysis.structure} (consider this in question design)\n`;
+    
+    if (contentAnalysis.hasVisualElements) {
+      enhancedPrompt += `- Content includes visual elements - create questions about data, trends, or relationships described\n`;
+    }
+    
+    enhancedPrompt += `- Word count: ${contentAnalysis.wordCount} words (sufficient detail available for specific questions)\n\n`;
+
+    // Add difficulty-specific instructions
+    const difficultyEnhancements = {
+      easy: "Focus on explicit facts, clear definitions, and direct statements from the content. Questions should test recognition and basic comprehension.",
+      medium: "Create questions requiring application of concepts and analysis of relationships. Test understanding of how different ideas connect.",
+      hard: "Develop questions requiring synthesis of multiple concepts, evaluation of arguments, and critical thinking about implications."
+    };
+    
+    enhancedPrompt += `DIFFICULTY-SPECIFIC GUIDANCE:\n${difficultyEnhancements[difficulty] || difficultyEnhancements.medium}\n\n`;
+
+    // Add quality assurance reminders
+    enhancedPrompt += `FINAL QUALITY CHECKS:\n`;
+    enhancedPrompt += `- Each question must stand alone without referencing "the text" or similar phrases\n`;
+    enhancedPrompt += `- Use actual names, dates, numbers, and specific details from the provided content\n`;
+    enhancedPrompt += `- Ensure questions cannot be answered without reading the provided material\n`;
+    enhancedPrompt += `- Make all distractors plausible but clearly distinguishable from correct answers\n\n`;
+
+    enhancedPrompt += `SOURCE CONTENT:\n${text}`;
+
+    return enhancedPrompt;
   }
 
-  // ENHANCED: Better JSON extraction with fallback handling
-  async _makeApiRequest(prompt, signal) {
+  async _makeEnhancedApiRequest(prompt, signal) {
     const apiKey = await this.ensureApiKey();
     await this.ensureEndpoint();
 
@@ -304,9 +314,9 @@ ${text}`;
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.3,
+            temperature: 0.2, // Lower for more consistent, factual questions
             maxOutputTokens: 8192,
-            topP: 0.8,
+            topP: 0.9, // Slightly higher for better diversity
             topK: 40,
           },
         }),
@@ -321,7 +331,7 @@ ${text}`;
         }
 
         throw new Error(
-          `API failed: ${response.status} - ${errorData.error?.message || response.statusText}`
+          `API request failed: ${response.status} - ${errorData.error?.message || response.statusText}`
         );
       }
 
@@ -329,159 +339,217 @@ ${text}`;
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
       if (!rawText) {
-        throw new Error('Empty response from the model.');
+        throw new Error('Empty response received from AI model.');
       }
 
       console.log(`📥 Received ${rawText.length} characters from AI model`);
 
-      // ENHANCED: Better JSON extraction with multiple fallback methods
-      let questions = [];
-      try {
-        const extracted = extractJson(rawText);
-        questions = extracted?.questions || [];
-      } catch (error) {
-        console.warn('⚠️ Primary JSON extraction failed, trying fallback methods');
-        
-        // Fallback 1: Look for JSON object containing questions
-        try {
-          const jsonMatch = rawText.match(/\{[\s\S]*"questions"[\s\S]*\]/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            questions = parsed.questions || [];
-          }
-        } catch (e) {
-          // Fallback 2: Look for questions array directly
-          try {
-            const questionsMatch = rawText.match(/"questions"\s*:\s*\[[\s\S]*\]/);
-            if (questionsMatch) {
-              const questionsJson = `{${questionsMatch[0]}}`;
-              const parsed = JSON.parse(questionsJson);
-              questions = parsed.questions || [];
-            }
-          } catch (e2) {
-            console.error('❌ All JSON extraction methods failed');
-            throw new Error('Failed to parse AI response as valid JSON');
-          }
-        }
-      }
-
-      if (!Array.isArray(questions) || questions.length === 0) {
-        throw new Error('AI model returned no valid questions');
-      }
-
-      console.log(`✅ Successfully extracted ${questions.length} questions`);
-      return questions;
+      // Enhanced JSON extraction with multiple fallback strategies
+      return this._extractQuestionsFromResponse(rawText);
 
     } finally {
       clearTimeout(timeout);
     }
   }
 
-  _processQuestions(questions, numQuestions) {
-    if (!Array.isArray(questions) || questions.length === 0) {
-      throw new Error('Model returned no questions.');
-    }
+  _extractQuestionsFromResponse(rawText) {
+    let questions = [];
     
-    const validQuestions = questions
-      .slice(0, numQuestions)
-      .map((q, index) => {
-        try {
-          return this._processQuestion(q, index);
-        } catch (error) {
-          console.warn(`⚠️ Skipping invalid question ${index + 1}:`, error.message);
-          return null;
+    try {
+      // Primary extraction method
+      const extracted = extractJson(rawText);
+      questions = extracted?.questions || [];
+      
+      if (Array.isArray(questions) && questions.length > 0) {
+        console.log(`✅ Primary extraction successful: ${questions.length} questions`);
+        return questions;
+      }
+    } catch (error) {
+      console.warn('⚠️ Primary JSON extraction failed, trying enhanced fallbacks');
+    }
+
+    // Enhanced fallback methods
+    const fallbackMethods = [
+      // Method 1: Look for complete JSON object
+      () => {
+        const jsonMatch = rawText.match(/\{[\s\S]*?"questions"\s*:\s*\[[\s\S]*?\]\s*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return parsed.questions || [];
         }
-      })
-      .filter(q => q !== null);
+        return null;
+      },
 
-    if (validQuestions.length === 0) {
-      throw new Error('No valid questions could be processed');
-    }
+      // Method 2: Extract questions array directly
+      () => {
+        const questionsMatch = rawText.match(/"questions"\s*:\s*(\[[\s\S]*?\])/);
+        if (questionsMatch) {
+          const questionsJson = `{"questions": ${questionsMatch[1]}}`;
+          const parsed = JSON.parse(questionsJson);
+          return parsed.questions || [];
+        }
+        return null;
+      },
 
-    console.log(`🔧 Successfully processed ${validQuestions.length} out of ${questions.length} questions`);
-    return validQuestions;
-  }
-
-  _processQuestion(q, index) {
-    // Validate required fields
-    if (!q.question || !Array.isArray(q.options) || q.options.length !== 4) {
-      throw new Error(`Question ${index + 1} is missing required fields`);
-    }
-
-    // Check for bad question patterns
-    const questionText = q.question.toString().trim();
-    const badPatterns = [
-      /(according to|in|from) (the|this) (passage|text|document|article)/gi,
-      /\b(the above|aforementioned)\b/gi,
-      /\b(x|y|z)\s+(company|graph|chart|table|passage)/gi, // Generic scenarios
-      /\bwhich\s+of\s+the\s+following.*passage/gi
+      // Method 3: Look for question objects individually
+      () => {
+        const questionPattern = /\{\s*"question"\s*:\s*"[^"]+",\s*"options"\s*:\s*\[[^\]]+\],\s*"correctAnswer"\s*:\s*\d+[^}]*\}/g;
+        const matches = rawText.match(questionPattern);
+        if (matches) {
+          const questions = [];
+          for (const match of matches) {
+            try {
+              questions.push(JSON.parse(match));
+            } catch (e) {
+              console.warn('⚠️ Skipping malformed question object');
+            }
+          }
+          return questions.length > 0 ? questions : null;
+        }
+        return null;
+      }
     ];
-    
-    for (const pattern of badPatterns) {
-      if (pattern.test(questionText)) {
-        console.warn(`Question ${index + 1} contains bad reference pattern: ${questionText.substring(0, 100)}...`);
-        // Don't throw error, but log warning
+
+    // Try each fallback method
+    for (let i = 0; i < fallbackMethods.length; i++) {
+      try {
+        const result = fallbackMethods[i]();
+        if (result && Array.isArray(result) && result.length > 0) {
+          console.log(`✅ Fallback method ${i + 1} successful: ${result.length} questions`);
+          return result;
+        }
+      } catch (error) {
+        console.warn(`⚠️ Fallback method ${i + 1} failed:`, error.message);
       }
     }
 
-    const options = [...q.options];
-    const cleanOptions = this._cleanAndValidateOptions(options, index);
-    const correctAnswer = parseInt(q.correctAnswer);
+    throw new Error('Failed to extract valid questions from AI response using all available methods');
+  }
+
+  _processHighQualityQuestions(questions, numQuestions) {
+    if (!Array.isArray(questions) || questions.length === 0) {
+      throw new Error('No valid questions received from AI model.');
+    }
     
-    if (isNaN(correctAnswer) || correctAnswer < 0 || correctAnswer >= 4) {
-      throw new Error(`Question ${index + 1} has invalid correct answer index`);
+    const processedQuestions = [];
+    let processedCount = 0;
+    
+    for (let i = 0; i < questions.length && processedCount < numQuestions; i++) {
+      try {
+        const processed = this._processIndividualQuestion(questions[i], i);
+        if (processed) {
+          processedQuestions.push(processed);
+          processedCount++;
+        }
+      } catch (error) {
+        console.warn(`⚠️ Skipping question ${i + 1}: ${error.message}`);
+      }
     }
 
+    if (processedQuestions.length === 0) {
+      throw new Error('No valid questions could be processed from AI response');
+    }
+
+    if (processedQuestions.length < numQuestions * 0.7) {
+      console.warn(`⚠️ Only processed ${processedQuestions.length}/${numQuestions} requested questions`);
+    }
+
+    console.log(`🔧 Successfully processed ${processedQuestions.length} high-quality questions`);
+    return processedQuestions;
+  }
+
+  _processIndividualQuestion(q, index) {
+    // Comprehensive validation
+    if (!q.question || typeof q.question !== 'string') {
+      throw new Error(`Question ${index + 1}: Missing or invalid question text`);
+    }
+
+    if (!Array.isArray(q.options) || q.options.length !== 4) {
+      throw new Error(`Question ${index + 1}: Must have exactly 4 options`);
+    }
+
+    // Enhanced quality checks
+    const questionText = q.question.trim();
+    
+    // Check for prohibited references
+    const badReferencePatterns = [
+      /\b(the|this)\s+(passage|text|document|article|material|content)\b/gi,
+      /\baccording\s+to\s+(the|this|it)\b/gi,
+      /\bas\s+mentioned\s+(above|earlier|in\s+the)\b/gi,
+      /\bfrom\s+(the|this)\s+(text|passage|document)\b/gi
+    ];
+    
+    for (const pattern of badReferencePatterns) {
+      if (pattern.test(questionText)) {
+        console.warn(`Question ${index + 1}: Contains bad reference - skipping`);
+        return null; // Skip this question instead of throwing error
+      }
+    }
+
+    // Check for generic placeholders
+    if (/\b[xyz]\s+(company|study|graph|chart|example)\b/gi.test(questionText)) {
+      console.warn(`Question ${index + 1}: Contains generic placeholder - skipping`);
+      return null;
+    }
+
+    // Validate and clean options
+    const cleanOptions = q.options
+      .map(opt => (opt || '').toString().trim().replace(/\s+/g, ' '))
+      .filter(opt => opt.length > 0);
+    
+    if (cleanOptions.length !== 4) {
+      throw new Error(`Question ${index + 1}: All 4 options must be valid`);
+    }
+
+    // Check for duplicate options
+    const uniqueOptions = [...new Set(cleanOptions.map(opt => opt.toLowerCase()))];
+    if (uniqueOptions.length !== 4) {
+      throw new Error(`Question ${index + 1}: Options must be unique`);
+    }
+
+    // Validate correct answer index
+    const correctAnswer = parseInt(q.correctAnswer);
+    if (isNaN(correctAnswer) || correctAnswer < 0 || correctAnswer >= 4) {
+      throw new Error(`Question ${index + 1}: Invalid correct answer index`);
+    }
+
+    // Create shuffled question with maintained correct answer tracking
     const correctOption = cleanOptions[correctAnswer];
     const shuffledOptions = this.shuffleArray([...cleanOptions]);
+    const newCorrectAnswer = shuffledOptions.indexOf(correctOption);
 
     return {
       question: questionText,
       options: shuffledOptions,
-      correctAnswer: shuffledOptions.indexOf(correctOption),
-      explanation: (q.explanation || 'No explanation provided').toString().trim(),
-      context: this._cleanContext(q.context),
+      correctAnswer: newCorrectAnswer,
+      explanation: this._cleanExplanation(q.explanation || 'Explanation not provided'),
       language: this.language,
+      difficulty: q.cognitive_level || 'medium',
+      questionType: q.question_type || 'conceptual'
     };
   }
 
-  _cleanAndValidateOptions(options, index) {
-    const cleanOptions = options.map((opt) =>
-      (opt || '').toString().trim().replace(/\s+/g, ' ')
-    ).filter(opt => opt.length > 0);
-    
-    if (cleanOptions.length !== 4) {
-      throw new Error(`Question ${index + 1} must have exactly 4 valid options`);
-    }
-
-    const uniqueOptions = [...new Set(cleanOptions.map(opt => opt.toLowerCase()))];
-    if (uniqueOptions.length !== 4) {
-      throw new Error(`Question ${index + 1} has duplicate or very similar options`);
+  _cleanExplanation(explanation) {
+    if (!explanation || typeof explanation !== 'string') {
+      return 'Explanation not available';
     }
     
-    return cleanOptions;
-  }
-
-  _cleanContext(context) {
-    if (!context) return 'Context not available';
+    let cleaned = explanation.toString().trim();
     
-    let cleaned = context.toString().trim();
-    
-    // Remove bad references to source document
+    // Remove bad references from explanations too
     cleaned = cleaned
-      .replace(/(according to|in|from|as mentioned in) (the|this) (passage|text|document|article|above|following)/gi, '')
-      .replace(/\b(the above|aforementioned|as stated|as shown|as described)\b/gi, '')
-      .replace(/^(in|from|according to)\s+/gi, '')
+      .replace(/\b(according\s+to|as\s+mentioned\s+in|from|in)\s+(the|this)\s+(passage|text|document|article|above|content)\b/gi, '')
+      .replace(/\b(the\s+above|aforementioned|as\s+stated)\b/gi, '')
       .trim();
     
-    // If context is too short or generic after cleaning, return fallback
-    if (cleaned.length < 10 || /^(context|information|data)\s*(not\s*)?(available|found)$/gi.test(cleaned)) {
-      return 'Context not available';
+    // Ensure minimum explanation quality
+    if (cleaned.length < 20 || /^(explanation|no\s+explanation)\s*(not\s*)?(available|provided)$/gi.test(cleaned)) {
+      return 'Explanation not available';
     }
     
     // Truncate if too long
-    if (cleaned.length > 150) {
-      cleaned = cleaned.substring(0, 147) + '...';
+    if (cleaned.length > 300) {
+      cleaned = cleaned.substring(0, 297) + '...';
     }
     
     return cleaned;

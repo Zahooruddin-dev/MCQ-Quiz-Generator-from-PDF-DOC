@@ -1,4 +1,4 @@
-// Enhanced + Professional languageUtils.js
+// Enhanced + Professional languageUtils.js - Context Removed + Superior Prompts
 
 // -------------------
 // Language Detection (Improved)
@@ -65,19 +65,20 @@ export function detectLanguage(text) {
 }
 
 // -------------------
-// Advanced Content Analysis
+// Advanced Content Analysis (Streamlined - No Context Dependencies)
 // -------------------
-export function analyzeContext(content) {
+export function analyzeContent(content) {
     if (!content || content.length < 10) {
         return { 
-            type: 'none', 
-            description: 'No content provided', 
+            type: 'general', 
+            description: 'General content', 
             hasVisualElements: false, 
-            suggestedInstructions: 'Ask user to provide content first',
             complexity: 'low',
             topics: [],
             keyTerms: [],
-            structure: 'unstructured'
+            structure: 'unstructured',
+            wordCount: 0,
+            avgWordsPerSentence: 0
         };
     }
 
@@ -175,8 +176,7 @@ export function analyzeContext(content) {
         topics: sortedTopics,
         keyTerms: keyTerms.slice(0, 10), // Top 10 key terms
         wordCount,
-        avgWordsPerSentence: Math.round(avgWordsPerSentence),
-        suggestedInstructions: generateContextualInstructions(primaryType, structure, complexity)
+        avgWordsPerSentence: Math.round(avgWordsPerSentence)
     };
 }
 
@@ -200,142 +200,153 @@ function extractKeyTerms(content) {
         .map(([word]) => word);
 }
 
-function generateContextualInstructions(type, structure, complexity) {
-    const baseInstructions = [
-        "Create questions that test deep understanding, not just recall",
-        "Include specific details and examples from the content",
-        "Make distractors plausible but clearly incorrect",
-        "Focus on key concepts and their relationships"
-    ];
-
-    const typeSpecific = {
-        academic: "Focus on specific research findings, exact methodologies, and actual theoretical frameworks mentioned",
-        scientific: "Test understanding of specific processes, precise cause-effect relationships, and concrete scientific principles from the content",
-        historical: "Emphasize specific dates, actual chronology, real cause-effect relationships, and historical significance of events mentioned",
-        technical: "Test specific procedural knowledge and actual system details described in the content",
-        mathematical: "Focus on actual problem-solving examples and specific conceptual understanding from the material",
-        literary: "Test analysis of specific themes, actual character names, and particular literary devices mentioned",
-        business: "Emphasize specific strategic decisions, real company names, and actual business applications described"
-    };
-
-    const complexityAdjustments = {
-        high: "Create analytical and synthesis-level questions",
-        medium: "Balance factual recall with application questions",
-        low: "Focus on comprehension and basic application"
-    };
-
-    return [
-        ...baseInstructions,
-        typeSpecific[type] || "Test core concepts and their practical applications",
-        complexityAdjustments[complexity] || "Create appropriately challenging questions"
-    ].join('. ') + '.';
-}
-
 // -------------------
-// Professional Prompt Generator
+// Superior Prompt Generator - Focused on Quality MCQs
 // -------------------
-export function generateSmartPrompt(language, numQuestions, difficulty, contextAnalysis) {
+export function generateSmartPrompt(language, numQuestions, difficulty, contentAnalysis) {
     const BLOOM_TAXONOMY = {
         easy: "Knowledge and Comprehension (recall facts, understand basic concepts)",
         medium: "Application and Analysis (apply concepts, analyze relationships)",
         hard: "Synthesis and Evaluation (create solutions, evaluate arguments, make judgments)"
     };
 
-    const QUALITY_REQUIREMENTS = [
-        "Each question MUST be completely self-contained with all necessary context",
+    const CRITICAL_REQUIREMENTS = [
+        "Each question MUST be completely self-contained with all necessary information",
         "NEVER reference 'the text', 'the passage', 'the document', or 'according to the above'",
-        "Questions must test understanding of the ACTUAL content provided, not hypothetical scenarios",
-        "AVOID generic scenarios like 'X company', 'Y graph', 'Z study' - use real names and data from content",
-        "All options must be plausible to someone with partial knowledge",
-        "Correct answers must be definitively correct based on the content",
-        "Distractors should represent common misconceptions or partial understanding",
-        "Use specific examples, names, dates, numbers, and details from the actual content",
-        "Focus on facts, concepts, and relationships explicitly mentioned in the provided material"
+        "Questions must test understanding of ACTUAL content provided, not hypothetical scenarios",
+        "AVOID generic placeholders like 'X company', 'Y graph', 'Z study' - use real names from content",
+        "All options must be plausible to someone with partial knowledge of the topic",
+        "Correct answers must be definitively correct based on the provided content",
+        "Distractors should represent common misconceptions or related but incorrect concepts",
+        "Use specific examples, names, dates, numbers, and details directly from the content",
+        "Focus on key concepts, relationships, and factual information explicitly stated",
+        "Ensure questions cannot be answered without reading the provided content"
     ];
 
-    const LANGUAGE_PROMPTS = {
-        en: {
-            instruction: `You are an expert educator creating {numQuestions} high-quality multiple choice questions.`,
-            difficulty_note: `Target Level: {difficulty} - {bloom_level}`,
-            content_note: `Content Type: {content_description}`
+    const DIFFICULTY_FRAMEWORKS = {
+        easy: {
+            focus: "Direct factual recall and basic comprehension",
+            questionTypes: ["What is...", "Who was...", "When did...", "Where does..."],
+            cognitiveLevel: "Remember and understand specific facts and definitions"
         },
-        ur: {
-            instruction: `آپ ایک ماہر معلم ہیں جو {numQuestions} اعلیٰ معیار کے کثیر انتخابی سوالات بنا رہے ہیں۔`,
-            difficulty_note: `ہدف کی سطح: {difficulty} - {bloom_level}`,
-            content_note: `مواد کی قسم: {content_description}`
+        medium: {
+            focus: "Application of concepts and analysis of relationships", 
+            questionTypes: ["How does...", "Why is...", "What causes...", "What is the relationship between..."],
+            cognitiveLevel: "Apply knowledge and analyze cause-effect relationships"
         },
-        ar: {
-            instruction: `أنت معلم خبير تقوم بإنشاء {numQuestions} أسئلة اختيار من متعدد عالية الجودة.`,
-            difficulty_note: `المستوى المستهدف: {difficulty} - {bloom_level}`,
-            content_note: `نوع المحتوى: {content_description}`
-        },
-        hi: {
-            instruction: `आप एक विशेषज्ञ शिक्षक हैं जो {numQuestions} उच्च गुणवत्ता वाले बहुविकल्पीय प्रश्न बना रहे हैं।`,
-            difficulty_note: `लक्षित स्तर: {difficulty} - {bloom_level}`,
-            content_note: `सामग्री का प्रकार: {content_description}`
+        hard: {
+            focus: "Synthesis of multiple concepts and critical evaluation",
+            questionTypes: ["What can be concluded...", "Which factor most influences...", "How would... affect..."],
+            cognitiveLevel: "Evaluate evidence and synthesize complex relationships"
         }
     };
 
-    const template = LANGUAGE_PROMPTS[language] || LANGUAGE_PROMPTS.en;
-    const bloomLevel = BLOOM_TAXONOMY[difficulty] || BLOOM_TAXONOMY.medium;
-    
-    let prompt = template.instruction.replace(/{numQuestions}/g, numQuestions) + '\n\n';
-    
-    prompt += template.difficulty_note
-        .replace(/{difficulty}/g, difficulty)
-        .replace(/{bloom_level}/g, bloomLevel) + '\n\n';
-    
-    prompt += template.content_note
-        .replace(/{content_description}/g, contextAnalysis.description) + '\n\n';
+    const LANGUAGE_TEMPLATES = {
+        en: {
+            title: `Expert MCQ Generator - ${numQuestions} Questions`,
+            instruction: `Create ${numQuestions} high-quality multiple choice questions that thoroughly test understanding of the provided content.`,
+            difficulty_note: `Difficulty Level: ${difficulty.toUpperCase()} - ${BLOOM_TAXONOMY[difficulty]}`,
+            content_analysis: `Content Type: ${contentAnalysis.description}`,
+            focus_areas: contentAnalysis.topics.length > 0 ? `Primary Topics: ${contentAnalysis.topics.join(', ')}` : '',
+            key_terms: contentAnalysis.keyTerms.length > 0 ? `Important Terms: ${contentAnalysis.keyTerms.slice(0, 8).join(', ')}` : ''
+        },
+        ur: {
+            title: `ماہر MCQ جنریٹر - ${numQuestions} سوالات`,
+            instruction: `${numQuestions} اعلیٰ معیار کے کثیر انتخابی سوالات بنائیں جو فراہم کردہ مواد کی مکمل سمجھ کو جانچتے ہیں۔`,
+            difficulty_note: `مشکل کی سطح: ${difficulty.toUpperCase()} - ${BLOOM_TAXONOMY[difficulty]}`,
+            content_analysis: `مواد کی قسم: ${contentAnalysis.description}`,
+            focus_areas: contentAnalysis.topics.length > 0 ? `بنیادی موضوعات: ${contentAnalysis.topics.join(', ')}` : '',
+            key_terms: contentAnalysis.keyTerms.length > 0 ? `اہم اصطلاحات: ${contentAnalysis.keyTerms.slice(0, 8).join(', ')}` : ''
+        },
+        ar: {
+            title: `مولد أسئلة MCQ خبير - ${numQuestions} أسئلة`,
+            instruction: `أنشئ ${numQuestions} أسئلة اختيار من متعدد عالية الجودة تختبر فهم المحتوى المقدم بشمولية.`,
+            difficulty_note: `مستوى الصعوبة: ${difficulty.toUpperCase()} - ${BLOOM_TAXONOMY[difficulty]}`,
+            content_analysis: `نوع المحتوى: ${contentAnalysis.description}`,
+            focus_areas: contentAnalysis.topics.length > 0 ? `الموضوعات الرئيسية: ${contentAnalysis.topics.join(', ')}` : '',
+            key_terms: contentAnalysis.keyTerms.length > 0 ? `المصطلحات المهمة: ${contentAnalysis.keyTerms.slice(0, 8).join(', ')}` : ''
+        },
+        hi: {
+            title: `विशेषज्ञ MCQ जेनरेटर - ${numQuestions} प्रश्न`,
+            instruction: `${numQuestions} उच्च गुणवत्ता वाले बहुविकल्पीय प्रश्न बनाएं जो प्रदान की गई सामग्री की गहरी समझ का परीक्षण करते हैं।`,
+            difficulty_note: `कठिनाई स्तर: ${difficulty.toUpperCase()} - ${BLOOM_TAXONOMY[difficulty]}`,
+            content_analysis: `सामग्री प्रकार: ${contentAnalysis.description}`,
+            focus_areas: contentAnalysis.topics.length > 0 ? `मुख्य विषय: ${contentAnalysis.topics.join(', ')}` : '',
+            key_terms: contentAnalysis.keyTerms.length > 0 ? `महत्वपूर्ण शब्द: ${contentAnalysis.keyTerms.slice(0, 8).join(', ')}` : ''
+        }
+    };
 
-    // Add specific guidance based on content analysis
-    if (contextAnalysis.topics.length > 0) {
-        prompt += `Focus Areas: ${contextAnalysis.topics.join(', ')}\n`;
-    }
-    if (contextAnalysis.keyTerms.length > 0) {
-        prompt += `Key Terms to Include: ${contextAnalysis.keyTerms.slice(0, 5).join(', ')}\n`;
-    }
+    const template = LANGUAGE_TEMPLATES[language] || LANGUAGE_TEMPLATES.en;
+    const difficultyFramework = DIFFICULTY_FRAMEWORKS[difficulty] || DIFFICULTY_FRAMEWORKS.medium;
     
-    prompt += `Content Complexity: ${contextAnalysis.complexity}\n`;
-    prompt += `${contextAnalysis.suggestedInstructions}\n\n`;
+    let prompt = `${template.title}\n\n`;
+    prompt += `${template.instruction}\n\n`;
+    prompt += `${template.difficulty_note}\n`;
+    prompt += `${template.content_analysis}\n`;
+    
+    if (template.focus_areas) prompt += `${template.focus_areas}\n`;
+    if (template.key_terms) prompt += `${template.key_terms}\n`;
+    
+    prompt += `\nCOGNITIVE TARGET: ${difficultyFramework.cognitiveLevel}\n`;
+    prompt += `QUESTION FOCUS: ${difficultyFramework.focus}\n\n`;
 
-    prompt += "CRITICAL QUALITY REQUIREMENTS:\n";
-    QUALITY_REQUIREMENTS.forEach((req, i) => {
+    prompt += "CRITICAL QUALITY STANDARDS:\n";
+    CRITICAL_REQUIREMENTS.forEach((req, i) => {
         prompt += `${i + 1}. ${req}\n`;
     });
 
-    prompt += `\nQUESTION DESIGN PRINCIPLES:\n`;
-    prompt += `- For FACTUAL questions: Test specific details, definitions, or direct statements\n`;
-    prompt += `- For CONCEPTUAL questions: Test understanding of relationships, causes, effects\n`;
-    prompt += `- For ANALYTICAL questions: Test ability to break down information and see patterns\n`;
-    prompt += `- For APPLICATION questions: Test ability to use knowledge in new situations\n\n`;
+    prompt += `\nQUESTION DESIGN FRAMEWORK:\n`;
+    prompt += `- FACTUAL QUESTIONS: Test specific details, exact definitions, precise data points\n`;
+    prompt += `- CONCEPTUAL QUESTIONS: Test understanding of processes, relationships, principles\n`;
+    prompt += `- ANALYTICAL QUESTIONS: Test ability to identify patterns, compare/contrast, classify\n`;
+    prompt += `- APPLICATION QUESTIONS: Test transfer of knowledge to new but related scenarios\n\n`;
 
-    prompt += `DISTRACTOR DESIGN:\n`;
-    prompt += `- Make incorrect options believable to someone with incomplete knowledge\n`;
-    prompt += `- Use common student misconceptions as distractors\n`;
-    prompt += `- Include partially correct information in distractors\n`;
-    prompt += `- Ensure all distractors are clearly wrong when content is understood\n\n`;
+    prompt += `DISTRACTOR ENGINEERING:\n`;
+    prompt += `- Create plausible wrong answers that reflect incomplete understanding\n`;
+    prompt += `- Use common misconceptions and partially correct information\n`;
+    prompt += `- Include related but incorrect facts from the same topic area\n`;
+    prompt += `- Ensure distractors are clearly distinguishable from the correct answer\n`;
+    prompt += `- Avoid obviously wrong options that can be eliminated without content knowledge\n\n`;
 
-    prompt += `REQUIRED JSON FORMAT:\n`;
+    prompt += `CONTENT-SPECIFIC GUIDANCE:\n`;
+    if (contentAnalysis.type === 'academic') {
+        prompt += `- Focus on research findings, methodologies, theoretical frameworks\n`;
+        prompt += `- Test understanding of evidence, conclusions, and scholarly arguments\n`;
+    } else if (contentAnalysis.type === 'scientific') {
+        prompt += `- Emphasize cause-effect relationships, processes, and scientific principles\n`;
+        prompt += `- Include questions about experimental design, data interpretation\n`;
+    } else if (contentAnalysis.type === 'historical') {
+        prompt += `- Test chronological understanding, causation, and historical significance\n`;
+        prompt += `- Focus on specific events, dates, figures, and their impacts\n`;
+    } else if (contentAnalysis.type === 'technical') {
+        prompt += `- Test procedural knowledge, system understanding, troubleshooting\n`;
+        prompt += `- Focus on specifications, implementations, and technical relationships\n`;
+    } else {
+        prompt += `- Focus on key concepts, important details, and main ideas\n`;
+        prompt += `- Test both factual knowledge and conceptual understanding\n`;
+    }
+
+    prompt += `\nSTRICT JSON OUTPUT FORMAT:\n`;
     prompt += `{
   "questions": [
     {
-      "question": "Complete, self-contained question with all necessary context",
-      "options": ["Correct answer", "Plausible distractor 1", "Plausible distractor 2", "Plausible distractor 3"],
+      "question": "Complete, self-contained question with all necessary information included",
+      "options": ["Correct answer with specific details", "Plausible distractor 1", "Plausible distractor 2", "Plausible distractor 3"],
       "correctAnswer": 0,
-      "explanation": "Clear explanation of why the correct answer is right and others are wrong",
-      "context": "Direct quote or specific fact from the content (max 150 chars)",
+      "explanation": "Comprehensive explanation of why the answer is correct and others are wrong",
       "cognitive_level": "${difficulty}",
       "question_type": "factual|conceptual|analytical|application"
     }
   ]
 }\n\n`;
 
+    prompt += "Remember: Every question must be answerable ONLY by someone who has read and understood the provided content. Generic knowledge should not be sufficient.\n\n";
+
     return prompt;
 }
 
 // -------------------
-// Enhanced Quality Validator
+// Enhanced Quality Validator (Context References Removed)
 // -------------------
 export function validateQuestionQuality(questions) {
     const issues = [];
@@ -344,106 +355,137 @@ export function validateQuestionQuality(questions) {
     questions.forEach((q, i) => {
         let questionScore = 100;
         
-        // Check for bad references
-        const badRefs = /\b(the passage|the text|the document|the article|according to (it|this|the above)|as mentioned (above|earlier)|in the (above|preceding|following)|from (this|the) (text|passage|document))\b/gi;
+        // Check for bad references to source material
+        const badRefs = /\b(the passage|the text|the document|the article|the material|the content|according to (it|this|the above)|as mentioned (above|earlier|previously)|in the (above|preceding|following)|from (this|the) (text|passage|document)|based on the (text|passage|document))\b/gi;
         if (badRefs.test(q.question)) {
             issues.push({ 
                 questionIndex: i, 
                 type: 'bad_reference', 
                 severity: 'high',
-                issue: 'Question references source document instead of being self-contained',
-                suggestion: 'Rewrite question to include all necessary context directly'
+                issue: 'Question references source material instead of being self-contained',
+                suggestion: 'Rewrite to include all necessary information directly in the question'
             });
             questionScore -= 40;
         }
 
-        // Check question length and completeness
-        if (q.question.length < 60) {
+        // Check for generic scenarios and placeholders
+        const genericPatterns = /\b([xyz])\s+(company|corporation|study|research|graph|chart|table|experiment|case|example|scenario)\b/gi;
+        if (genericPatterns.test(q.question)) {
+            issues.push({ 
+                questionIndex: i, 
+                type: 'generic_placeholder', 
+                severity: 'high',
+                issue: 'Question uses generic placeholders instead of specific content details',
+                suggestion: 'Use actual names, terms, and details from the provided content'
+            });
+            questionScore -= 35;
+        }
+
+        // Check question specificity and detail level
+        if (q.question.length < 80) {
             issues.push({ 
                 questionIndex: i, 
                 type: 'insufficient_detail', 
                 severity: 'medium',
-                issue: 'Question too brief, may lack necessary context',
-                suggestion: 'Add more specific details and context to the question'
+                issue: 'Question lacks sufficient detail and context',
+                suggestion: 'Add more specific information to make the question comprehensive'
             });
             questionScore -= 20;
         }
 
         // Check for vague language
-        const vaguePatterns = /\b(this|that|these|those|it|they|them|which one|what is it)\b/gi;
-        if (vaguePatterns.test(q.question)) {
+        const vaguePatterns = /\b(this|that|these|those|it|they|them|which one|what is it|the following|the above)\b/gi;
+        const vagueMatches = (q.question.match(vaguePatterns) || []).length;
+        if (vagueMatches > 2) {
             issues.push({ 
                 questionIndex: i, 
                 type: 'vague_language', 
                 severity: 'medium',
-                issue: 'Question contains vague pronouns or references',
-                suggestion: 'Replace vague terms with specific nouns and concepts'
+                issue: 'Question contains excessive vague pronouns and references',
+                suggestion: 'Replace vague terms with specific nouns and clear references'
             });
             questionScore -= 15;
         }
 
-        // Check option quality
+        // Validate options structure and quality
         if (!Array.isArray(q.options) || q.options.length !== 4) {
             issues.push({ 
                 questionIndex: i, 
                 type: 'invalid_options', 
                 severity: 'high',
-                issue: 'Question must have exactly 4 options',
-                suggestion: 'Provide exactly 4 distinct, plausible options'
+                issue: 'Question must have exactly 4 answer options',
+                suggestion: 'Provide exactly 4 distinct, well-crafted options'
             });
             questionScore -= 50;
         } else {
-            // Check for duplicate or very similar options
-            const uniqueOptions = new Set(q.options.map(opt => opt.toLowerCase().trim()));
+            // Check for duplicate or overly similar options
+            const optionsLower = q.options.map(opt => opt.toLowerCase().trim());
+            const uniqueOptions = new Set(optionsLower);
             if (uniqueOptions.size !== 4) {
                 issues.push({ 
                     questionIndex: i, 
                     type: 'duplicate_options', 
                     severity: 'high',
-                    issue: 'Options are duplicated or too similar',
-                    suggestion: 'Make each option clearly distinct'
+                    issue: 'Answer options are duplicated or too similar',
+                    suggestion: 'Ensure each option is clearly distinct and meaningful'
                 });
                 questionScore -= 30;
             }
 
-            // Check option length variation (good distractors should be reasonably similar in length)
+            // Check option quality and balance
             const lengths = q.options.map(opt => opt.length);
             const avgLength = lengths.reduce((a, b) => a + b, 0) / lengths.length;
-            const hasOutlier = lengths.some(len => Math.abs(len - avgLength) > avgLength * 0.5);
-            if (hasOutlier) {
+            const hasExtremeOutlier = lengths.some(len => len < avgLength * 0.3 || len > avgLength * 2);
+            if (hasExtremeOutlier) {
                 issues.push({ 
                     questionIndex: i, 
-                    type: 'length_bias', 
-                    severity: 'low',
-                    issue: 'Option lengths vary dramatically (may reveal correct answer)',
-                    suggestion: 'Balance option lengths to avoid obvious patterns'
+                    type: 'unbalanced_options', 
+                    severity: 'medium',
+                    issue: 'Answer options have dramatically different lengths',
+                    suggestion: 'Balance option lengths to avoid revealing the correct answer'
                 });
-                questionScore -= 10;
+                questionScore -= 15;
+            }
+
+            // Check for obviously wrong distractors
+            const obviouslyWrong = q.options.some(opt => 
+                /\b(never|always|impossible|definitely not|completely wrong|totally incorrect)\b/i.test(opt)
+            );
+            if (obviouslyWrong) {
+                issues.push({ 
+                    questionIndex: i, 
+                    type: 'obvious_distractors', 
+                    severity: 'medium',
+                    issue: 'Some distractors are obviously incorrect',
+                    suggestion: 'Make distractors plausible to someone with partial knowledge'
+                });
+                questionScore -= 20;
             }
         }
 
         // Check explanation quality
-        if (!q.explanation || q.explanation.length < 20) {
+        if (!q.explanation || q.explanation.length < 30) {
             issues.push({ 
                 questionIndex: i, 
                 type: 'poor_explanation', 
                 severity: 'medium',
-                issue: 'Explanation is missing or too brief',
-                suggestion: 'Provide clear explanation of correct answer and why others are wrong'
+                issue: 'Explanation is missing or insufficient',
+                suggestion: 'Provide detailed explanation of correct answer and why others are wrong'
             });
             questionScore -= 15;
         }
 
-        // Check context quality
-        if (!q.context || q.context === 'Context not available' || q.context.length < 10) {
+        // Check correct answer validity
+        const correctAnswer = parseInt(q.correctAnswer);
+        if (isNaN(correctAnswer) || correctAnswer < 0 || correctAnswer >= 4) {
             issues.push({ 
                 questionIndex: i, 
-                type: 'missing_context', 
-                severity: 'low',
-                issue: 'Context is missing or too brief',
-                suggestion: 'Include specific supporting information from source'
+                type: 'invalid_correct_answer', 
+                severity: 'high',
+                issue: 'Correct answer index is invalid',
+                suggestion: 'Set correctAnswer to valid index (0-3)'
             });
-            questionScore -= 10;
+            questionScore -= 40;
         }
 
         totalScore += Math.max(0, questionScore);
@@ -453,7 +495,7 @@ export function validateQuestionQuality(questions) {
     const highSeverityIssues = issues.filter(issue => issue.severity === 'high').length;
     
     return {
-        isValid: highSeverityIssues === 0 && averageScore >= 70,
+        isValid: highSeverityIssues === 0 && averageScore >= 75,
         score: Math.round(averageScore),
         issues,
         summary: {
@@ -469,30 +511,49 @@ export function validateQuestionQuality(questions) {
 function generateQualityRecommendations(issues, averageScore) {
     const recommendations = [];
     
-    if (averageScore < 50) {
-        recommendations.push("Consider regenerating questions with more specific prompts");
+    if (averageScore < 60) {
+        recommendations.push("Questions need significant improvement - consider regenerating with more specific content-focused prompts");
+    } else if (averageScore < 80) {
+        recommendations.push("Questions show good potential but need refinement for better quality");
     }
     
     const issueTypes = [...new Set(issues.map(i => i.type))];
     
     if (issueTypes.includes('bad_reference')) {
-        recommendations.push("Focus on making questions completely self-contained");
+        recommendations.push("Eliminate all references to source material - make questions completely self-contained");
+    }
+    
+    if (issueTypes.includes('generic_placeholder')) {
+        recommendations.push("Replace generic placeholders with specific details and actual names from content");
     }
     
     if (issueTypes.includes('insufficient_detail')) {
-        recommendations.push("Include more specific context and details in questions");
+        recommendations.push("Add more comprehensive context and specific information to questions");
     }
     
     if (issueTypes.includes('duplicate_options')) {
-        recommendations.push("Ensure all answer options are clearly distinct");
+        recommendations.push("Ensure all answer options are clearly distinct and meaningful");
+    }
+    
+    if (issueTypes.includes('vague_language')) {
+        recommendations.push("Replace vague pronouns and references with specific, clear terms");
+    }
+    
+    if (issueTypes.includes('obvious_distractors')) {
+        recommendations.push("Create more sophisticated distractors that require content knowledge to eliminate");
     }
     
     return recommendations;
 }
 
 // -------------------
-// Legacy Wrapper (Maintained for compatibility)
+// Legacy Compatibility Wrappers
 // -------------------
 export function getLanguagePrompt(language, numQuestions, difficulty, contextAnalysis) {
     return generateSmartPrompt(language, numQuestions, difficulty, contextAnalysis);
+}
+
+// Alias for backward compatibility
+export function analyzeContext(content) {
+    return analyzeContent(content);
 }
