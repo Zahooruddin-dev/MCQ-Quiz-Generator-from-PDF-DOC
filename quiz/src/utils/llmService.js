@@ -1,9 +1,9 @@
-// LLMService.js - Enhanced MCQ Generation with Superior Prompts (Context Removed)
+// LLMService.js - Working version with improved validation
 import { REQUEST_TIMEOUT_MS } from './constants.js';
 import {
   detectLanguage,
-  generateSmartPrompt,
-  analyzeContent,
+  getLanguagePrompt,
+  analyzeContext,
 } from './languageUtils.js';
 import { trimForPrompt, extractJson, extractKeyFacts } from './textUtils.js';
 import { readFileContent } from './fileReader.js';
@@ -23,14 +23,13 @@ import { shuffleArray, validateQuestions } from './quizValidator.js';
 export class LLMService {
   static instance = null;
   static responseCache = new Map();
-  static MAX_CACHE_SIZE = 50; // Prevent memory bloat
 
   constructor() {
     this.baseUrl = sessionStorage.getItem('llm_baseUrl') || null;
     this.apiKey = sessionStorage.getItem('llm_apiKey') || null;
     this.language = 'en';
     this.controller = null;
-    console.log('🚀 Enhanced LLMService initialized with superior MCQ generation');
+    console.log('✅ LLMService initialized');
   }
 
   static async preloadApiConfig() {
@@ -39,7 +38,7 @@ export class LLMService {
     }
     await LLMService.instance.ensureApiKey();
     await LLMService.instance.ensureEndpoint();
-    console.log('⚡ LLMService preloaded with optimized configuration');
+    console.log('🚀 LLMService preloaded API key and endpoint');
   }
 
   async ensureApiKey() {
@@ -47,20 +46,20 @@ export class LLMService {
       this.apiKey = sessionStorage.getItem('llm_apiKey') || (await getGlobalApiKey());
       if (!this.apiKey) throw new Error('No global API key configured in Firestore.');
       sessionStorage.setItem('llm_apiKey', this.apiKey);
-      console.log('✅ API key loaded and cached');
+      console.log('✅ API key loaded');
     }
     return this.apiKey;
   }
 
   async ensureEndpoint() {
     const config = await getGlobalApiConfig();
-    if (!config?.baseUrl) throw new Error('No API endpoint (baseUrl) configured in Firestore.');
+    if (!config?.baseUrl) throw new Error('No API endpoint configured in Firestore.');
 
     const cached = sessionStorage.getItem('llm_baseUrl');
     if (config.baseUrl !== this.baseUrl || config.baseUrl !== cached) {
       this.baseUrl = config.baseUrl;
       sessionStorage.setItem('llm_baseUrl', this.baseUrl);
-      console.log(`🔗 Endpoint loaded: ${this.baseUrl}`);
+      console.log(`✅ Endpoint loaded: ${this.baseUrl}`);
     } else if (!this.baseUrl) {
       this.baseUrl = cached;
     }
@@ -72,11 +71,10 @@ export class LLMService {
     this.apiKey = null;
     sessionStorage.removeItem('llm_apiKey');
     const newKey = await this.ensureApiKey();
-    console.log('🔄 API key refreshed successfully');
+    console.log('🔄 API key refreshed');
     return newKey;
   }
 
-  // Utility methods (unchanged)
   async saveQuizResults(quizData) {
     return saveQuizResults(quizData);
   }
@@ -101,36 +99,19 @@ export class LLMService {
     return validateQuestions(questions);
   }
 
-  // Enhanced cache management
   static generateCacheKey(content, options) {
     try {
-      const contentSample = content.slice(0, 200);
-      const optionsStr = `${options.numQuestions}-${options.difficulty}`;
-      
-      // Create a simple hash for Unicode safety
+      const shortContent = content.slice(0, 100);
+      const optionsStr = JSON.stringify(options);
       let hash = 0;
-      const combined = contentSample + optionsStr;
-      for (let i = 0; i < Math.min(combined.length, 300); i++) {
+      const combined = shortContent + optionsStr;
+      for (let i = 0; i < Math.min(combined.length, 500); i++) {
         hash = ((hash << 5) - hash + combined.charCodeAt(i)) & 0xffffffff;
       }
-      
-      return `mcq_${Math.abs(hash).toString(36)}_${options.numQuestions}q_${options.difficulty}`;
+      return `quiz_${Math.abs(hash).toString(36)}_${Date.now().toString(36).slice(-4)}`;
     } catch (error) {
-      console.warn('🟡 Cache key generation fallback used');
-      return `mcq_fallback_${content.length}_${Date.now()}`;
-    }
-  }
-
-  static manageCacheSize() {
-    if (LLMService.responseCache.size > LLMService.MAX_CACHE_SIZE) {
-      const entries = Array.from(LLMService.responseCache.entries());
-      // Remove oldest entries (keep newest half)
-      const toKeep = entries.slice(-Math.floor(LLMService.MAX_CACHE_SIZE / 2));
-      LLMService.responseCache.clear();
-      toKeep.forEach(([key, value]) => {
-        LLMService.responseCache.set(key, value);
-      });
-      console.log('🧹 Cache cleaned to prevent memory bloat');
+      console.warn('Cache key fallback used:', error);
+      return `quiz_fallback_${content.length}_${Date.now().toString(36)}`;
     }
   }
 
@@ -172,12 +153,11 @@ export class LLMService {
   async generateQuizQuestions(fileOrText, options = {}) {
     const { numQuestions = 10, difficulty = 'medium' } = options;
 
-    // Credit check (safety check - UI should handle this)
     await this.checkUserCredits();
     await this.ensureApiKey();
     await this.ensureEndpoint();
 
-    console.log(`🎯 Starting enhanced MCQ generation for ${numQuestions} ${difficulty} questions`);
+    console.log(`🚀 Starting quiz generation`);
 
     return withRetry(async () => {
       if (this.controller) this.controller.abort();
@@ -189,50 +169,35 @@ export class LLMService {
           : await this.readFileContent(fileOrText);
 
         if (!sourceText?.trim() || sourceText.trim().length < 50) {
-          throw new Error('Content is empty or too short for meaningful quiz generation.');
+          throw new Error('The document seems empty or too short.');
         }
 
-        // Enhanced caching with better cache management
         const cacheKey = LLMService.generateCacheKey(sourceText, options);
         if (LLMService.responseCache.has(cacheKey)) {
-          console.log('⚡ Using cached high-quality questions');
+          console.log('📋 Using cached questions');
           return LLMService.responseCache.get(cacheKey);
         }
 
-        // Intelligent content analysis
         this.language = detectLanguage(sourceText);
-        const processedText = trimForPrompt(sourceText);
-        const contentAnalysis = analyzeContent(sourceText);
-        const keyFacts = extractKeyFacts(sourceText, numQuestions * 2); // More facts for better questions
+        const text = trimForPrompt(sourceText);
+        const keyFacts = extractKeyFacts(sourceText);
+        const contextAnalysis = analyzeContext(sourceText);
         
-        console.log(`📊 Content Analysis: ${contentAnalysis.type} (${contentAnalysis.complexity}) - ${contentAnalysis.wordCount} words`);
-        console.log(`🔍 Key Facts Extracted: ${keyFacts.length} important points identified`);
-        
-        // Generate superior prompt using enhanced analysis
-        const prompt = this._buildSuperiorPrompt(
-          processedText, 
-          keyFacts, 
-          numQuestions, 
-          difficulty, 
-          this.language, 
-          contentAnalysis
-        );
+        const prompt = this._buildBetterPrompt(text, keyFacts, numQuestions, difficulty, this.language);
 
-        console.log(`🚀 Making optimized API request with ${prompt.length} char prompt`);
-        const questions = await this._makeEnhancedApiRequest(prompt, this.controller.signal);
+        console.log(`🔧 Making API request`);
+        const questions = await this._makeApiRequest(prompt, this.controller.signal);
 
-        const processedQuestions = this._processHighQualityQuestions(questions, numQuestions);
+        const processedQuestions = this._processQuestions(questions, numQuestions);
         
-        // Cache management and storage
-        LLMService.manageCacheSize();
         LLMService.responseCache.set(cacheKey, processedQuestions);
 
-        console.log(`✅ Generated ${processedQuestions.length} high-quality MCQs`);
+        console.log(`✅ Generated ${processedQuestions.length} questions`);
         return processedQuestions;
         
       } catch (error) {
         if (error?.name === 'AbortError') {
-          throw new Error('Request was cancelled by user.');
+          throw new Error('Request cancelled.');
         }
 
         if (error.message?.includes('API key') || 
@@ -240,65 +205,77 @@ export class LLMService {
             error.message?.includes('403')) {
           try {
             await this.refreshApiKey();
-            console.log('🔄 API key refreshed, retrying...');
+            console.log('🔄 Retrying with new API key...');
           } catch (keyError) {
             console.error('❌ Failed to refresh API key:', keyError);
           }
         }
 
-        console.error('❌ Enhanced MCQ generation failed:', error);
+        console.error('❌ Quiz generation error:', error);
         throw error;
       }
     });
   }
 
-  _buildSuperiorPrompt(text, keyFacts, numQuestions, difficulty, language, contentAnalysis) {
-    const prompt = generateSmartPrompt(language, numQuestions, difficulty, contentAnalysis);
-    
-    // Add key facts guidance for better question generation
-    let enhancedPrompt = prompt;
-    
-    if (keyFacts.length > 0) {
-      enhancedPrompt += `\nKEY CONTENT INSIGHTS FOR QUESTION GENERATION:\n`;
-      keyFacts.slice(0, Math.min(10, numQuestions * 1.5)).forEach((fact, i) => {
-        enhancedPrompt += `${i + 1}. ${fact}\n`;
-      });
-      enhancedPrompt += `\nPRIORITIZE questions that test understanding of these specific insights and facts.\n\n`;
-    }
-
-    // Add content-specific optimization
-    enhancedPrompt += `CONTENT OPTIMIZATION NOTES:\n`;
-    enhancedPrompt += `- Content complexity: ${contentAnalysis.complexity} (adjust question depth accordingly)\n`;
-    enhancedPrompt += `- Primary structure: ${contentAnalysis.structure} (consider this in question design)\n`;
-    
-    if (contentAnalysis.hasVisualElements) {
-      enhancedPrompt += `- Content includes visual elements - create questions about data, trends, or relationships described\n`;
-    }
-    
-    enhancedPrompt += `- Word count: ${contentAnalysis.wordCount} words (sufficient detail available for specific questions)\n\n`;
-
-    // Add difficulty-specific instructions
-    const difficultyEnhancements = {
-      easy: "Focus on explicit facts, clear definitions, and direct statements from the content. Questions should test recognition and basic comprehension.",
-      medium: "Create questions requiring application of concepts and analysis of relationships. Test understanding of how different ideas connect.",
-      hard: "Develop questions requiring synthesis of multiple concepts, evaluation of arguments, and critical thinking about implications."
+  _buildBetterPrompt(text, keyFacts, numQuestions, difficulty, language) {
+    const difficultyInstructions = {
+      easy: "Focus on direct facts, definitions, and basic recall questions.",
+      medium: "Include application questions and simple analysis of relationships.",
+      hard: "Create questions requiring synthesis, evaluation, and complex reasoning."
     };
-    
-    enhancedPrompt += `DIFFICULTY-SPECIFIC GUIDANCE:\n${difficultyEnhancements[difficulty] || difficultyEnhancements.medium}\n\n`;
 
-    // Add quality assurance reminders
-    enhancedPrompt += `FINAL QUALITY CHECKS:\n`;
-    enhancedPrompt += `- Each question must stand alone without referencing "the text" or similar phrases\n`;
-    enhancedPrompt += `- Use actual names, dates, numbers, and specific details from the provided content\n`;
-    enhancedPrompt += `- Ensure questions cannot be answered without reading the provided material\n`;
-    enhancedPrompt += `- Make all distractors plausible but clearly distinguishable from correct answers\n\n`;
+    const contextGuidance = keyFacts.length > 0 
+      ? `\nKey facts from the content:\n${keyFacts.map((fact, i) => `${i+1}. ${fact}`).join('\n')}\n`
+      : '';
 
-    enhancedPrompt += `SOURCE CONTENT:\n${text}`;
+    return `You are creating ${numQuestions} high-quality multiple choice questions based on the provided content.
 
-    return enhancedPrompt;
+CRITICAL REQUIREMENTS:
+- Each question MUST be completely self-contained with all necessary information
+- NEVER reference "the passage", "the text", "the document", or "according to the above"
+- Questions must test understanding of ACTUAL content provided, not generic scenarios
+- Use specific names, dates, numbers, and facts from the content
+- Avoid generic placeholders like "X company", "Y study", "the senator", "the author"
+
+EXAMPLES OF WHAT TO AVOID:
+❌ "The senator described in the passage was known for what characteristic?"
+❌ "According to the research, what was the main finding?"
+❌ "The company's strategy involved which approach?"
+
+EXAMPLES OF GOOD QUESTIONS:
+✅ "Senator John McCain of Arizona, who served from 1987 to 2018, was primarily known for which characteristic?"
+✅ "The 2019 Harvard Medical School study found that what percentage of teenagers got less than 7 hours of sleep?"
+✅ "Netflix's streaming strategy in 2015 focused on which business approach?"
+
+DIFFICULTY LEVEL: ${difficulty}
+${difficultyInstructions[difficulty] || difficultyInstructions.medium}
+
+CREATE QUESTIONS ABOUT:
+- Specific names, dates, numbers, and facts from the content
+- Actual concepts, processes, and relationships described
+- Cause-and-effect relationships mentioned
+- Definitions and explanations provided
+- Comparisons and contrasts made
+
+${contextGuidance}
+
+Required JSON format:
+{
+  "questions": [
+    {
+      "question": "Self-contained question with all necessary context included",
+      "options": ["Correct answer based on content", "Plausible wrong answer", "Another plausible wrong answer", "Third plausible wrong answer"],
+      "correctAnswer": 0,
+      "explanation": "Clear explanation of why this answer is correct"
+    }
+  ]
+}
+
+CONTENT:
+${text}`;
   }
 
-  async _makeEnhancedApiRequest(prompt, signal) {
+  async _makeApiRequest(prompt, signal) {
     const apiKey = await this.ensureApiKey();
     await this.ensureEndpoint();
 
@@ -314,9 +291,9 @@ export class LLMService {
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.2, // Lower for more consistent, factual questions
+            temperature: 0.3,
             maxOutputTokens: 8192,
-            topP: 0.9, // Slightly higher for better diversity
+            topP: 0.8,
             topK: 40,
           },
         }),
@@ -331,7 +308,7 @@ export class LLMService {
         }
 
         throw new Error(
-          `API request failed: ${response.status} - ${errorData.error?.message || response.statusText}`
+          `API failed: ${response.status} - ${errorData.error?.message || response.statusText}`
         );
       }
 
@@ -339,219 +316,132 @@ export class LLMService {
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
       if (!rawText) {
-        throw new Error('Empty response received from AI model.');
+        throw new Error('Empty response from the model.');
       }
 
-      console.log(`📥 Received ${rawText.length} characters from AI model`);
+      console.log(`📥 Received ${rawText.length} characters from AI`);
 
-      // Enhanced JSON extraction with multiple fallback strategies
-      return this._extractQuestionsFromResponse(rawText);
+      let questions = [];
+      try {
+        const extracted = extractJson(rawText);
+        questions = extracted?.questions || [];
+      } catch (error) {
+        console.warn('⚠️ Primary JSON extraction failed, trying fallbacks');
+        
+        try {
+          const jsonMatch = rawText.match(/\{[\s\S]*"questions"[\s\S]*\]/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            questions = parsed.questions || [];
+          }
+        } catch (e) {
+          try {
+            const questionsMatch = rawText.match(/"questions"\s*:\s*\[[\s\S]*\]/);
+            if (questionsMatch) {
+              const questionsJson = `{${questionsMatch[0]}}`;
+              const parsed = JSON.parse(questionsJson);
+              questions = parsed.questions || [];
+            }
+          } catch (e2) {
+            console.error('❌ All JSON extraction methods failed');
+            throw new Error('Failed to parse AI response as valid JSON');
+          }
+        }
+      }
+
+      if (!Array.isArray(questions) || questions.length === 0) {
+        throw new Error('AI model returned no valid questions');
+      }
+
+      console.log(`✅ Successfully extracted ${questions.length} questions`);
+      return questions;
 
     } finally {
       clearTimeout(timeout);
     }
   }
 
-  _extractQuestionsFromResponse(rawText) {
-    let questions = [];
-    
-    try {
-      // Primary extraction method
-      const extracted = extractJson(rawText);
-      questions = extracted?.questions || [];
-      
-      if (Array.isArray(questions) && questions.length > 0) {
-        console.log(`✅ Primary extraction successful: ${questions.length} questions`);
-        return questions;
-      }
-    } catch (error) {
-      console.warn('⚠️ Primary JSON extraction failed, trying enhanced fallbacks');
-    }
-
-    // Enhanced fallback methods
-    const fallbackMethods = [
-      // Method 1: Look for complete JSON object
-      () => {
-        const jsonMatch = rawText.match(/\{[\s\S]*?"questions"\s*:\s*\[[\s\S]*?\]\s*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          return parsed.questions || [];
-        }
-        return null;
-      },
-
-      // Method 2: Extract questions array directly
-      () => {
-        const questionsMatch = rawText.match(/"questions"\s*:\s*(\[[\s\S]*?\])/);
-        if (questionsMatch) {
-          const questionsJson = `{"questions": ${questionsMatch[1]}}`;
-          const parsed = JSON.parse(questionsJson);
-          return parsed.questions || [];
-        }
-        return null;
-      },
-
-      // Method 3: Look for question objects individually
-      () => {
-        const questionPattern = /\{\s*"question"\s*:\s*"[^"]+",\s*"options"\s*:\s*\[[^\]]+\],\s*"correctAnswer"\s*:\s*\d+[^}]*\}/g;
-        const matches = rawText.match(questionPattern);
-        if (matches) {
-          const questions = [];
-          for (const match of matches) {
-            try {
-              questions.push(JSON.parse(match));
-            } catch (e) {
-              console.warn('⚠️ Skipping malformed question object');
-            }
-          }
-          return questions.length > 0 ? questions : null;
-        }
-        return null;
-      }
-    ];
-
-    // Try each fallback method
-    for (let i = 0; i < fallbackMethods.length; i++) {
-      try {
-        const result = fallbackMethods[i]();
-        if (result && Array.isArray(result) && result.length > 0) {
-          console.log(`✅ Fallback method ${i + 1} successful: ${result.length} questions`);
-          return result;
-        }
-      } catch (error) {
-        console.warn(`⚠️ Fallback method ${i + 1} failed:`, error.message);
-      }
-    }
-
-    throw new Error('Failed to extract valid questions from AI response using all available methods');
-  }
-
-  _processHighQualityQuestions(questions, numQuestions) {
+  _processQuestions(questions, numQuestions) {
     if (!Array.isArray(questions) || questions.length === 0) {
-      throw new Error('No valid questions received from AI model.');
+      throw new Error('Model returned no questions.');
     }
     
-    const processedQuestions = [];
-    let processedCount = 0;
-    
-    for (let i = 0; i < questions.length && processedCount < numQuestions; i++) {
-      try {
-        const processed = this._processIndividualQuestion(questions[i], i);
-        if (processed) {
-          processedQuestions.push(processed);
-          processedCount++;
+    const validQuestions = questions
+      .slice(0, numQuestions)
+      .map((q, index) => {
+        try {
+          return this._processQuestion(q, index);
+        } catch (error) {
+          console.warn(`⚠️ Skipping question ${index + 1}: ${error.message}`);
+          return null;
         }
-      } catch (error) {
-        console.warn(`⚠️ Skipping question ${i + 1}: ${error.message}`);
-      }
+      })
+      .filter(q => q !== null);
+
+    if (validQuestions.length === 0) {
+      throw new Error('No valid questions could be processed');
     }
 
-    if (processedQuestions.length === 0) {
-      throw new Error('No valid questions could be processed from AI response');
-    }
-
-    if (processedQuestions.length < numQuestions * 0.7) {
-      console.warn(`⚠️ Only processed ${processedQuestions.length}/${numQuestions} requested questions`);
-    }
-
-    console.log(`🔧 Successfully processed ${processedQuestions.length} high-quality questions`);
-    return processedQuestions;
+    console.log(`🔧 Processed ${validQuestions.length}/${questions.length} questions`);
+    return validQuestions;
   }
 
-  _processIndividualQuestion(q, index) {
-    // Comprehensive validation
-    if (!q.question || typeof q.question !== 'string') {
-      throw new Error(`Question ${index + 1}: Missing or invalid question text`);
+  _processQuestion(q, index) {
+    if (!q.question || !Array.isArray(q.options) || q.options.length !== 4) {
+      throw new Error(`Missing required fields`);
     }
 
-    if (!Array.isArray(q.options) || q.options.length !== 4) {
-      throw new Error(`Question ${index + 1}: Must have exactly 4 options`);
-    }
-
-    // Enhanced quality checks
-    const questionText = q.question.trim();
+    const questionText = q.question.toString().trim();
     
-    // Check for prohibited references
-    const badReferencePatterns = [
-      /\b(the|this)\s+(passage|text|document|article|material|content)\b/gi,
-      /\baccording\s+to\s+(the|this|it)\b/gi,
-      /\bas\s+mentioned\s+(above|earlier|in\s+the)\b/gi,
-      /\bfrom\s+(the|this)\s+(text|passage|document)\b/gi
+    // Simple validation - reject obviously bad patterns
+    const badPatterns = [
+      /\b(the passage|the text|the document|the article)\b/gi,
+      /\baccording to (the|this)\b/gi,
+      /\bas mentioned (above|earlier)\b/gi,
+      /\bthe (author|researcher|senator|president|company)\b/gi
     ];
     
-    for (const pattern of badReferencePatterns) {
+    let hasBadPattern = false;
+    for (const pattern of badPatterns) {
       if (pattern.test(questionText)) {
-        console.warn(`Question ${index + 1}: Contains bad reference - skipping`);
-        return null; // Skip this question instead of throwing error
+        hasBadPattern = true;
+        console.warn(`Question ${index + 1} has bad pattern: ${pattern.source}`);
+        break;
       }
     }
-
-    // Check for generic placeholders
-    if (/\b[xyz]\s+(company|study|graph|chart|example)\b/gi.test(questionText)) {
-      console.warn(`Question ${index + 1}: Contains generic placeholder - skipping`);
+    
+    // Skip questions with bad patterns instead of throwing error
+    if (hasBadPattern) {
       return null;
     }
 
-    // Validate and clean options
     const cleanOptions = q.options
       .map(opt => (opt || '').toString().trim().replace(/\s+/g, ' '))
       .filter(opt => opt.length > 0);
     
     if (cleanOptions.length !== 4) {
-      throw new Error(`Question ${index + 1}: All 4 options must be valid`);
+      throw new Error(`Must have exactly 4 valid options`);
     }
 
-    // Check for duplicate options
     const uniqueOptions = [...new Set(cleanOptions.map(opt => opt.toLowerCase()))];
     if (uniqueOptions.length !== 4) {
-      throw new Error(`Question ${index + 1}: Options must be unique`);
+      throw new Error(`Options must be unique`);
     }
 
-    // Validate correct answer index
     const correctAnswer = parseInt(q.correctAnswer);
     if (isNaN(correctAnswer) || correctAnswer < 0 || correctAnswer >= 4) {
-      throw new Error(`Question ${index + 1}: Invalid correct answer index`);
+      throw new Error(`Invalid correct answer index`);
     }
 
-    // Create shuffled question with maintained correct answer tracking
     const correctOption = cleanOptions[correctAnswer];
     const shuffledOptions = this.shuffleArray([...cleanOptions]);
-    const newCorrectAnswer = shuffledOptions.indexOf(correctOption);
 
     return {
       question: questionText,
       options: shuffledOptions,
-      correctAnswer: newCorrectAnswer,
-      explanation: this._cleanExplanation(q.explanation || 'Explanation not provided'),
+      correctAnswer: shuffledOptions.indexOf(correctOption),
+      explanation: (q.explanation || 'No explanation provided').toString().trim(),
       language: this.language,
-      difficulty: q.cognitive_level || 'medium',
-      questionType: q.question_type || 'conceptual'
     };
-  }
-
-  _cleanExplanation(explanation) {
-    if (!explanation || typeof explanation !== 'string') {
-      return 'Explanation not available';
-    }
-    
-    let cleaned = explanation.toString().trim();
-    
-    // Remove bad references from explanations too
-    cleaned = cleaned
-      .replace(/\b(according\s+to|as\s+mentioned\s+in|from|in)\s+(the|this)\s+(passage|text|document|article|above|content)\b/gi, '')
-      .replace(/\b(the\s+above|aforementioned|as\s+stated)\b/gi, '')
-      .trim();
-    
-    // Ensure minimum explanation quality
-    if (cleaned.length < 20 || /^(explanation|no\s+explanation)\s*(not\s*)?(available|provided)$/gi.test(cleaned)) {
-      return 'Explanation not available';
-    }
-    
-    // Truncate if too long
-    if (cleaned.length > 300) {
-      cleaned = cleaned.substring(0, 297) + '...';
-    }
-    
-    return cleaned;
   }
 }
