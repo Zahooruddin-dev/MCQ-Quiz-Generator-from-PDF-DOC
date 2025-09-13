@@ -205,11 +205,6 @@ const ExplanationPaper = styled(Paper)(({ theme, type = 'info' }) => ({
 	fontSize: '0.9rem',
 	borderLeft: `5px solid`,
 	backgroundColor: theme.palette.grey[50],
-	...(type === 'context' && {
-		borderLeftColor: theme.palette.info.main,
-		backgroundColor: theme.palette.info.light + '1A',
-		color: theme.palette.info.dark,
-	}),
 	...(type === 'explanation' && {
 		borderLeftColor: theme.palette.success.main,
 		backgroundColor: theme.palette.success.light + '1A',
@@ -457,14 +452,7 @@ const ModernResultPage = ({ questions, userAnswers, onNewQuiz, onRetakeQuiz, fil
 											</OptionItem>
 										);
 									})}
-									{q.context && (
-										<ExplanationPaper type='context'>
-											<Typography variant='subtitle2' gutterBottom>
-												Context
-											</Typography>
-											<Typography variant='body2'>{q.context}</Typography>
-										</ExplanationPaper>
-									)}
+									
 									{q.explanation && (
 										<ExplanationPaper type='explanation'>
 											<Typography variant='subtitle2' gutterBottom>
