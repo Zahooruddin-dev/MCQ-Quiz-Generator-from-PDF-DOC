@@ -101,7 +101,7 @@ const ConfigPanel = ({
           </Box>
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              AI Generation Settings
+              MCQs Generation Settings
             </Typography>
             {/* Credit status */}
             <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
@@ -162,7 +162,7 @@ const ConfigPanel = ({
           }
           label={
             <Box>
-              <Typography component="span">Enable AI-powered question generation</Typography>
+              <Typography component="span">Enable AI-powered custom question generation</Typography>
               {!isPremium && !isAdmin && credits <= 0 && (
                 <Typography variant="caption" color="error" display="block">
                   No credits remaining - upgrade to Premium or wait for daily reset
