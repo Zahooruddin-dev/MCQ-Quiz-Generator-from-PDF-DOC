@@ -69,6 +69,7 @@ const ModernHeader = ({ onProfileClick, onApiConfigClick }) => {
           getUserInitials={getUserInitials}
           onProfileClick={handleProfileClick}
           onApiConfigClick={handleApiConfigClick}
+          
           onLogout={handleLogout}
         />
       </Toolbar>
