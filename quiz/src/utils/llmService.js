@@ -1,4 +1,4 @@
-// LLMService.js - Improved version with enhanced prompt for academic MCQs
+// LLMService.js - Adapted version with improvements from both versions
 import { REQUEST_TIMEOUT_MS } from './constants.js';
 import {
   detectLanguage,
@@ -12,7 +12,7 @@ import {
   getDashboardData,
   saveChatMessage,
   getGlobalApiKey,
-  getGlobalApiConfig,
+  getGlobalApiConfig, // fetch baseUrl & apiKey dynamically
 } from './firebaseService.js';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -29,7 +29,7 @@ export class LLMService {
     this.apiKey = sessionStorage.getItem('llm_apiKey') || null;
     this.language = 'en';
     this.controller = null;
-    console.log('✅ LLMService initialized');
+    console.log('✅ LLMService initialized (dynamic config loading enabled)');
   }
 
   static async preloadApiConfig() {
@@ -46,12 +46,13 @@ export class LLMService {
       this.apiKey = sessionStorage.getItem('llm_apiKey') || (await getGlobalApiKey());
       if (!this.apiKey) throw new Error('No global API key configured in Firestore.');
       sessionStorage.setItem('llm_apiKey', this.apiKey);
-      console.log('✅ API key loaded');
+      console.log('✅ Global API key loaded successfully');
     }
     return this.apiKey;
   }
 
   async ensureEndpoint() {
+    // Always fetch the latest config so updates in Firestore take effect immediately
     const config = await getGlobalApiConfig();
     if (!config?.baseUrl) throw new Error('No API endpoint configured in Firestore.');
 
@@ -59,7 +60,7 @@ export class LLMService {
     if (config.baseUrl !== this.baseUrl || config.baseUrl !== cached) {
       this.baseUrl = config.baseUrl;
       sessionStorage.setItem('llm_baseUrl', this.baseUrl);
-      console.log(`✅ Endpoint loaded: ${this.baseUrl}`);
+      console.log(`✅ Dynamic endpoint loaded: ${this.baseUrl}`);
     } else if (!this.baseUrl) {
       this.baseUrl = cached;
     }
@@ -87,8 +88,8 @@ export class LLMService {
     return saveChatMessage(message, isUserMessage);
   }
 
-  async readFileContent(file) {
-    return withRetry(async () => readFileContent(file));
+  async readFileContent(file, progressCallback) {
+    return withRetry(async () => readFileContent(file, progressCallback));
   }
 
   shuffleArray(array) {
@@ -99,6 +100,7 @@ export class LLMService {
     return validateQuestions(questions);
   }
 
+  // Improved cache key generation that handles Unicode safely
   static generateCacheKey(content, options) {
     try {
       const shortContent = content.slice(0, 100);
@@ -157,7 +159,7 @@ export class LLMService {
     await this.ensureApiKey();
     await this.ensureEndpoint();
 
-    console.log(`🚀 Starting quiz generation`);
+    console.log(`🚀 Starting quiz generation at: ${this.baseUrl}`);
 
     return withRetry(async () => {
       if (this.controller) this.controller.abort();
@@ -183,7 +185,7 @@ export class LLMService {
         const keyFacts = extractKeyFacts(sourceText);
         const contextAnalysis = analyzeContext(sourceText);
         
-        const prompt = this._buildBetterPrompt(text, keyFacts, contextAnalysis, numQuestions, difficulty, this.language);
+        const prompt = this._buildBetterPrompt(text, keyFacts, numQuestions, difficulty, this.language);
 
         console.log(`🔧 Making API request`);
         const questions = await this._makeApiRequest(prompt, this.controller.signal);
@@ -217,77 +219,62 @@ export class LLMService {
     });
   }
 
-  _buildBetterPrompt(text, keyFacts, contextAnalysis, numQuestions, difficulty, language) {
+  _buildBetterPrompt(text, keyFacts, numQuestions, difficulty, language) {
     const difficultyInstructions = {
-      easy: "Focus on basic recall of definitions, key terms, simple facts, and straightforward comprehension. Use simple language and avoid complex reasoning.",
-      medium: "Include questions on application of concepts, relationships between ideas, basic analysis, and interpretation of data or examples.",
-      hard: "Emphasize synthesis of multiple concepts, evaluation of arguments, advanced reasoning, critical thinking, and problem-solving that may require multi-step logic."
+      easy: "Focus on direct facts, definitions, and basic recall questions.",
+      medium: "Include application questions and simple analysis of relationships.",
+      hard: "Create questions requiring synthesis, evaluation, and complex reasoning."
     };
 
     const contextGuidance = keyFacts.length > 0 
-      ? `\nKey facts extracted from the content:\n${keyFacts.map((fact, i) => `${i+1}. ${fact}`).join('\n')}\n`
+      ? `\nKey facts from the content:\n${keyFacts.map((fact, i) => `${i+1}. ${fact}`).join('\n')}\n`
       : '';
 
-    const analysisGuidance = contextAnalysis 
-      ? `\nContext analysis of the content:\n- Type: ${contextAnalysis.type || 'General'}\n- Topics: ${contextAnalysis.topics?.join(', ') || 'N/A'}\n- Has math/equations: ${contextAnalysis.hasMath ? 'Yes' : 'No'}\n- Has graphs/diagrams: ${contextAnalysis.hasGraphs ? 'Yes (described in text)' : 'No'}\n- Complexity: ${contextAnalysis.complexity || 'Medium'}\n`
-      : '';
+    return `You are creating ${numQuestions} high-quality multiple choice questions based on the provided content.
 
-    return `You are an expert academic quiz generator specializing in creating high-quality, rigorous multiple-choice questions (MCQs) for educational purposes. Your questions must be suitable for academic assessments, such as exams in subjects like science, history, literature, mathematics, or social studies.
+CRITICAL REQUIREMENTS:
+- Each question MUST be completely self-contained with all necessary information
+- NEVER reference "the passage", "the text", "the document", or "according to the above"
+- Questions must test understanding of ACTUAL content provided, not generic scenarios
+- Use specific names, dates, numbers, and facts from the content
+- Avoid generic placeholders like "X company", "Y study", "the senator", "the author"
 
-CRITICAL REQUIREMENTS FOR ALL QUESTIONS:
-- Each question MUST be 100% self-contained: Include ALL necessary context, details, data, descriptions, or excerpts directly in the question text. Never assume the reader has access to external content.
-- NEVER use vague references like "the passage", "the text", "the document", "the article", "the graph above", "according to the study", "as mentioned", or any indirect pointers.
-- ALWAYS incorporate specific details from the content: Use exact names (e.g., people, places, organizations), dates, numbers, quotes, formulas, data points, or descriptions of graphs/diagrams/processes.
-- Make questions precise and academic: Avoid ambiguity; ensure options are plausible distractors based on common misconceptions or partial understandings.
-- Vary question types: Include recall, comprehension, application, analysis, and evaluation where appropriate for the difficulty.
-- Handle special content:
-  - For mathematics: Use plain text for equations (e.g., "Solve for x in the equation 2x + 3 = 7"). Include calculation-based questions if the content supports it. Ensure correct answer is derivable from provided info.
-  - For graphs/diagrams: If described in the content, rephrase the description inline (e.g., "In a graph showing temperature vs. time where temperature rises linearly from 20°C at t=0 to 100°C at t=10 minutes, what is the rate of change?").
-  - For passages/excerpts: Quote or paraphrase key sentences inline (e.g., "In the sentence 'The mitochondria is the powerhouse of the cell,' what organelle is described?").
-  - For academic subjects: Tailor to detected context (e.g., if scientific, focus on hypotheses, evidence; if historical, on causes/effects; if literary, on themes/motifs).
-- Distractors: Make them plausible by basing on misinterpretations, near-misses, or related but incorrect facts from the content.
-- Explanations: Provide detailed, educational explanations citing specific content details.
-- Diversity: Ensure questions cover different sections/topics; avoid repetition.
-- Language: Use formal, academic tone. Match the content's language (${language}).
+EXAMPLES OF WHAT TO AVOID:
+❌ "The senator described in the passage was known for what characteristic?"
+❌ "According to the research, what was the main finding?"
+❌ "The company's strategy involved which approach?"
 
-EXAMPLES TO AVOID (BAD - NOT SELF-CONTAINED OR TOO VAGUE):
-❌ "What does the graph in the passage show?"
-❌ "According to the equation provided, solve for x."
-❌ "The author argues that climate change is caused by what?"
-❌ "In the study, what was the main variable?"
-
-EXAMPLES OF GOOD ACADEMIC MCQS (SELF-CONTAINED, PRECISE):
-✅ "In the process of photosynthesis, where carbon dioxide and water are converted into glucose and oxygen using sunlight, as described by the equation 6CO2 + 6H2O → C6H12O6 + 6O2, what is the primary energy source?"
-   Options: ["Sunlight", "Glucose", "Carbon dioxide", "Oxygen"]
-✅ "Based on the data from a 2020 study where 45% of participants reported improved sleep after exercise, 30% saw no change, and 25% reported worse sleep, what percentage experienced no change?"
-   Options: ["30%", "45%", "25%", "70%"]
-✅ "In Shakespeare's Hamlet, when the character says 'To be or not to be, that is the question,' what philosophical dilemma is being contemplated?"
-   Options: ["Existence and suicide", "Love and betrayal", "Power and kingship", "Friendship and loyalty"]
-✅ "For the quadratic equation x² - 5x + 6 = 0, what are the roots?"
-   Options: ["2 and 3", "1 and 6", " -2 and -3", "5 and 1"]
+EXAMPLES OF GOOD QUESTIONS:
+✅ "Senator John McCain of Arizona, who served from 1987 to 2018, was primarily known for which characteristic?"
+✅ "The 2019 Harvard Medical School study found that what percentage of teenagers got less than 7 hours of sleep?"
+✅ "Netflix's streaming strategy in 2015 focused on which business approach?"
 
 DIFFICULTY LEVEL: ${difficulty}
 ${difficultyInstructions[difficulty] || difficultyInstructions.medium}
 
-ADDITIONAL GUIDANCE BASED ON CONTENT ANALYSIS:
-${analysisGuidance}
+CREATE QUESTIONS ABOUT:
+- Specific names, dates, numbers, and facts from the content
+- Actual concepts, processes, and relationships described
+- Cause-and-effect relationships mentioned
+- Definitions and explanations provided
+- Comparisons and contrasts made
+
 ${contextGuidance}
 
-Generate EXACTLY ${numQuestions} questions. Do not include any extra text outside the JSON.
-
-Required STRICT JSON format (no markdown, no code blocks, pure JSON):
+Required JSON format:
 {
   "questions": [
     {
-      "question": "Fully self-contained academic question text",
-      "options": ["Option A (correct or distractor)", "Option B", "Option C", "Option D"],
-      "correctAnswer": 0,  // Index of the correct option (0-3)
-      "explanation": "Detailed academic explanation with reference to specific content details"
+      "question": "Self-contained question with all necessary context included",
+      "options": ["Correct answer based on content", "Plausible wrong answer", "Another plausible wrong answer", "Third plausible wrong answer"],
+      "correctAnswer": 0,
+      "explanation": "Clear explanation of why this answer is correct",
+      "context": "Direct quote from content (max 150 chars)"
     }
   ]
 }
 
-CONTENT FOR QUESTIONS:
+CONTENT:
 ${text}`;
   }
 
@@ -398,10 +385,6 @@ ${text}`;
       throw new Error('No valid questions could be processed');
     }
 
-    if (validQuestions.length < numQuestions) {
-      console.warn(`⚠️ Only ${validQuestions.length}/${numQuestions} valid questions processed`);
-    }
-
     console.log(`🔧 Processed ${validQuestions.length}/${questions.length} questions`);
     return validQuestions;
   }
@@ -413,17 +396,26 @@ ${text}`;
 
     const questionText = q.question.toString().trim();
     
-    // Enhanced validation for academic quality - reject bad patterns more strictly
+    // Simple validation - reject obviously bad patterns but don't be too strict
     const badPatterns = [
-      /\b(the passage|the text|the document|the article|the graph|the diagram|the equation|the study|the research|the author|the content|as mentioned|according to|in the above|from the provided)\b/gi,
-      /\b(X|Y|the company|the senator|the president|the variable|the process)\b/gi  // Generic placeholders
+      /\b(the passage|the text|the document|the article)\b/gi,
+      /\baccording to (the|this)\b/gi,
+      /\bas mentioned (above|earlier)\b/gi,
+      /\bthe (author|researcher|senator|president|company)\b/gi
     ];
     
+    let hasBadPattern = false;
     for (const pattern of badPatterns) {
       if (pattern.test(questionText)) {
+        hasBadPattern = true;
         console.warn(`Question ${index + 1} has bad pattern: ${pattern.source}`);
-        return null;  // Skip instead of throw to allow partial success
+        break;
       }
+    }
+    
+    // Skip questions with bad patterns instead of throwing error
+    if (hasBadPattern) {
+      return null;
     }
 
     const cleanOptions = q.options
@@ -452,7 +444,33 @@ ${text}`;
       options: shuffledOptions,
       correctAnswer: shuffledOptions.indexOf(correctOption),
       explanation: (q.explanation || 'No explanation provided').toString().trim(),
+      context: this._cleanContext(q.context),
       language: this.language,
     };
+  }
+
+  _cleanContext(context) {
+    if (!context) return 'Context not available';
+    
+    let cleaned = context.toString().trim();
+    
+    // Remove bad references to source document
+    cleaned = cleaned
+      .replace(/(according to|in|from|as mentioned in) (the|this) (passage|text|document|article|above|following)/gi, '')
+      .replace(/\b(the above|aforementioned|as stated|as shown|as described)\b/gi, '')
+      .replace(/^(in|from|according to)\s+/gi, '')
+      .trim();
+    
+    // If context is too short or generic after cleaning, return fallback
+    if (cleaned.length < 10 || /^(context|information|data)\s*(not\s*)?(available|found)$/gi.test(cleaned)) {
+      return 'Context not available';
+    }
+    
+    // Truncate if too long
+    if (cleaned.length > 150) {
+      cleaned = cleaned.substring(0, 147) + '...';
+    }
+    
+    return cleaned;
   }
 }
