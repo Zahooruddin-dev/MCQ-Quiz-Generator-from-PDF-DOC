@@ -294,20 +294,7 @@ const FileDropZone = ({
 								justifyContent='center'
 								flexWrap='wrap'
 							>
-								{safeDetails.textExtracted > 0 && (
-									<Typography
-										variant='caption'
-										sx={{
-											bgcolor: 'rgba(255,255,255,0.1)',
-											px: 1,
-											py: 0.5,
-											borderRadius: 1,
-											color: 'white',
-										}}
-									>
-										📄 {safeDetails.textExtracted} chars extracted
-									</Typography>
-								)}
+						
 								{typeof safeDetails.ocrConfidence === 'number' && (
 									<Typography
 										variant='caption'
