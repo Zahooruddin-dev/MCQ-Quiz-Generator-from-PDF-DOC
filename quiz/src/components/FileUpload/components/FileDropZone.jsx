@@ -404,25 +404,6 @@ const FileDropZone = ({
 						</Typography>
 					)}
 
-					{/* NEW: File Read Status Indicator */}
-					{fileReadStatusInfo && useAI && (
-						<Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
-							<Chip
-								icon={<fileReadStatusInfo.icon size={16} />}
-								label={fileReadStatusInfo.text}
-								sx={{
-									backgroundColor: fileReadStatusInfo.bgColor,
-									color: fileReadStatusInfo.color,
-									border: `1px solid ${fileReadStatusInfo.color}`,
-									fontWeight: 500,
-									'& .MuiChip-icon': {
-										color: fileReadStatusInfo.color,
-									},
-								}}
-							/>
-						</Box>
-					)}
-
 					<Stack
 						direction='row'
 						spacing={2}
@@ -437,10 +418,17 @@ const FileDropZone = ({
 									e.stopPropagation();
 									onGenerateQuiz();
 								}}
-								disabled={effectiveLoading || fileReadStatus === 'reading' || fileReadStatus === 'error' || !extractedText}
+								disabled={
+									effectiveLoading ||
+									fileReadStatus === 'reading' ||
+									fileReadStatus === 'error' ||
+									!extractedText
+								}
 								sx={{ borderRadius: 2 }}
 							>
-								{fileReadStatus === 'reading' ? 'Reading File...' : 'Generate Quiz'}
+								{fileReadStatus === 'reading'
+									? 'Reading File...'
+									: 'Generate Quiz'}
 							</Button>
 						)}
 						<Button
