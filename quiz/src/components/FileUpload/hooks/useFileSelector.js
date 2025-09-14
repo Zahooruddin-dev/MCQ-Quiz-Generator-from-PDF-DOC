@@ -198,7 +198,6 @@ export const useFileSelector = ({
     ]
   );
 
-  console.log("🔧 useFileSelector hook initialized");
   
   return { handleFileSelect };
 };

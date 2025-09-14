@@ -13,7 +13,7 @@ const Features = () => {
       useFlexGap
     >
       <FeatureChip icon={<Brain size={16} />} label="AI-Powered Generation" />
-      <FeatureChip icon={<Zap size={16} />} label="Lightning Fast" />
+      <FeatureChip icon={<Zap size={16} />} label="Fast & Efficient" />
       <FeatureChip icon={<FileText size={16} />} label="Multiple Formats" />
     </Stack>
   );

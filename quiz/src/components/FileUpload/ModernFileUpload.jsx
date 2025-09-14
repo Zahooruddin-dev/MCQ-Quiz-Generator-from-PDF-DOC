@@ -362,7 +362,6 @@ const ModernFileUpload = ({
 					handleKeyDown={handleKeyDown}
 					baseUrl={baseUrl}
 					onFileUpload={onFileUpload}
-					// NEW PROPS: Pass file read status for UI feedback
 					fileReadStatus={fileReadStatus}
 					extractedText={extractedText}
 				/>
