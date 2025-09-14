@@ -81,17 +81,18 @@ export class LLMService {
     return this.userCreditService.checkUserCredits();
   }
 
-  // --- MAIN ENTRY: Progressive difficulty fallback system
+// --- MAIN ENTRY: Enhanced generation with difficulty and quality options
   async generateQuizQuestions(fileOrText, options = {}) {
     const {
       numQuestions = 10,
-      difficulty = 'high',
+      difficulty = 'medium', // Changed default to medium
+      quality = 'normal',     // New quality option
       questionType = 'mixed',
       cache = true,
     } = options;
 
     const requested = Math.max(1, Math.min(100, parseInt(numQuestions) || 10));
-    console.log(`🎯 Requested ${requested} questions (starting with HIGH quality, fallback enabled)`);
+    console.log(`🎯 Requested ${requested} questions (Difficulty: ${difficulty.toUpperCase()}, Quality: ${quality.toUpperCase()})`);
 
     await this.checkUserCredits();
     await this.ensureApiKey();
@@ -102,7 +103,7 @@ export class LLMService {
       throw new Error('Content empty or too short to create questions.');
     }
 
-    const cacheKey = CacheService.generateCacheKey(sourceText, { requested, difficulty, questionType });
+    const cacheKey = CacheService.generateCacheKey(sourceText, { requested, difficulty, quality, questionType });
     if (cache && CacheService.get(cacheKey)) {
       const cached = CacheService.get(cacheKey);
       if (Array.isArray(cached) && cached.length === requested) {
@@ -116,37 +117,72 @@ export class LLMService {
     const keyFacts = extractKeyFacts(sourceText);
 
     let aggregated = [];
-    let totalAttempts = 0;
+    
+    // Map UI difficulty to internal difficulty levels
+    const difficultyMapping = {
+      'easy': 'easy',
+      'medium': 'medium', // Changed from 'normal' to 'medium'
+      'hard': 'high'      // Map 'hard' to internal 'high'
+    };
+    const internalDifficulty = difficultyMapping[difficulty] || 'medium';
 
-    console.log('🚀 TIER 1: Attempting HIGH quality MCQ generation');
-    aggregated = await this._attemptGeneration(
-      text, keyFacts, requested, 'high',
-      LLMService.HIGH_QUALITY_ATTEMPTS, aggregated, totalAttempts
-    );
-    totalAttempts += LLMService.HIGH_QUALITY_ATTEMPTS;
+    // Configure generation strategy based on quality setting
+    const qualityConfig = this._getQualityConfig(quality);
+    console.log(`🔧 Using quality config: ${quality} (${qualityConfig.attempts} attempts per tier)`);
 
-    if (aggregated.length < requested) {
-      const missing = requested - aggregated.length;
-      console.log(`⚡ TIER 2: HIGH quality insufficient (${aggregated.length}/${requested}). Trying MEDIUM quality...`);
+    // Generate based on selected difficulty and quality
+    if (quality === 'quick') {
+      // Quick generation: single attempt at selected difficulty only
       aggregated = await this._attemptGeneration(
-        text, keyFacts, requested, 'medium',
-        LLMService.MEDIUM_QUALITY_ATTEMPTS, aggregated, totalAttempts
+        text, keyFacts, requested, internalDifficulty,
+        qualityConfig.attempts, aggregated, 0
       );
-      totalAttempts += LLMService.MEDIUM_QUALITY_ATTEMPTS;
+    } else if (quality === 'normal') {
+      // Normal generation: selected difficulty + one fallback tier
+      aggregated = await this._attemptGeneration(
+        text, keyFacts, requested, internalDifficulty,
+        qualityConfig.attempts, aggregated, 0
+      );
+      
+      if (aggregated.length < requested) {
+        const fallbackDifficulty = this._getFallbackDifficulty(internalDifficulty);
+        console.log(`⚡ Primary difficulty insufficient (${aggregated.length}/${requested}). Trying ${fallbackDifficulty.toUpperCase()}...`);
+        aggregated = await this._attemptGeneration(
+          text, keyFacts, requested, fallbackDifficulty,
+          qualityConfig.attempts, aggregated, qualityConfig.attempts
+        );
+      }
+    } else if (quality === 'premium') {
+      // Premium generation: full progressive difficulty fallback
+      console.log('🚀 TIER 1: Attempting PRIMARY difficulty');
+      aggregated = await this._attemptGeneration(
+        text, keyFacts, requested, internalDifficulty,
+        qualityConfig.highQualityAttempts, aggregated, 0
+      );
+
+      if (aggregated.length < requested) {
+        const fallback1 = this._getFallbackDifficulty(internalDifficulty);
+        console.log(`⚡ TIER 2: PRIMARY insufficient (${aggregated.length}/${requested}). Trying ${fallback1.toUpperCase()}...`);
+        aggregated = await this._attemptGeneration(
+          text, keyFacts, requested, fallback1,
+          qualityConfig.mediumQualityAttempts, aggregated, qualityConfig.highQualityAttempts
+        );
+      }
+
+      if (aggregated.length < requested) {
+        const fallback2 = this._getSecondFallbackDifficulty(internalDifficulty);
+        console.log(`💡 TIER 3: SECONDARY insufficient (${aggregated.length}/${requested}). Trying ${fallback2.toUpperCase()}...`);
+        aggregated = await this._attemptGeneration(
+          text, keyFacts, requested, fallback2,
+          qualityConfig.easyQualityAttempts, aggregated, 
+          qualityConfig.highQualityAttempts + qualityConfig.mediumQualityAttempts
+        );
+      }
     }
 
+    // Synthesis fallback if still insufficient
     if (aggregated.length < requested) {
-      const missing = requested - aggregated.length;
-      console.log(`💡 TIER 3: MEDIUM quality insufficient (${aggregated.length}/${requested}). Trying EASY quality...`);
-      aggregated = await this._attemptGeneration(
-        text, keyFacts, requested, 'easy',
-        LLMService.EASY_QUALITY_ATTEMPTS, aggregated, totalAttempts
-      );
-      totalAttempts += LLMService.EASY_QUALITY_ATTEMPTS;
-    }
-
-    if (aggregated.length < requested) {
-      console.warn(`⚠️ All difficulty tiers exhausted (${aggregated.length}/${requested}). Synthesizing remaining questions...`);
+      console.warn(`⚠️ Generation insufficient (${aggregated.length}/${requested}). Synthesizing remaining questions...`);
       const synthesized = this._synthesizeQuestions(aggregated, keyFacts, requested - aggregated.length);
       aggregated = this._mergeUniqueQuestions(aggregated, synthesized, requested);
       console.log(`After synthesis: ${aggregated.length}/${requested}`);
@@ -164,14 +200,59 @@ export class LLMService {
       ...q,
       id: q.id || `q_${idx + 1}`,
       language: q.language || this.language,
+      difficulty: difficulty, // Add user's selected difficulty to each question
+      quality: quality,       // Add quality level to each question
     }));
 
     if (cache) CacheService.set(cacheKey, aggregated);
 
-    console.log(`✅ SUCCESS: Returning EXACT ${aggregated.length} questions (requested: ${requested})`);
+    console.log(`✅ SUCCESS: Returning EXACT ${aggregated.length} questions (${difficulty}/${quality})`);
     return aggregated;
   }
 
+  // --- Quality configuration helper
+  _getQualityConfig(quality) {
+    const configs = {
+      quick: {
+        attempts: 2,
+        highQualityAttempts: 2,
+        mediumQualityAttempts: 0,
+        easyQualityAttempts: 0,
+      },
+      normal: {
+        attempts: 3,
+        highQualityAttempts: 3,
+        mediumQualityAttempts: 2,
+        easyQualityAttempts: 0,
+      },
+      premium: {
+        attempts: 4,
+        highQualityAttempts: 4,
+        mediumQualityAttempts: 3,
+        easyQualityAttempts: 3,
+      }
+    };
+    return configs[quality] || configs.normal;
+  }
+
+  // --- Difficulty fallback helpers
+  _getFallbackDifficulty(primary) {
+    const fallbacks = {
+      'high': 'medium',
+      'medium': 'easy',
+      'easy': 'medium'
+    };
+    return fallbacks[primary] || 'medium';
+  }
+
+  _getSecondFallbackDifficulty(primary) {
+    const fallbacks = {
+      'high': 'easy',
+      'medium': 'high',
+      'easy': 'high'
+    };
+    return fallbacks[primary] || 'easy';
+  }
   // --- Helper: Attempt generation at specific difficulty level
   async _attemptGeneration(text, keyFacts, requested, difficulty, maxAttempts, existingQuestions, startAttemptNum) {
     let aggregated = [...existingQuestions];

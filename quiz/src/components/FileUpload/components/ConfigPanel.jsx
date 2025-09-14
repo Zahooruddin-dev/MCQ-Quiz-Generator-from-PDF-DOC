@@ -11,8 +11,14 @@ import {
   Button,
   Collapse,
   Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Grid,
+  Paper,
 } from "@mui/material";
-import { Settings, Coins, Crown } from "lucide-react";
+import { Settings, Coins, Crown, Zap, Clock, Target } from "lucide-react";
 import { useAuth } from '../../../context/AuthContext';
 
 const ConfigPanel = ({
@@ -25,10 +31,12 @@ const ConfigPanel = ({
 }) => {
   // Get credit information
   const { credits, isPremium, isAdmin } = useAuth();
+  
   // Ensure all values are defined to prevent controlled/uncontrolled issues
   const defaultOptions = {
     numQuestions: 10,
     difficulty: "medium",
+    quality: "normal",
     questionType: "mixed",
     useAI: false,
     ...initialOptions // Allow overrides
@@ -36,6 +44,53 @@ const ConfigPanel = ({
 
   const [useAI, setUseAI] = useState(hasAI || false);
   const [aiOptions, setAiOptions] = useState(defaultOptions);
+
+  // Difficulty options with descriptions
+  const difficultyOptions = [
+    { 
+      value: 'easy', 
+      label: 'Easy', 
+      description: 'Basic recall and simple comprehension questions',
+      icon: <Target size={16} color="#10B981" />
+    },
+    { 
+      value: 'medium', 
+      label: 'Normal', 
+      description: 'Balanced mix of comprehension and application questions',
+      icon: <Target size={16} color="#F59E0B" />
+    },
+    { 
+      value: 'hard', 
+      label: 'Hard', 
+      description: 'Advanced analysis and critical thinking questions',
+      icon: <Target size={16} color="#EF4444" />
+    }
+  ];
+
+  // Quality options with descriptions
+  const qualityOptions = [
+    { 
+      value: 'quick', 
+      label: 'Quick', 
+      description: 'Fast generation with basic quality checks',
+      icon: <Zap size={16} color="#8B5CF6" />,
+      estimatedTime: '~30s'
+    },
+    { 
+      value: 'normal', 
+      label: 'Normal', 
+      description: 'Balanced quality and speed with good validation',
+      icon: <Clock size={16} color="#3B82F6" />,
+      estimatedTime: '~1-2min'
+    },
+    { 
+      value: 'premium', 
+      label: 'Premium', 
+      description: 'Highest quality with multiple validation passes',
+      icon: <Crown size={16} color="#F59E0B" />,
+      estimatedTime: '~2-4min'
+    }
+  ];
 
   // Toggle AI
   const handleToggleAI = useCallback(
@@ -70,6 +125,29 @@ const ConfigPanel = ({
     [aiOptions, onOptionsChange]
   );
 
+  // Difficulty change handler
+  const handleDifficultyChange = useCallback(
+    (e) => {
+      const newOptions = { ...aiOptions, difficulty: e.target.value };
+      setAiOptions(newOptions);
+      onOptionsChange?.(newOptions);
+    },
+    [aiOptions, onOptionsChange]
+  );
+
+  // Quality change handler
+  const handleQualityChange = useCallback(
+    (e) => {
+      const newOptions = { ...aiOptions, quality: e.target.value };
+      setAiOptions(newOptions);
+      onOptionsChange?.(newOptions);
+    },
+    [aiOptions, onOptionsChange]
+  );
+
+  const selectedDifficulty = difficultyOptions.find(d => d.value === aiOptions.difficulty);
+  const selectedQuality = qualityOptions.find(q => q.value === aiOptions.quality);
+
   return (
     <Box
       sx={{
@@ -101,7 +179,7 @@ const ConfigPanel = ({
           </Box>
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              MCQs Generation Settings
+              AI Quiz Generation Settings
             </Typography>
             {/* Credit status */}
             <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
@@ -187,6 +265,112 @@ const ConfigPanel = ({
               helperText="Generate between 5-50 questions"
               sx={{ flex: 1 }}
             />
+
+            {/* Difficulty and Quality Selection */}
+            <Grid container spacing={2}>
+              {/* Difficulty Selection */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth disabled={loading}>
+                  <InputLabel>Difficulty Level</InputLabel>
+                  <Select
+                    value={aiOptions.difficulty}
+                    label="Difficulty Level"
+                    onChange={handleDifficultyChange}
+                  >
+                    {difficultyOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {option.icon}
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {option.label}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {option.description}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Quality Selection */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth disabled={loading}>
+                  <InputLabel>Generation Quality</InputLabel>
+                  <Select
+                    value={aiOptions.quality}
+                    label="Generation Quality"
+                    onChange={handleQualityChange}
+                  >
+                    {qualityOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {option.icon}
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {option.label}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {option.description}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+
+            {/* Current Selection Summary */}
+            <Paper 
+              sx={{ 
+                p: 2, 
+                backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                borderRadius: 2 
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#4F46E5' }}>
+                Current Configuration
+              </Typography>
+              <Grid container spacing={1}>
+                <Grid item xs={6}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {selectedDifficulty?.icon}
+                    <Typography variant="body2">
+                      <strong>Difficulty:</strong> {selectedDifficulty?.label}
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={6}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {selectedQuality?.icon}
+                    <Typography variant="body2">
+                      <strong>Quality:</strong> {selectedQuality?.label}
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="caption" color="text.secondary">
+                    Estimated generation time: {selectedQuality?.estimatedTime || '~1-2min'}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Paper>
+
+            {/* Premium Quality Notice */}
+            {aiOptions.quality === 'premium' && !isPremium && !isAdmin && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  <strong>Premium Quality selected:</strong> This will use advanced validation and multiple quality passes, 
+                  providing the highest quality questions but taking longer to generate.
+                </Typography>
+              </Alert>
+            )}
 
             {/* API Key Warning */}
             {!apiKey && (
