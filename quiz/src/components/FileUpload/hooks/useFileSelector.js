@@ -1,73 +1,116 @@
-import { useCallback } from "react";
-import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from "../utils";
+// hooks/useFileSelector.js - Modified to auto-read files on upload
+import { useCallback } from 'react';
+import { MAX_FILE_SIZE, SUPPORTED } from '../utils';
+import { LLMService } from '../../../utils/llmService';
 
-/**
- * useFileSelector
- * Encapsulates file validation + selection logic
- *
- * @param {Object} params
- * @param {Function} params.setError
- * @param {Function} params.setFileName
- * @param {Function} params.setFileSize
- * @param {Function} params.setFileType
- * @param {Function} params.setSelectedFile
- * @param {Function} params.clearSelectedFile
- * @param {Function} params.processFile
- * @param {boolean} params.useAI
- *
- * @returns {Object} { handleFileSelect }
- */
 export const useFileSelector = ({
   setError,
   setFileName,
   setFileSize,
   setFileType,
   setSelectedFile,
+  setExtractedText, // NEW: Store extracted text
+  setFileReadStatus, // NEW: Track file read status
   clearSelectedFile,
   processFile,
   useAI,
+  startLoading,
+  stopLoading,
+  updateLoadingStage,
 }) => {
   const handleFileSelect = useCallback(
     async (file) => {
+      if (!file) return;
+      
       setError(null);
-
+      
+      // Validate file first
+      if (file.size > MAX_FILE_SIZE) {
+        setError(`File size exceeds ${Math.round(MAX_FILE_SIZE / (1024 * 1024))}MB limit.`);
+        return;
+      }
+      
+      const extension = file.name.toLowerCase().split('.').pop();
+      if (!SUPPORTED.includes(`.${extension}`)) {
+        setError(`Unsupported file type. Please use: ${SUPPORTED.join(', ')}`);
+        return;
+      }
+      
+      // Set file info immediately
+      setFileName(file.name);
+      setFileSize(file.size);
+      setFileType(file.type);
+      setSelectedFile(file);
+      setFileReadStatus('reading'); // NEW: Set status to reading
+      
+      // If not using AI, just store the file without reading
+      if (!useAI) {
+        setFileReadStatus('ready'); // NEW: Set status to ready
+        return;
+      }
+      
+      // START READING FILE IMMEDIATELY (the key change!)
       try {
-        if (!file) return;
-
-        setFileName(file.name || "uploaded-file");
-        setFileSize(file.size || null);
-        setFileType(file.type || "");
-        setSelectedFile(file);
-
-        if (file.size && file.size > MAX_FILE_SIZE) {
-          setError(
-            `File is too large (${formatBytes(
-              file.size
-            )}). Maximum allowed size is ${formatBytes(MAX_FILE_SIZE)}.`
-          );
-          clearSelectedFile();
-          return;
+        startLoading('reading', `Reading ${file.name}...`);
+        
+        const llmService = new LLMService();
+        
+        // Read file content with progress tracking
+        const extractedText = await llmService.readFileContent(file, (progressInfo) => {
+          if (progressInfo.stage === 'ocr') {
+            updateLoadingStage(
+              'ocr',
+              progressInfo.message || 'Using OCR to extract text from image...',
+              progressInfo.progress,
+              { ocrConfidence: progressInfo.confidence }
+            );
+          } else if (progressInfo.stage === 'pdf') {
+            updateLoadingStage(
+              'processing',
+              progressInfo.message || 'Processing PDF document...',
+              progressInfo.progress
+            );
+          } else {
+            updateLoadingStage(
+              'reading',
+              progressInfo.message || 'Reading document...',
+              progressInfo.progress
+            );
+          }
+        });
+        
+        // Store the extracted text
+        setExtractedText(extractedText);
+        setFileReadStatus('ready'); // NEW: Mark as ready for AI processing
+        
+        updateLoadingStage(
+          'complete',
+          `File read successfully! ${extractedText.length} characters extracted.`,
+          100,
+          { textExtracted: extractedText.length }
+        );
+        
+        // Stop loading after a brief delay to show completion
+        setTimeout(() => {
+          stopLoading();
+        }, 1000);
+        
+      } catch (error) {
+        console.error('Error reading file:', error);
+        let userMessage = error?.message || 'Failed to read file. Please try again.';
+        
+        // Enhanced error messages
+        if (userMessage.includes('OCR')) {
+          userMessage += ' Try using a higher quality image or a different file format.';
+        } else if (userMessage.includes('PDF')) {
+          userMessage += ' The PDF may be password-protected or corrupted.';
+        } else if (userMessage.includes('DOCX')) {
+          userMessage += ' The Word document may be corrupted.';
         }
-
-        const mime = (file.type || "").toLowerCase();
-        const isSupported =
-          SUPPORTED.some((s) => mime.includes(s)) ||
-          /\.(pdf|docx?|txt|html)$/i.test(file.name || "");
-
-        if (!isSupported) {
-          setError(
-            "Unsupported file type. Please upload PDF, DOCX, TXT, or HTML files."
-          );
-          clearSelectedFile();
-          return;
-        }
-
-        if (!useAI) {
-          await processFile(file, false);
-        }
-      } catch (err) {
-        console.error("Error selecting file:", err);
-        setError(err?.message || "Failed to select file. Please try again.");
+        
+        setError(userMessage);
+        setFileReadStatus('error'); // NEW: Mark as error
+        stopLoading();
       }
     },
     [
@@ -76,11 +119,14 @@ export const useFileSelector = ({
       setFileSize,
       setFileType,
       setSelectedFile,
-      clearSelectedFile,
-      processFile,
+      setExtractedText,
+      setFileReadStatus,
       useAI,
+      startLoading,
+      stopLoading,
+      updateLoadingStage,
     ]
   );
-
+  
   return { handleFileSelect };
 };

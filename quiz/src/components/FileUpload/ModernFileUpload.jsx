@@ -1,14 +1,13 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react'; // Import useEffect
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Stack } from '@mui/material';
 import { LLMService } from '../../utils/llmService';
-import { useAuth } from '../../context/AuthContext'; // Import useAuth for credits
+import { useAuth } from '../../context/AuthContext';
 import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from './utils';
 import Header from './components/Header';
 import Features from './components/Features';
 import { UploadContainer, MainCard } from './ModernFileUpload.styles';
 import UploadMainCard from './components/MainCard';
 import { useFileSelector } from './hooks/useFileSelector';
-import { useFileProcessor } from './hooks/useFileProcessor';
 
 const ModernFileUpload = ({
 	onFileUpload,
@@ -34,6 +33,11 @@ const ModernFileUpload = ({
 	const [isLoading, setIsLoading] = useState(false);
 	const [uploadProgress, setUploadProgress] = useState(0);
 	const [selectedFile, setSelectedFile] = useState(null);
+	
+	// NEW STATE: Store extracted text and file read status
+	const [extractedText, setExtractedText] = useState('');
+	const [fileReadStatus, setFileReadStatus] = useState('none'); // 'none', 'reading', 'ready', 'error'
+	
 	const [loadingStage, setLoadingStage] = useState('');
 	const [stageMessage, setStageMessage] = useState('');
 	const [processingDetails, setProcessingDetails] = useState({
@@ -49,8 +53,7 @@ const ModernFileUpload = ({
 	// ----- Call preloadApiConfig on component mount -----
 	useEffect(() => {
 		LLMService.preloadApiConfig().catch(console.error);
-	}, []); // Empty dependency array ensures it runs only once on mount
-	// ---------------------------------------------------
+	}, []);
 
 	// Stage-based loading helpers
 	const startLoading = useCallback((stage = 'reading', message = 'Reading file...') => {
@@ -82,6 +85,8 @@ const ModernFileUpload = ({
 		setFileSize(null);
 		setFileType('');
 		setSelectedFile(null);
+		setExtractedText(''); // NEW: Clear extracted text
+		setFileReadStatus('none'); // NEW: Reset status
 		setError(null);
 		if (fileInputRef.current) {
 			fileInputRef.current.value = '';
@@ -96,20 +101,14 @@ const ModernFileUpload = ({
 		[onReconfigure]
 	);
 
-	const processFile = useCallback(
-		async (file) => {
+	// MODIFIED: Now only handles AI processing, not file reading
+	const processFileForAI = useCallback(
+		async (file, preExtractedText) => {
 			if (busyRef.current) return;
 			setError(null);
 
 			try {
-				if (!file) return;
-
-				if (!useAI) {
-					onFileUpload(file, false, null);
-					return;
-				}
-
-				// Check credit availability first (before API key check)
+				// Check credit availability first
 				if (!isPremium && !isAdmin && credits <= 0) {
 					setError(
 						'You have no credits remaining. Please upgrade to Premium or wait 24 hours for daily credit reset.'
@@ -125,91 +124,45 @@ const ModernFileUpload = ({
 					return;
 				}
 
-				// Stage 1: Start file reading
-				startLoading('reading', `Reading ${file.name}...`);
+				// Start AI processing - file already read!
+				startLoading('analyzing', 'Analyzing content...');
 
 				try {
 					const llmService = new LLMService();
 
-					// Stage 2: File processing with enhanced feedback
-					updateLoadingStage('processing', 'Extracting text from document...', 20);
-
-					// Read file content with progress tracking
-					let extractedText;
-					try {
-						extractedText = await llmService.readFileContent(file, (progressInfo) => {
-							if (progressInfo.stage === 'ocr') {
-								updateLoadingStage(
-									'ocr',
-									progressInfo.message || 'Using OCR to extract text from image...',
-									20 + progressInfo.progress * 0.4,
-									{ ocrConfidence: progressInfo.confidence }
-								);
-							} else {
-								updateLoadingStage(
-									'processing',
-									progressInfo.message || 'Processing document...',
-									20 + progressInfo.progress * 0.4
-								);
-							}
-						});
-					} catch (fileError) {
-						// Enhanced error messages based on error type
-						let userFriendlyMessage = 'Failed to process the file.';
-
-						if (fileError.message.includes('OCR')) {
-							userFriendlyMessage =
-								'Could not extract text from this image. Please ensure the image is clear and contains readable text.';
-						} else if (fileError.message.includes('PDF')) {
-							userFriendlyMessage =
-								'Could not read this PDF file. It may be password-protected or corrupted.';
-						} else if (fileError.message.includes('DOCX')) {
-							userFriendlyMessage =
-								'Could not read this Word document. The file may be corrupted.';
-						} else if (fileError.message.includes('size')) {
-							userFriendlyMessage = 'File is too large. Please use a smaller file.';
-						} else if (fileError.message.includes('format')) {
-							userFriendlyMessage =
-								'Unsupported file format. Please use PDF, DOCX, TXT, HTML, or image files.';
-						}
-
-						throw new Error(userFriendlyMessage);
-					}
-
-					// Stage 3: Analyzing
-					updateLoadingStage('analyzing', 'Analyzing content...', 60, {
-						textExtracted: extractedText?.length || 0,
+					// Use the pre-extracted text instead of reading again
+					updateLoadingStage('analyzing', 'Analyzing content...', 30, {
+						textExtracted: preExtractedText?.length || 0,
 					});
 
-					// Stage 4: Deduct credit before AI generation
-					updateLoadingStage('validating', 'Checking credits...', 65);
+					// Deduct credit before AI generation
+					updateLoadingStage('validating', 'Checking credits...', 40);
 					
-					// Deduct credit (this also checks if user has credits available)
 					const canUseCredit = await useCredit();
 					if (!canUseCredit) {
 						throw new Error('Insufficient credits. You need at least 1 credit to generate a quiz.');
 					}
 
-					let creditDeducted = true; // Track if we deducted a credit
+					let creditDeducted = true;
 
 					try {
-						// Stage 5: AI question generation
-						updateLoadingStage('generating', 'AI is generating quiz questions...', 70);
+						// AI question generation
+						updateLoadingStage('generating', 'AI is generating quiz questions...', 50);
 
 						const questions = await llmService.generateQuizQuestions(
-							extractedText,
+							preExtractedText,
 							aiOptions
 						);
 
-						// Stage 6: Finalizing
+						// Finalizing
 						updateLoadingStage(
 							'finalizing',
 							`Generated ${questions.length} questions successfully! 1 credit used.`,
-							95,
+							90,
 							{ questionsGenerated: questions.length }
 						);
 
-						// Stage 7: Complete
+						// Complete
 						setTimeout(() => {
 							updateLoadingStage('complete', 'Quiz ready!', 100);
 							setTimeout(() => {
@@ -227,13 +180,13 @@ const ModernFileUpload = ({
 								console.error('❌ Failed to refund credit:', refundError);
 							}
 						}
-						throw apiError; // Re-throw the original API error
+						throw apiError;
 					}
 				} catch (err) {
 					throw err;
 				}
 			} catch (err) {
-				console.error('Error processing file:', err);
+				console.error('Error processing file for AI:', err);
 
 				// Enhanced error handling
 				let userMessage = err?.message || 'Failed to process file. Please try again.';
@@ -249,8 +202,6 @@ const ModernFileUpload = ({
 					userMessage.includes('Service Unavailable')
 				) {
 					userMessage += ' The AI service is temporarily unavailable. Your credit has been refunded. Please try again later.';
-				} else if (userMessage.includes('image') || userMessage.includes('OCR')) {
-					userMessage += ' Try using a higher quality image or a different file format.';
 				} else if (
 					userMessage.includes('API failed') ||
 					userMessage.includes('500') ||
@@ -272,32 +223,75 @@ const ModernFileUpload = ({
 			startLoading,
 			stopLoading,
 			updateLoadingStage,
+			useCredit,
+			refundCredit,
+			credits,
+			isPremium,
+			isAdmin,
 		]
 	);
 
 	const { handleFileSelect } = useFileSelector({
-		setError,
-		setFileName,
-		setFileSize,
-		setFileType,
-		setSelectedFile,
-		clearSelectedFile,
-		processFile,
-		useAI,
-	});
+    setError,
+    setFileName,
+    setFileSize,
+    setFileType,
+    setSelectedFile,
+    setExtractedText, // NEW: Pass extracted text setter
+    setFileReadStatus, // NEW: Pass status setter
+    clearSelectedFile,
+    processFile: processFileForAI, // This is now just AI processing
+    useAI,
+    startLoading,
+    stopLoading,
+    updateLoadingStage,
+    // Remove the duplicates - you had these twice
+});
 
+	// MODIFIED: Generate quiz using pre-extracted text
 	const handleGenerateQuiz = useCallback(async () => {
 		if (!selectedFile) {
 			setError('No file selected. Please upload a file first.');
 			return;
 		}
+		
+		if (fileReadStatus === 'reading') {
+			setError('File is still being read. Please wait for it to complete.');
+			return;
+		}
+		
+		if (fileReadStatus === 'error') {
+			setError('File reading failed. Please try uploading a different file.');
+			return;
+		}
+		
+		if (!extractedText) {
+			setError('No text was extracted from the file. Please try a different file.');
+			return;
+		}
+		
 		try {
-			await processFile(selectedFile);
+			// Use the pre-extracted text for AI processing
+			await processFileForAI(selectedFile, extractedText);
 		} catch (error) {
 			console.error('Quiz generation failed:', error);
 			setError(error.message);
 		}
-	}, [selectedFile, processFile]);
+	}, [selectedFile, extractedText, fileReadStatus, processFileForAI]);
+
+	// Handle non-AI file uploads immediately
+	const handleNonAIUpload = useCallback(() => {
+		if (selectedFile && !useAI) {
+			onFileUpload(selectedFile, false, null);
+		}
+	}, [selectedFile, useAI, onFileUpload]);
+
+	// Auto-upload for non-AI files when file is selected
+	useEffect(() => {
+		if (selectedFile && !useAI && fileReadStatus === 'ready') {
+			handleNonAIUpload();
+		}
+	}, [selectedFile, useAI, fileReadStatus, handleNonAIUpload]);
 
 	const handleDrop = useCallback(
 		(e) => {
@@ -317,7 +311,6 @@ const ModernFileUpload = ({
 
 	const handleDragLeave = useCallback((e) => {
 		e.preventDefault();
-		// Only set dragOver to false if we're actually leaving the drop zone
 		if (!e.currentTarget.contains(e.relatedTarget)) {
 			setDragOver(false);
 		}
@@ -369,6 +362,9 @@ const ModernFileUpload = ({
 					handleKeyDown={handleKeyDown}
 					baseUrl={baseUrl}
 					onFileUpload={onFileUpload}
+					// NEW PROPS: Pass file read status for UI feedback
+					fileReadStatus={fileReadStatus}
+					extractedText={extractedText}
 				/>
 			</Stack>
 		</UploadContainer>

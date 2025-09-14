@@ -8,6 +8,7 @@ import {
 	LinearProgress,
 	Snackbar,
 	Alert,
+	Chip,
 } from '@mui/material';
 import {
 	Upload,
@@ -21,6 +22,9 @@ import {
 	Eye,
 	Settings,
 	RefreshCw,
+	CheckCircle,
+	AlertCircle,
+	Clock,
 } from 'lucide-react';
 import {
 	DropZone,
@@ -50,6 +54,9 @@ const FileDropZone = ({
 	onGenerateQuiz,
 	error,
 	setError,
+	// NEW PROPS: File read status
+	fileReadStatus = 'none', // 'none', 'reading', 'ready', 'error'
+	extractedText = '',
 }) => {
 	const getFileIcon = (type) => {
 		const t = (type || '').toLowerCase();
@@ -168,6 +175,35 @@ const FileDropZone = ({
 		}
 	};
 
+	// NEW: Get file read status info
+	const getFileReadStatusInfo = () => {
+		switch (fileReadStatus) {
+			case 'reading':
+				return {
+					icon: Clock,
+					color: '#f59e0b',
+					text: 'Reading file...',
+					bgColor: 'rgba(245, 158, 11, 0.1)',
+				};
+			case 'ready':
+				return {
+					icon: CheckCircle,
+					color: '#10b981',
+					text: `Ready (${extractedText.length} chars)`,
+					bgColor: 'rgba(16, 185, 129, 0.1)',
+				};
+			case 'error':
+				return {
+					icon: AlertCircle,
+					color: '#ef4444',
+					text: 'Read failed',
+					bgColor: 'rgba(239, 68, 68, 0.1)',
+				};
+			default:
+				return null;
+		}
+	};
+
 	const StageIcon = getStageIcon(loadingStage);
 	const stageColor = getStageColor(loadingStage);
 	const safeDetails = processingDetails || {
@@ -175,6 +211,8 @@ const FileDropZone = ({
 		ocrConfidence: null,
 		questionsGenerated: 0,
 	};
+
+	const fileReadStatusInfo = getFileReadStatusInfo();
 
 	return (
 		<DropZone
@@ -357,14 +395,34 @@ const FileDropZone = ({
 			) : (
 				<Box>
 					<FileIcon>{getFileIcon(fileType)}</FileIcon>
-					<Typography variant='h6' sx={{ fontWeight: 600 }}>
+					<Typography variant='h6' sx={{ fontWeight: 600, mb: 1 }}>
 						{fileName}
 					</Typography>
 					{fileSize && (
-						<Typography variant='body2' sx={{ mb: 2, color: 'text.secondary' }}>
+						<Typography variant='body2' sx={{ mb: 1, color: 'text.secondary' }}>
 							{formatBytes(fileSize)}
 						</Typography>
 					)}
+
+					{/* NEW: File Read Status Indicator */}
+					{fileReadStatusInfo && useAI && (
+						<Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
+							<Chip
+								icon={<fileReadStatusInfo.icon size={16} />}
+								label={fileReadStatusInfo.text}
+								sx={{
+									backgroundColor: fileReadStatusInfo.bgColor,
+									color: fileReadStatusInfo.color,
+									border: `1px solid ${fileReadStatusInfo.color}`,
+									fontWeight: 500,
+									'& .MuiChip-icon': {
+										color: fileReadStatusInfo.color,
+									},
+								}}
+							/>
+						</Box>
+					)}
+
 					<Stack
 						direction='row'
 						spacing={2}
@@ -379,10 +437,10 @@ const FileDropZone = ({
 									e.stopPropagation();
 									onGenerateQuiz();
 								}}
-								disabled={effectiveLoading}
+								disabled={effectiveLoading || fileReadStatus === 'reading' || fileReadStatus === 'error' || !extractedText}
 								sx={{ borderRadius: 2 }}
 							>
-								Generate Quiz
+								{fileReadStatus === 'reading' ? 'Reading File...' : 'Generate Quiz'}
 							</Button>
 						)}
 						<Button
