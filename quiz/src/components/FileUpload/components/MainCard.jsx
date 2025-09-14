@@ -43,6 +43,8 @@ const UploadMainCard = ({
   handleGenerateQuiz,
   baseUrl,
   onFileUpload,
+    fileReadStatus, // ADD THIS
+  extractedText,  // ADD THIS
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -163,26 +165,27 @@ const UploadMainCard = ({
             </Typography>
           </Box>
         )}
-        
-        <FileDropZone
-          dragOver={dragOver}
-          fileName={fileName}
-          fileSize={fileSize}
-          fileType={fileType}
-          useAI={useAI}
-          effectiveLoading={effectiveLoading}
-          uploadProgress={uploadProgress}
-          loadingStage={loadingStage}
-          stageMessage={stageMessage}
-          processingDetails={processingDetails}
-          fileInputRef={fileInputRef}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onFileSelect={handleFileSelect}
-          onClear={clearSelectedFile}
-          onGenerateQuiz={handleGenerateQuiz}
-        />
+  <FileDropZone
+  dragOver={dragOver}
+  fileName={fileName}
+  fileSize={fileSize}
+  fileType={fileType}
+  useAI={useAI}
+  effectiveLoading={effectiveLoading}
+  uploadProgress={uploadProgress}
+  loadingStage={loadingStage}
+  stageMessage={stageMessage}
+  processingDetails={processingDetails}
+  fileInputRef={fileInputRef}
+  onDrop={handleDrop}
+  onDragOver={handleDragOver}
+  onDragLeave={handleDragLeave}
+  onFileSelect={handleFileSelect}
+  onClear={clearSelectedFile}
+  onGenerateQuiz={handleGenerateQuiz}
+  fileReadStatus={fileReadStatus}  // ADD THIS LINE
+  extractedText={extractedText}    // ADD THIS LINE
+/>
       </Box>
 
       {/* Enhanced Divider with better mobile styling */}
