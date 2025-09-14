@@ -10,30 +10,28 @@ import {
   saveQuizResults,
   getDashboardData,
   saveChatMessage,
-  getGlobalApiKey,
-  getGlobalApiConfig,
 } from './firebaseService.js';
-import { getAuth } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig.js';
 import { withRetry } from './retryUtils.js';
 import { shuffleArray as shuffleArrayImported, validateQuestions as validateQuestionsImported } from './quizValidator.js';
+import { ApiConfigService }   from './llmService/apiConfigService.js';
+import { UserCreditService }  from './llmService/userCreditService.js';
+import { CacheService } from './llmService/cacheService.js';
 
 export class LLMService {
   static instance = null;
-  static responseCache = new Map();
+  static responseCache = new Map(); // This is kept for now, but CacheService is the new standard
 
   // CONFIG: Progressive difficulty fallback system
   static HIGH_QUALITY_ATTEMPTS = 3;    // First tier: high-quality MCQs
-  static MEDIUM_QUALITY_ATTEMPTS = 3;   // Second tier: medium difficulty
-  static EASY_QUALITY_ATTEMPTS = 3;     // Third tier: easy questions
+  static MEDIUM_QUALITY_ATTEMPTS = 3;  // Second tier: medium difficulty
+  static EASY_QUALITY_ATTEMPTS = 3;    // Third tier: easy questions
   static MIN_ACCEPT_RATIO = 0.7;
   static MINIMUM_ACCEPTABLE = 3;
 
   // Constructor
   constructor() {
-    this.baseUrl = sessionStorage.getItem('llm_baseUrl') || null;
-    this.apiKey = sessionStorage.getItem('llm_apiKey') || null;
+    this.apiConfig = new ApiConfigService();
+    this.userCreditService = new UserCreditService();
     this.language = 'en';
     this.controller = null;
     console.log('✅ LLMService initialized (progressive difficulty fallback mode)');
@@ -42,8 +40,8 @@ export class LLMService {
   // convenience: singleton
   static async preloadApiConfig() {
     if (!LLMService.instance) LLMService.instance = new LLMService();
-    await LLMService.instance.ensureApiKey();
-    await LLMService.instance.ensureEndpoint();
+    await LLMService.instance.apiConfig.ensureApiKey();
+    await LLMService.instance.apiConfig.ensureEndpoint();
     console.log('🚀 API key + endpoint preloaded');
   }
 
@@ -55,35 +53,17 @@ export class LLMService {
     return validateQuestionsImported(questions);
   }
 
-  // --- API key / endpoint (unchanged)
+  // --- API key / endpoint (now delegated)
   async ensureApiKey() {
-    if (!this.apiKey) {
-      this.apiKey = sessionStorage.getItem('llm_apiKey') || (await getGlobalApiKey());
-      if (!this.apiKey) throw new Error('No global API key configured in Firestore.');
-      sessionStorage.setItem('llm_apiKey', this.apiKey);
-      console.log('✅ API key loaded');
-    }
-    return this.apiKey;
+    return this.apiConfig.ensureApiKey();
   }
 
   async ensureEndpoint() {
-    const config = await getGlobalApiConfig();
-    if (!config?.baseUrl) throw new Error('No API endpoint configured.');
-    const cached = sessionStorage.getItem('llm_baseUrl');
-    if (config.baseUrl !== this.baseUrl || config.baseUrl !== cached) {
-      this.baseUrl = config.baseUrl;
-      sessionStorage.setItem('llm_baseUrl', this.baseUrl);
-      console.log(`✅ Endpoint set: ${this.baseUrl}`);
-    } else if (!this.baseUrl) {
-      this.baseUrl = cached;
-    }
-    return this.baseUrl;
+    return this.apiConfig.ensureEndpoint();
   }
 
   async refreshApiKey() {
-    this.apiKey = null;
-    sessionStorage.removeItem('llm_apiKey');
-    return await this.ensureApiKey();
+    return this.apiConfig.refreshApiKey();
   }
 
   // --- Firebase wrappers (unchanged)
@@ -96,38 +76,16 @@ export class LLMService {
     return withRetry(async () => readFileContent(file, progressCallback));
   }
 
-  // --- User credit check (unchanged)
+  // --- User credit check (now delegated)
   async checkUserCredits() {
-    try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
-
-      const userRef = doc(db, 'users', user.uid);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) throw new Error('User profile not found');
-
-      const userData = userSnap.data();
-      const isPremium = userData.isPremium || false;
-      const credits = userData.credits || 0;
-      const tokenResult = await user.getIdTokenResult();
-      const isAdmin = tokenResult.claims.admin === true;
-
-      if (isPremium || isAdmin) return true;
-      if (credits <= 0) throw new Error('Insufficient credits.');
-
-      return true;
-    } catch (err) {
-      console.error('❌ Credit check failed', err);
-      throw err;
-    }
+    return this.userCreditService.checkUserCredits();
   }
 
   // --- MAIN ENTRY: Progressive difficulty fallback system
   async generateQuizQuestions(fileOrText, options = {}) {
     const {
       numQuestions = 10,
-      difficulty = 'high', // Changed default to 'high'
+      difficulty = 'high',
       questionType = 'mixed',
       cache = true,
     } = options;
@@ -139,61 +97,54 @@ export class LLMService {
     await this.ensureApiKey();
     await this.ensureEndpoint();
 
-    // Load content
     const sourceText = typeof fileOrText === 'string' ? fileOrText : await this.readFileContent(fileOrText);
     if (!sourceText || !sourceText.trim() || sourceText.trim().length < 30) {
       throw new Error('Content empty or too short to create questions.');
     }
 
-    const cacheKey = LLMService.generateCacheKey(sourceText, { requested, difficulty, questionType });
-    if (cache && LLMService.responseCache.has(cacheKey)) {
-      const cached = LLMService.responseCache.get(cacheKey);
+    const cacheKey = CacheService.generateCacheKey(sourceText, { requested, difficulty, questionType });
+    if (cache && CacheService.get(cacheKey)) {
+      const cached = CacheService.get(cacheKey);
       if (Array.isArray(cached) && cached.length === requested) {
         console.log('📋 Returning cached exact-count quiz');
         return cached;
       }
     }
 
-    // Prepare text + facts
     this.language = detectLanguage(sourceText) || 'en';
     const text = trimForPrompt(sourceText);
     const keyFacts = extractKeyFacts(sourceText);
 
-    // Progressive difficulty fallback pipeline
     let aggregated = [];
     let totalAttempts = 0;
 
-    // TIER 1: HIGH QUALITY ATTEMPTS (3 attempts)
     console.log('🚀 TIER 1: Attempting HIGH quality MCQ generation');
     aggregated = await this._attemptGeneration(
-      text, keyFacts, requested, 'high', 
+      text, keyFacts, requested, 'high',
       LLMService.HIGH_QUALITY_ATTEMPTS, aggregated, totalAttempts
     );
     totalAttempts += LLMService.HIGH_QUALITY_ATTEMPTS;
 
-    // TIER 2: MEDIUM QUALITY ATTEMPTS (if still missing questions)
     if (aggregated.length < requested) {
       const missing = requested - aggregated.length;
       console.log(`⚡ TIER 2: HIGH quality insufficient (${aggregated.length}/${requested}). Trying MEDIUM quality...`);
       aggregated = await this._attemptGeneration(
-        text, keyFacts, requested, 'medium', 
+        text, keyFacts, requested, 'medium',
         LLMService.MEDIUM_QUALITY_ATTEMPTS, aggregated, totalAttempts
       );
       totalAttempts += LLMService.MEDIUM_QUALITY_ATTEMPTS;
     }
 
-    // TIER 3: EASY QUALITY ATTEMPTS (if still missing questions)
     if (aggregated.length < requested) {
       const missing = requested - aggregated.length;
       console.log(`💡 TIER 3: MEDIUM quality insufficient (${aggregated.length}/${requested}). Trying EASY quality...`);
       aggregated = await this._attemptGeneration(
-        text, keyFacts, requested, 'easy', 
+        text, keyFacts, requested, 'easy',
         LLMService.EASY_QUALITY_ATTEMPTS, aggregated, totalAttempts
       );
       totalAttempts += LLMService.EASY_QUALITY_ATTEMPTS;
     }
 
-    // FINAL TIER: Synthesis (if still missing questions)
     if (aggregated.length < requested) {
       console.warn(`⚠️ All difficulty tiers exhausted (${aggregated.length}/${requested}). Synthesizing remaining questions...`);
       const synthesized = this._synthesizeQuestions(aggregated, keyFacts, requested - aggregated.length);
@@ -201,25 +152,21 @@ export class LLMService {
       console.log(`After synthesis: ${aggregated.length}/${requested}`);
     }
 
-    // Final validation
     if (aggregated.length < Math.max(LLMService.MINIMUM_ACCEPTABLE, Math.ceil(requested * 0.5))) {
       const msg = `Failed to produce sufficient valid questions (${aggregated.length}/${requested}). Content may lack extractable facts.`;
       console.error(msg);
       throw new Error(msg);
     }
 
-    // Trim to exact requested number
     aggregated = aggregated.slice(0, requested);
 
-    // Final normalization
     aggregated = aggregated.map((q, idx) => ({
       ...q,
       id: q.id || `q_${idx + 1}`,
       language: q.language || this.language,
     }));
 
-    // Cache result
-    if (cache) LLMService.responseCache.set(cacheKey, aggregated);
+    if (cache) CacheService.set(cacheKey, aggregated);
 
     console.log(`✅ SUCCESS: Returning EXACT ${aggregated.length} questions (requested: ${requested})`);
     return aggregated;
@@ -234,28 +181,27 @@ export class LLMService {
       attemptCount++;
       const totalAttemptNum = startAttemptNum + attemptCount;
       const missing = requested - aggregated.length;
-      
-      console.log(`  Attempt ${attemptCount}/${maxAttempts} (${difficulty.toUpperCase()}): Need ${missing} more questions`);
-      
+
+      console.log(`  Attempt ${attemptCount}/${maxAttempts} (${difficulty.toUpperCase()}): Need ${missing} more questions`);
+
       try {
         const prompt = this._buildPromptForDifficulty(text, keyFacts, missing, difficulty, this.language);
         const raw = await this._makeApiRequest(prompt);
         const processed = this._extractAndProcess(raw);
-        
+
         const beforeCount = aggregated.length;
         aggregated = this._mergeUniqueQuestions(aggregated, processed, requested);
         const addedCount = aggregated.length - beforeCount;
-        
-        console.log(`    ✓ Added ${addedCount} unique questions. Total: ${aggregated.length}/${requested}`);
-        
-        // If we got enough, break early
+
+        console.log(`    ✓ Added ${addedCount} unique questions. Total: ${aggregated.length}/${requested}`);
+
         if (aggregated.length >= requested) {
-          console.log(`    🎉 ${difficulty.toUpperCase()} tier successful! Got required questions.`);
+          console.log(`    🎉 ${difficulty.toUpperCase()} tier successful! Got required questions.`);
           break;
         }
-        
+
       } catch (err) {
-        console.warn(`    ❌ ${difficulty.toUpperCase()} attempt ${attemptCount} failed:`, err.message);
+        console.warn(`    ❌ ${difficulty.toUpperCase()} attempt ${attemptCount} failed:`, err.message);
       }
     }
 
@@ -277,7 +223,6 @@ export class LLMService {
     return difficultyPrompts[difficulty] || difficultyPrompts.medium;
   }
 
-  // --- HIGH QUALITY MCQ PROMPT (most sophisticated)
   _buildHighQualityPrompt(text, keyFacts, numQuestions, language) {
     const contextGuidance = keyFacts && keyFacts.length
       ? `\nCritical facts to incorporate:\n${keyFacts.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n`
@@ -327,7 +272,6 @@ MANDATORY OUTPUT FORMAT (JSON):
 GENERATE EXACTLY ${numQuestions} HIGH-QUALITY QUESTIONS NOW.`;
   }
 
-  // --- MEDIUM QUALITY MCQ PROMPT (balanced approach)
   _buildMediumQualityPrompt(text, keyFacts, numQuestions, language) {
     const contextGuidance = keyFacts && keyFacts.length
       ? `\nKey facts:\n${keyFacts.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n`
@@ -367,7 +311,6 @@ OUTPUT JSON FORMAT:
 GENERATE EXACTLY ${numQuestions} QUESTIONS.`;
   }
 
-  // --- EASY QUALITY MCQ PROMPT (basic recall and simple comprehension)
   _buildEasyQualityPrompt(text, keyFacts, numQuestions, language) {
     const contextGuidance = keyFacts && keyFacts.length
       ? `\nKey facts:\n${keyFacts.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n`
@@ -407,10 +350,10 @@ OUTPUT JSON FORMAT:
 GENERATE EXACTLY ${numQuestions} QUESTIONS.`;
   }
 
-  // --- API request method (unchanged)
+  // --- API request method (updated to use the new service)
   async _makeApiRequest(prompt) {
-    await this.ensureApiKey();
-    await this.ensureEndpoint();
+    const apiKey = await this.apiConfig.ensureApiKey();
+    const baseUrl = await this.apiConfig.ensureEndpoint();
 
     if (this.controller) {
       try { this.controller.abort(); } catch (e) { /* ignore */ }
@@ -420,11 +363,11 @@ GENERATE EXACTLY ${numQuestions} QUESTIONS.`;
     const timeout = setTimeout(() => this.controller?.abort(), REQUEST_TIMEOUT_MS);
 
     try {
-      const response = await fetch(this.baseUrl, {
+      const response = await fetch(baseUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': this.apiKey,
+          'x-goog-api-key': apiKey,
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
@@ -441,8 +384,7 @@ GENERATE EXACTLY ${numQuestions} QUESTIONS.`;
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         if (response.status === 401 || response.status === 403) {
-          this.apiKey = null;
-          sessionStorage.removeItem('llm_apiKey');
+          this.apiConfig.refreshApiKey();
         }
         throw new Error(`API failed: ${response.status} - ${errorData.error?.message || response.statusText}`);
       }
@@ -456,19 +398,17 @@ GENERATE EXACTLY ${numQuestions} QUESTIONS.`;
     }
   }
 
-  // --- Extract and process methods (mostly unchanged, keeping existing robust parsing)
+  // --- Extract and process methods (unchanged)
   _extractAndProcess(rawOrArray, opts = { relaxed: false }) {
     let questionsArr = [];
     if (Array.isArray(rawOrArray)) {
       questionsArr = rawOrArray;
     } else {
       const rawText = rawOrArray || '';
-      // try primary JSON extraction
       try {
         const extracted = extractJson(rawText);
         if (extracted?.questions && Array.isArray(extracted.questions)) questionsArr = extracted.questions;
       } catch (e) {
-        // fallbacks
         try {
           const jsonMatch = rawText.match(/\{[\s\S]*"questions"[\s\S]*\]/);
           if (jsonMatch) {
@@ -491,7 +431,6 @@ GENERATE EXACTLY ${numQuestions} QUESTIONS.`;
       }
     }
 
-    // process each into normalized validated form
     const processed = [];
     for (let i = 0; i < questionsArr.length; i++) {
       try {
@@ -761,20 +700,5 @@ GENERATE EXACTLY ${numQuestions} QUESTIONS.`;
     if (cleaned.length < 10) return 'Context not available';
     if (cleaned.length > 150) cleaned = cleaned.substring(0, 147) + '...';
     return cleaned;
-  }
-
-  static generateCacheKey(content, options) {
-    try {
-      const shortContent = content.slice(0, 200);
-      const optionsStr = JSON.stringify(options || {});
-      let hash = 0;
-      const combined = shortContent + optionsStr;
-      for (let i = 0; i < Math.min(combined.length, 1000); i++) {
-        hash = ((hash << 5) - hash + combined.charCodeAt(i)) | 0;
-      }
-      return `quiz_${Math.abs(hash).toString(36)}_${Date.now().toString(36).slice(-6)}`;
-    } catch (err) {
-      return `quiz_fallback_${Date.now().toString(36)}`;
-    }
   }
 }
