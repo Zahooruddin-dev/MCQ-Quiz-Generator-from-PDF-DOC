@@ -355,7 +355,7 @@ const ConfigPanel = ({
                   </Box>
                 </Grid>
                 <Grid item xs={12}>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1, lineHeight: 1.75, padding: '0 4px' }}>
                     Estimated generation time: {selectedQuality?.estimatedTime || '~1-2min'}
                   </Typography>
                 </Grid>
