@@ -419,7 +419,8 @@ const HeaderWrapper = ({ onProfileClick, onApiConfigClick, showApiConfig }) => (
 			onApiConfigClick={onApiConfigClick}
 			showApiConfig={showApiConfig}
 		/>
-	</Suspense>
+	</Suspense> 
+	
 );
 
 
@@ -459,6 +460,7 @@ const App = () => {
 				const docSnap = await getDoc(doc(db, 'settings', 'apiKey'));
 
 				if (!isMounted) return;
+				
 
 				if (docSnap.exists()) {
 					const key = docSnap.data().value;
