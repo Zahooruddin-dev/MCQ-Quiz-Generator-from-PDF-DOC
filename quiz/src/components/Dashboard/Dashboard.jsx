@@ -376,6 +376,13 @@ const Dashboard = ({ onCreateQuiz, onViewResults, onResumeQuiz, onRetakeQuiz }) 
 
   // Memoize the quick actions with stable references
   const quickActions = useMemo(() => [
+       {
+      title: 'AI Quiz Generator',
+      description: 'Let AI generate quizzes from your documents',
+      icon: <Brain size={28} />,
+      color: 'secondary',
+      action: handleUploadNavigation,
+    },
     {
       title: 'Upload Document',
       description: 'Upload PDF, DOCX, or paste text to generate quiz',
@@ -383,13 +390,7 @@ const Dashboard = ({ onCreateQuiz, onViewResults, onResumeQuiz, onRetakeQuiz }) 
       color: 'primary',
       action: handleUploadNavigation,
     },
-    {
-      title: 'AI Quiz Generator',
-      description: 'Let AI create questions from your content',
-      icon: <Brain size={28} />,
-      color: 'secondary',
-      action: handleUploadNavigation,
-    },
+ 
     {
       title: 'View Analytics',
       description: 'Check your performance and insights',
