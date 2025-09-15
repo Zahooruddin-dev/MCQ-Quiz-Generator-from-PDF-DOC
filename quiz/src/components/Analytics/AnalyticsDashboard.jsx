@@ -5,24 +5,17 @@ import {
   CardContent,
   Typography,
   Stack,
-  Button,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
   Skeleton,
-  Chip,
   Alert,
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
 import {
   PollOutlined as AnalyticsIcon,
-  SaveAltOutlined as ExportIcon,
   FilterAltOutlined as FilterIcon,
 } from '@mui/icons-material';
-import { BarChart } from '@mui/x-charts/BarChart';
-import { PieChart } from '@mui/x-charts/PieChart';
-import { LineChart } from '@mui/x-charts/LineChart';
 import { useAuth } from '../../context/AuthContext';
 
 // Firebase imports
@@ -32,11 +25,15 @@ import {
   query,
   where,
   orderBy,
-  limit,
   getDocs,
-  doc,
-  getDoc,
 } from 'firebase/firestore';
+
+// Import sub-components
+import ExportButton from './ExportButton';
+import ScoreDistributionChart from './ScoreDistributionChart';
+import MonthlyStatsChart from './MonthlyStatsChart';
+import TopicPerformanceChart from './TopicPerformanceChart';
+import PerformanceTrendChart from './PerformanceTrendChart';
 
 const db = getFirestore();
 
@@ -46,303 +43,6 @@ const TimePeriod = {
   THIS_MONTH: 'this_month',
   THIS_WEEK: 'this_week',
   LAST_30_DAYS: 'last_30_days',
-};
-
-const AnalyticsCard = styled(Card)(({ theme }) => ({
-  height: '100%',
-  transition: 'all 0.2s ease',
-  '&:hover': {
-    boxShadow: theme.shadows[4],
-  },
-}));
-
-const ExportButton = ({ onExport, data }) => {
-  const handleExport = () => {
-    if (!data) return;
-
-    // Create CSV data
-    const csvData = [
-      ['Metric', 'Value'],
-      ['Total Quizzes', data.totalQuizzes || 0],
-      ['Average Score', `${(data.avgScore || 0).toFixed(1)}%`],
-      ['Best Score', `${data.bestScore || 0}%`],
-      ['Current Streak', data.streak || 0],
-      ...((data.topicPerformance || []).map(topic => [`${topic.topic} Average`, `${topic.avgScore.toFixed(1)}%`])),
-    ];
-    
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'quiz-analytics.csv';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-    
-    if (onExport) onExport(data);
-  };
-
-  return (
-    <Button
-      startIcon={<ExportIcon />}
-      onClick={handleExport}
-      variant="outlined"
-      size="small"
-      disabled={!data}
-    >
-      Export Data
-    </Button>
-  );
-};
-
-const ScoreDistributionChart = ({ data }) => {
-  if (!data || data.length === 0) {
-    return (
-      <AnalyticsCard>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-            Score Distribution
-          </Typography>
-          <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              No quiz data available
-            </Typography>
-          </Box>
-        </CardContent>
-      </AnalyticsCard>
-    );
-  }
-
-  return (
-    <AnalyticsCard>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-          Score Distribution
-        </Typography>
-        
-        <Box sx={{ height: 300 }}>
-          <PieChart
-            series={[
-              {
-                data: data.map((item, index) => ({
-                  id: index,
-                  value: item.count,
-                  label: item.range,
-                })),
-                highlightScope: { faded: 'global', highlighted: 'item' },
-              },
-            ]}
-            height={300}
-            margin={{ right: 100 }}
-          />
-        </Box>
-        
-        <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap' }}>
-          {data.map((item, index) => (
-            <Chip
-              key={index}
-              label={`${item.range}: ${item.count} quizzes`}
-              size="small"
-              variant="outlined"
-            />
-          ))}
-        </Stack>
-      </CardContent>
-    </AnalyticsCard>
-  );
-};
-
-const MonthlyStatsChart = ({ data }) => {
-  if (!data || data.length === 0) {
-    return (
-      <AnalyticsCard>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-            Monthly Performance
-          </Typography>
-          <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              No monthly data available
-            </Typography>
-          </Box>
-        </CardContent>
-      </AnalyticsCard>
-    );
-  }
-
-  return (
-    <AnalyticsCard>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-          Monthly Performance
-        </Typography>
-        
-        <Box sx={{ height: 300 }}>
-          <BarChart
-            series={[
-              {
-                data: data.map(item => item.quizzes),
-                label: 'Quizzes Taken',
-                color: '#6366F1',
-              },
-              {
-                data: data.map(item => item.avgScore),
-                label: 'Average Score',
-                color: '#10B981',
-              },
-            ]}
-            xAxis={[
-              {
-                data: data.map(item => item.month),
-                scaleType: 'band',
-              },
-            ]}
-            height={300}
-            margin={{ left: 60, right: 20, top: 20, bottom: 60 }}
-          />
-        </Box>
-      </CardContent>
-    </AnalyticsCard>
-  );
-};
-
-const TopicPerformanceChart = ({ data }) => {
-  if (!data || data.length === 0) {
-    return (
-      <AnalyticsCard>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-            Topic Performance
-          </Typography>
-          <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              No topic data available
-            </Typography>
-          </Box>
-        </CardContent>
-      </AnalyticsCard>
-    );
-  }
-
-  return (
-    <AnalyticsCard>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-          Topic Performance
-        </Typography>
-        
-        <Box sx={{ height: 300 }}>
-          <BarChart
-            series={[
-              {
-                data: data.map(item => item.avgScore),
-                label: 'Average Score (%)',
-                color: '#8B5CF6',
-              },
-            ]}
-            xAxis={[
-              {
-                data: data.map(item => item.topic),
-                scaleType: 'band',
-              },
-            ]}
-            yAxis={[
-              {
-                min: 0,
-                max: 100,
-              },
-            ]}
-            height={300}
-            margin={{ left: 60, right: 20, top: 20, bottom: 60 }}
-          />
-        </Box>
-        
-        <Stack spacing={1} sx={{ mt: 2 }}>
-          {data.map((topic, index) => (
-            <Stack key={index} direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="body2">{topic.topic}</Typography>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Chip
-                  label={`${topic.avgScore.toFixed(1)}%`}
-                  size="small"
-                  color={topic.avgScore >= 85 ? 'success' : topic.avgScore >= 70 ? 'warning' : 'error'}
-                />
-                <Typography variant="caption" color="text.secondary">
-                  {topic.quizCount} quizzes
-                </Typography>
-              </Stack>
-            </Stack>
-          ))}
-        </Stack>
-      </CardContent>
-    </AnalyticsCard>
-  );
-};
-
-const PerformanceTrendChart = ({ quizzes }) => {
-  if (!quizzes || quizzes.length === 0) {
-    return (
-      <AnalyticsCard>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-            Recent Performance Trend
-          </Typography>
-          <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              No recent quiz data available
-            </Typography>
-          </Box>
-        </CardContent>
-      </AnalyticsCard>
-    );
-  }
-
-  const trendData = quizzes.slice(-10).map((quiz, index) => ({
-    quiz: index + 1,
-    score: quiz.score,
-    date: quiz.completedAt?.toDate?.() || new Date(quiz.completedAt),
-  }));
-
-  return (
-    <AnalyticsCard>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-          Recent Performance Trend
-        </Typography>
-        
-        <Box sx={{ height: 300 }}>
-          <LineChart
-            series={[
-              {
-                data: trendData.map(item => item.score),
-                label: 'Score (%)',
-                color: '#F59E0B',
-                curve: 'smooth',
-              },
-            ]}
-            xAxis={[
-              {
-                data: trendData.map((_, index) => `Quiz ${index + 1}`),
-                scaleType: 'point',
-              },
-            ]}
-            yAxis={[
-              {
-                min: 0,
-                max: 100,
-                label: 'Score (%)',
-              },
-            ]}
-            height={300}
-            margin={{ left: 60, right: 20, top: 20, bottom: 60 }}
-            grid={{ vertical: true, horizontal: true }}
-          />
-        </Box>
-      </CardContent>
-    </AnalyticsCard>
-  );
 };
 
 const AnalyticsDashboard = ({ 
