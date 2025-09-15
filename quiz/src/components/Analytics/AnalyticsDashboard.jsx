@@ -34,7 +34,8 @@ import ScoreDistributionChart from './ScoreDistributionChart';
 import MonthlyStatsChart from './MonthlyStatsChart';
 import TopicPerformanceChart from './TopicPerformanceChart';
 import PerformanceTrendChart from './PerformanceTrendChart';
-
+import AnalyticsLoadingState from './AnalyticsLoadingState';
+import AnalyticsErrorState from './AnalyticsErrorState';
 const db = getFirestore();
 
 // Time period constants
@@ -264,45 +265,11 @@ const AnalyticsDashboard = ({
   }, [targetUserId, timePeriod]);
 
   if (loading) {
-    return (
-      <Box>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <AnalyticsIcon color="primary" />
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Analytics Dashboard
-            </Typography>
-          </Stack>
-        </Stack>
-        
-        <Stack spacing={3}>
-          <Stack direction="row" spacing={2}>
-            <Skeleton variant="rectangular" height={400} sx={{ flex: 1, borderRadius: 2 }} />
-            <Skeleton variant="rectangular" height={400} sx={{ flex: 1, borderRadius: 2 }} />
-          </Stack>
-          <Stack direction="row" spacing={2}>
-            <Skeleton variant="rectangular" height={400} sx={{ flex: 1, borderRadius: 2 }} />
-            <Skeleton variant="rectangular" height={400} sx={{ flex: 1, borderRadius: 2 }} />
-          </Stack>
-        </Stack>
-      </Box>
-    );
+    return <AnalyticsLoadingState />;
   }
 
   if (error) {
-    return (
-      <Box>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <AnalyticsIcon color="primary" />
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Analytics Dashboard
-            </Typography>
-          </Stack>
-        </Stack>
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
+    return <AnalyticsErrorState error={error} />;
   }
 
   return (
