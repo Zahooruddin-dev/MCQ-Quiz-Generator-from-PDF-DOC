@@ -56,7 +56,6 @@ const ConfigPanel = ({
 		quality: 'normal',
 		questionType: 'mixed',
 		useAI: false,
-		useOCR: false, // 👈 new option
 
 		customInstructions: '', // New field for custom instructions
 		...initialOptions, // Allow overrides
@@ -318,53 +317,7 @@ const ConfigPanel = ({
 						</Box>
 					}
 				/>
-				{/* Enable OCR */}
-				<Tooltip title='OCR support is coming soon!' placement='top' arrow>
-					<span>
-						{/* span wrapper is required because disabled elements don't trigger Tooltip directly */}
-						<FormControlLabel
-							control={
-								<Switch
-									checked={aiOptions.useOCR}
-									onChange={() => {}}
-									disabled
-									inputProps={{
-										'aria-disabled': true,
-										'aria-label': 'Enable OCR (coming soon)',
-									}}
-								/>
-							}
-							label={
-								<Box
-									role='button'
-									tabIndex={0}
-									aria-disabled='true'
-									onClick={(e) => {
-										e.preventDefault();
-										alert('OCR support is coming soon 🚀'); // fallback for mobile/tap
-									}}
-									onKeyPress={(e) => {
-										if (e.key === 'Enter' || e.key === ' ') {
-											alert('OCR support is coming soon 🚀');
-										}
-									}}
-									sx={{ cursor: 'not-allowed' }}
-								>
-									<Typography component='span'>
-										Enable OCR (for scanned PDFs / images)
-									</Typography>
-									<Typography
-										variant='caption'
-										color='text.secondary'
-										display='block'
-									>
-										Uses optical character recognition if text extraction fails
-									</Typography>
-								</Box>
-							}
-						/>
-					</span>
-				</Tooltip>
+			
 				{/* AI Options */}
 				<Collapse in={useAI}>
 					<Stack spacing={3}>

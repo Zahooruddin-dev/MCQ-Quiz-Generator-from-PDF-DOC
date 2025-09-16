@@ -1,7 +1,8 @@
-// Enhanced Production-Grade fileReader.js (OCR Disabled)
+// Enhanced Production-Grade fileReader.js (WITH OCR Support)
 import * as pdfjsLib from 'pdfjs-dist';
 import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { MAX_CHARS } from './constants.js';
+import { getOCRProcessor, isOCRSupported, cleanupOCR } from './ocrProcessor.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
@@ -10,7 +11,7 @@ export const FILE_ERROR_TYPES = {
   UNSUPPORTED_TYPE: 'UNSUPPORTED_TYPE',
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',
   CORRUPTED_FILE: 'CORRUPTED_FILE',
-  OCR_UNAVAILABLE: 'OCR_UNAVAILABLE', // updated to indicate OCR is disabled
+  OCR_FAILED: 'OCR_FAILED',
   NETWORK_ERROR: 'NETWORK_ERROR',
   PROCESSING_FAILED: 'PROCESSING_FAILED',
   EMPTY_CONTENT: 'EMPTY_CONTENT',
@@ -29,13 +30,13 @@ class FileProcessingError extends Error {
   getUserMessage() {
     switch (this.type) {
       case FILE_ERROR_TYPES.UNSUPPORTED_TYPE:
-        return 'This file type is not supported. Please upload a PDF, DOCX, TXT, or HTML file.';
+        return 'This file type is not supported. Please upload a PDF, DOCX, TXT, HTML, or image file.';
       case FILE_ERROR_TYPES.FILE_TOO_LARGE:
         return 'File is too large. Please upload a file smaller than 50MB.';
       case FILE_ERROR_TYPES.CORRUPTED_FILE:
         return 'This file appears to be corrupted or damaged. Please try uploading a different file.';
-      case FILE_ERROR_TYPES.OCR_UNAVAILABLE:
-        return 'OCR (image-to-text extraction) is not available right now. Please upload a text-based file instead.';
+      case FILE_ERROR_TYPES.OCR_FAILED:
+        return 'Failed to extract text from the image. The image quality might be too poor or the text unreadable.';
       case FILE_ERROR_TYPES.NETWORK_ERROR:
         return 'Network error occurred while processing the file. Please check your connection and try again.';
       case FILE_ERROR_TYPES.PROCESSING_FAILED:
@@ -61,7 +62,7 @@ export class ProcessingProgress {
   }
 }
 
-// FIXED: Enhanced PDF processing (no OCR fallback anymore)
+// Enhanced PDF processing WITH OCR fallback
 async function processPDF(arrayBuffer, filename, progress) {
   if (!arrayBuffer || arrayBuffer.byteLength === 0) {
     throw new FileProcessingError(
@@ -99,6 +100,7 @@ async function processPDF(arrayBuffer, filename, progress) {
   let extractedText = '';
   let hasTextContent = false;
   const maxPages = Math.min(pdf.numPages, 50);
+  let ocrUsedPages = [];
 
   for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
     try {
@@ -118,26 +120,76 @@ async function processPDF(arrayBuffer, filename, progress) {
         });
 
         pageText = pageText.trim();
-        if (pageText.length > 0) {
+        if (pageText.length > 50) { // Only consider meaningful text content
           extractedText += pageText + '\n\n';
           hasTextContent = true;
+        } else {
+          // Text is too short, might need OCR
+          ocrUsedPages.push(pageNum);
         }
+      } else {
+        // No text content, will need OCR
+        ocrUsedPages.push(pageNum);
       }
+
+      progress.update('pdf', 10 + (pageNum / maxPages) * 60, 
+        `Processing page ${pageNum} of ${maxPages}...`);
     } catch (pageError) {
       console.warn(`Failed to process page ${pageNum}:`, pageError.message);
     }
   }
 
+  // If we have sufficient text content, return it
   const finalText = extractedText.trim();
-  if (hasTextContent && finalText.length > 50) {
+  if (hasTextContent && finalText.length > 100) {
     progress.update('pdf', 100, 'Successfully extracted text from PDF');
     return finalText;
   }
 
-  // OCR Fallback disabled → clearly inform user
+  // OCR Fallback for pages without text or image-based PDFs
+  if (ocrUsedPages.length > 0 && isOCRSupported()) {
+    progress.update('pdf', 70, 'PDF appears to be image-based. Starting OCR processing...');
+    
+    try {
+      const ocrProcessor = await getOCRProcessor('eng');
+      let ocrText = '';
+      
+      const pagesToProcess = Math.min(ocrUsedPages.length, 10); // Limit OCR pages
+      
+      for (let i = 0; i < pagesToProcess; i++) {
+        const pageNum = ocrUsedPages[i];
+        try {
+          const page = await pdf.getPage(pageNum);
+          const pageOCRText = await ocrProcessor.extractTextFromPDFPage(page, 
+            (ocrProgress) => {
+              const totalProgress = 70 + (i / pagesToProcess) * 25 + (ocrProgress.progress / 100) * (25 / pagesToProcess);
+              progress.update('pdf-ocr', totalProgress, 
+                `OCR processing page ${pageNum}: ${ocrProgress.message}`);
+            }
+          );
+          
+          if (pageOCRText && pageOCRText.trim().length > 20) {
+            ocrText += `Page ${pageNum}:\n${pageOCRText}\n\n`;
+          }
+        } catch (ocrError) {
+          console.warn(`OCR failed for page ${pageNum}:`, ocrError.message);
+        }
+      }
+      
+      if (ocrText.trim().length > 50) {
+        progress.update('pdf', 100, 'Successfully extracted text using OCR');
+        return (extractedText + '\n\n' + ocrText).trim();
+      }
+    } catch (ocrError) {
+      console.error('OCR processing failed:', ocrError);
+      // Continue to regular error handling below
+    }
+  }
+
+  // If we reach here, both text extraction and OCR failed
   throw new FileProcessingError(
-    FILE_ERROR_TYPES.OCR_UNAVAILABLE,
-    'This PDF appears to be image-based. OCR (text extraction from images) is not available right now.'
+    FILE_ERROR_TYPES.OCR_FAILED,
+    'This PDF appears to be image-based and OCR failed to extract readable text.'
   );
 }
 
@@ -169,24 +221,61 @@ async function processDOCX(file, progress) {
   }
 }
 
-// Image processing → disabled (OCR unavailable)
+// Image processing WITH OCR support
 async function processImage(file, progress) {
-  throw new FileProcessingError(
-    FILE_ERROR_TYPES.OCR_UNAVAILABLE,
-    'OCR for image files is not available right now. Please upload a text-based file.'
-  );
+  if (!isOCRSupported()) {
+    throw new FileProcessingError(
+      FILE_ERROR_TYPES.OCR_FAILED,
+      'OCR is not supported in this environment'
+    );
+  }
+
+  progress.update('image', 0, 'Preparing image for OCR...');
+
+  try {
+    const ocrProcessor = await getOCRProcessor('eng');
+    
+    progress.update('image', 25, 'Starting OCR text extraction...');
+    
+    const extractedText = await ocrProcessor.processImageFile(file, (ocrProgress) => {
+      const totalProgress = 25 + (ocrProgress.progress / 100) * 70;
+      progress.update('image', totalProgress, ocrProgress.message);
+    });
+
+    if (!extractedText || extractedText.trim().length < 10) {
+      throw new FileProcessingError(
+        FILE_ERROR_TYPES.EMPTY_CONTENT,
+        'No readable text was found in the image'
+      );
+    }
+
+    progress.update('image', 100, 'Image OCR completed successfully');
+    return extractedText.trim();
+  } catch (error) {
+    throw new FileProcessingError(
+      FILE_ERROR_TYPES.OCR_FAILED,
+      'Failed to extract text from image',
+      error.message
+    );
+  }
 }
 
-// File type validation
+// File type validation (updated to include images)
 function validateFileType(file) {
   const allowedTypes = [
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'text/plain',
     'text/html',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/bmp',
+    'image/tiff'
   ];
 
-  const allowedExtensions = ['.pdf', '.docx', '.txt', '.html', '.htm'];
+  const allowedExtensions = ['.pdf', '.docx', '.txt', '.html', '.htm', 
+                            '.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tiff', '.tif'];
 
   const fileExtension = file.name.toLowerCase().match(/\.[^.]+$/)?.[0];
 
@@ -273,6 +362,10 @@ export async function readFileContent(file, progressCallback = null) {
       FILE_ERROR_TYPES.PROCESSING_FAILED,
       `File processing failed: ${error.message}`
     );
+  } finally {
+    // Optional: Clean up OCR resources after processing
+    // Uncomment the line below if you want to clean up after each file
+    // await cleanupOCR();
   }
 }
 
@@ -283,6 +376,9 @@ export function getErrorMessage(error) {
   }
   return 'An unexpected error occurred while processing the file.';
 }
+
+// Export cleanup function for manual resource management
+export { cleanupOCR };
 
 // Export error class/types
 export { FileProcessingError };
