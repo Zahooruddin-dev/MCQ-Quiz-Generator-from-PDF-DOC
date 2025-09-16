@@ -37,6 +37,10 @@ import {
 	Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+	// Import separated constants
+import examplePrompts from './ConfigPanel/examplePrompts';
+import difficultyOptions from './ConfigPanel/difficultyOptions';
+import qualityOptions from './ConfigPanel/qualityOptions';
 
 const ConfigPanel = ({
 	hasAI = false,
@@ -65,62 +69,6 @@ const ConfigPanel = ({
 	const [aiOptions, setAiOptions] = useState(defaultOptions);
 	const [showCustomInstructions, setShowCustomInstructions] = useState(false);
 
-	// Example prompts for custom instructions
-	const examplePrompts = [
-		'Focus on practical application questions',
-		'Include real-world scenarios and examples',
-		'Test critical thinking and analysis skills',
-		'Make questions suitable for beginners',
-		'Include questions about key terminology',
-		'Focus on problem-solving abilities',
-	];
-
-	// Difficulty options with descriptions
-	const difficultyOptions = [
-		{
-			value: 'easy',
-			label: 'Easy',
-			description: 'Basic recall and simple comprehension questions',
-			icon: <Target size={16} color='#10B981' />,
-		},
-		{
-			value: 'medium',
-			label: 'Normal',
-			description: 'Balanced mix of comprehension and application questions',
-			icon: <Target size={16} color='#F59E0B' />,
-		},
-		{
-			value: 'hard',
-			label: 'Hard',
-			description: 'Advanced analysis and critical thinking questions',
-			icon: <Target size={16} color='#EF4444' />,
-		},
-	];
-
-	// Quality options with descriptions
-	const qualityOptions = [
-		{
-			value: 'quick',
-			label: 'Quick',
-			description: 'Fast generation with basic quality checks',
-			icon: <Zap size={16} color='#8B5CF6' />,
-			estimatedTime: '~30s',
-		},
-		{
-			value: 'normal',
-			label: 'Normal',
-			description: 'Balanced quality and speed with good validation',
-			icon: <Clock size={16} color='#3B82F6' />,
-			estimatedTime: '~1-2min',
-		},
-		{
-			value: 'premium',
-			label: 'Premium',
-			description: 'Highest quality with multiple validation passes',
-			icon: <Crown size={16} color='#F59E0B' />,
-			estimatedTime: '~2-4min',
-		},
-	];
 
 	// Toggle AI
 	const handleToggleAI = useCallback(
@@ -131,11 +79,6 @@ const ConfigPanel = ({
 		},
 		[aiOptions, onOptionsChange]
 	);
-	const handleChange = (field, value) => {
-		const newOptions = { ...aiOptions, [field]: value };
-		setAiOptions(newOptions);
-		onOptionsChange?.(newOptions);
-	};
 	// Number of questions
 	const handleNumQuestionsChange = useCallback(
 		(e) => {
