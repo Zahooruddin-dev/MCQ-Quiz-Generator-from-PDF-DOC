@@ -30,9 +30,8 @@ import {
 	WhatsApp as WhatsAppIcon, // <-- ✅ WhatsApp instead of WhatsAppOutlined
 } from '@mui/icons-material';
 
-import { useAuth } from '../../context/AuthContext';
 import DownloadQuizButton from './DownloadQuizButton/DownloadQuizButton';
-
+import { useAuth } from '../../../../../context/AuthContext';
 const ShareDialog = styled(Dialog)(({ theme }) => ({
 	'& .MuiDialog-paper': {
 		borderRadius: theme.shape.borderRadius * 2,

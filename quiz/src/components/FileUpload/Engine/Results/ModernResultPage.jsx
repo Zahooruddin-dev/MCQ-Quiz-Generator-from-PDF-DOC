@@ -35,7 +35,7 @@ import {
 	ArrowRight,
 } from 'lucide-react';
 
-import ShareQuizModal from '../../../ShareQuizModal/ShareQuizModal';
+import ShareQuizModal from './ShareQuizModal/ShareQuizModal'
 
 // Animations
 const scaleIn = keyframes`

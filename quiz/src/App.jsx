@@ -14,7 +14,7 @@ import { styled } from '@mui/material/styles';
 
 import theme from './theme';
 import { useAuth } from './context/AuthContext';
-import ShareQuizModal from './components/ShareQuizModal/ShareQuizModal';
+import ShareQuizModal from './components/FileUpload/Engine/Results/ShareQuizModal/ShareQuizModal';
 import { QuizManager, initializeQuizManager } from './utils/quizManager';
 
 // Loader
