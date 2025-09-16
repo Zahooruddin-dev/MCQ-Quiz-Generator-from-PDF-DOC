@@ -17,8 +17,24 @@ import {
   MenuItem,
   Grid,
   Paper,
+  IconButton,
+  Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from "@mui/material";
-import { Settings, Coins, Crown, Zap, Clock, Target } from "lucide-react";
+import { 
+  Settings, 
+  Coins, 
+  Crown, 
+  Zap, 
+  Clock, 
+  Target, 
+  MessageSquare,
+  ChevronDown,
+  Info,
+  Sparkles
+} from "lucide-react";
 import { useAuth } from '../../../context/AuthContext';
 
 const ConfigPanel = ({
@@ -39,11 +55,23 @@ const ConfigPanel = ({
     quality: "normal",
     questionType: "mixed",
     useAI: false,
+    customInstructions: "", // New field for custom instructions
     ...initialOptions // Allow overrides
   };
 
   const [useAI, setUseAI] = useState(hasAI || false);
   const [aiOptions, setAiOptions] = useState(defaultOptions);
+  const [showCustomInstructions, setShowCustomInstructions] = useState(false);
+
+  // Example prompts for custom instructions
+  const examplePrompts = [
+    "Focus on practical application questions",
+    "Include real-world scenarios and examples",
+    "Test critical thinking and analysis skills",
+    "Make questions suitable for beginners",
+    "Include questions about key terminology",
+    "Focus on problem-solving abilities"
+  ];
 
   // Difficulty options with descriptions
   const difficultyOptions = [
@@ -139,6 +167,30 @@ const ConfigPanel = ({
   const handleQualityChange = useCallback(
     (e) => {
       const newOptions = { ...aiOptions, quality: e.target.value };
+      setAiOptions(newOptions);
+      onOptionsChange?.(newOptions);
+    },
+    [aiOptions, onOptionsChange]
+  );
+
+  // Custom instructions handler
+  const handleCustomInstructionsChange = useCallback(
+    (e) => {
+      const newOptions = { ...aiOptions, customInstructions: e.target.value };
+      setAiOptions(newOptions);
+      onOptionsChange?.(newOptions);
+    },
+    [aiOptions, onOptionsChange]
+  );
+
+  // Add example prompt to custom instructions
+  const addExamplePrompt = useCallback(
+    (prompt) => {
+      const currentInstructions = aiOptions.customInstructions.trim();
+      const newInstructions = currentInstructions 
+        ? `${currentInstructions}\n${prompt}` 
+        : prompt;
+      const newOptions = { ...aiOptions, customInstructions: newInstructions };
       setAiOptions(newOptions);
       onOptionsChange?.(newOptions);
     },
@@ -325,6 +377,91 @@ const ConfigPanel = ({
               </Grid>
             </Grid>
 
+            {/* Custom Instructions Section */}
+            <Accordion 
+              expanded={showCustomInstructions} 
+              onChange={() => setShowCustomInstructions(!showCustomInstructions)}
+              sx={{
+                backgroundColor: 'rgba(139, 92, 246, 0.05)',
+                border: '1px solid rgba(139, 92, 246, 0.2)',
+                borderRadius: 2,
+                '&:before': { display: 'none' },
+                boxShadow: 'none',
+              }}
+            >
+              <AccordionSummary
+                expandIcon={<ChevronDown size={20} />}
+                sx={{ minHeight: 48, '&.Mui-expanded': { minHeight: 48 } }}
+              >
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Sparkles size={18} color="#8B5CF6" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#6B46C1' }}>
+                    Custom Instructions (Optional)
+                  </Typography>
+                  <Tooltip title="Add specific requirements for your quiz questions">
+                    <Info size={16} color="#9CA3AF" />
+                  </Tooltip>
+                </Stack>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Stack spacing={2}>
+                  <TextField
+                    multiline
+                    rows={4}
+                    placeholder="Add your custom instructions here... (e.g., 'Focus on Chapter 3', 'Include calculation problems', 'Test understanding of key concepts')"
+                    value={aiOptions.customInstructions}
+                    onChange={handleCustomInstructionsChange}
+                    disabled={loading}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: { xs: '0.875rem', sm: '1rem' },
+                      }
+                    }}
+                    InputProps={{
+                      startAdornment: (
+                        <MessageSquare size={18} color="#9CA3AF" style={{ marginRight: 8, marginTop: 12 }} />
+                      ),
+                    }}
+                  />
+                  
+                  {/* Example prompts */}
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                      Quick examples (click to add):
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {examplePrompts.map((prompt, index) => (
+                        <Chip
+                          key={index}
+                          label={prompt}
+                          size="small"
+                          onClick={() => addExamplePrompt(prompt)}
+                          sx={{
+                            cursor: 'pointer',
+                            fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                            '&:hover': {
+                              backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                              transform: 'scale(1.05)',
+                              transition: 'all 0.2s',
+                            }
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+
+                  {aiOptions.customInstructions && (
+                    <Alert severity="info" sx={{ 
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      '& .MuiAlert-icon': { fontSize: { xs: '1rem', sm: '1.25rem' } }
+                    }}>
+                      Your custom instructions will guide the AI while maintaining question quality and format standards.
+                    </Alert>
+                  )}
+                </Stack>
+              </AccordionDetails>
+            </Accordion>
+
             {/* Current Selection Summary */}
             <Paper 
               sx={{ 
@@ -338,7 +475,7 @@ const ConfigPanel = ({
                 Current Configuration
               </Typography>
               <Grid container spacing={1}>
-                <Grid item xs={6}>
+                <Grid item xs={12} sm={6}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {selectedDifficulty?.icon}
                     <Typography variant="body2">
@@ -346,7 +483,7 @@ const ConfigPanel = ({
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid item xs={12} sm={6}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {selectedQuality?.icon}
                     <Typography variant="body2">
@@ -354,8 +491,45 @@ const ConfigPanel = ({
                     </Typography>
                   </Box>
                 </Grid>
+                {aiOptions.customInstructions && (
+                  <Grid item xs={12}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mt: 1 }}>
+                      <MessageSquare size={16} color="#8B5CF6" style={{ marginTop: 2 }} />
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          Custom Instructions:
+                        </Typography>
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary" 
+                          sx={{ 
+                            display: 'block',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                            maxHeight: 60,
+                            overflow: 'auto',
+                            fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                          }}
+                        >
+                          {aiOptions.customInstructions}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                )}
                 <Grid item xs={12}>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1, lineHeight: 1.75, padding: '0 4px' }}>
+                  <Typography 
+                    variant="caption" 
+                    color="text.secondary" 
+                    sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 1, 
+                      lineHeight: 1.75, 
+                      padding: '0 4px',
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                    }}
+                  >
                     Estimated generation time: {selectedQuality?.estimatedTime || '~1-2min'}
                   </Typography>
                 </Grid>

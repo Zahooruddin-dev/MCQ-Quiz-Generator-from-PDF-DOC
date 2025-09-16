@@ -24,9 +24,19 @@ export class GenerationService {
    * @param {number} maxAttempts Maximum attempts.
    * @param {Array} existingQuestions Existing questions.
    * @param {number} startAttemptNum Starting attempt number.
+   * @param {string} [customInstructions] ✅ Optional custom instructions.
    * @returns {Promise<Array>} Array of generated questions.
    */
-  async attemptGeneration(text, keyFacts, requested, difficulty, maxAttempts, existingQuestions, startAttemptNum) {
+  async attemptGeneration(
+    text,
+    keyFacts,
+    requested,
+    difficulty,
+    maxAttempts,
+    existingQuestions,
+    startAttemptNum,
+    customInstructions = '' // ✅ new param
+  ) {
     let aggregated = [...existingQuestions];
     let attemptCount = 0;
 
@@ -35,10 +45,21 @@ export class GenerationService {
       const totalAttemptNum = startAttemptNum + attemptCount;
       const missing = requested - aggregated.length;
 
-      console.log(`  Attempt ${attemptCount}/${maxAttempts} (${difficulty.toUpperCase()}): Need ${missing} more questions`);
+      console.log(
+        `  Attempt ${attemptCount}/${maxAttempts} (${difficulty.toUpperCase()}): Need ${missing} more questions`
+      );
 
       try {
-        const prompt = PromptBuilder.buildPrompt(text, keyFacts, missing, difficulty, this.language);
+        // ✅ Inject custom instructions into the prompt
+        const prompt = PromptBuilder.buildPrompt(
+          text,
+          keyFacts,
+          missing,
+          difficulty,
+          this.language,
+          customInstructions
+        );
+
         const raw = await this.apiClient.makeRequest(prompt);
         const processed = this.questionProcessor.extractAndProcess(raw);
 
@@ -46,28 +67,27 @@ export class GenerationService {
         aggregated = this._mergeUniqueQuestions(aggregated, processed, requested);
         const addedCount = aggregated.length - beforeCount;
 
-        console.log(`   ✓ Added ${addedCount} unique questions. Total: ${aggregated.length}/${requested}`);
+        console.log(
+          `   ✓ Added ${addedCount} unique questions. Total: ${aggregated.length}/${requested}`
+        );
 
         if (aggregated.length >= requested) {
-          console.log(`   🎉 ${difficulty.toUpperCase()} tier successful! Got required questions.`);
+          console.log(
+            `   🎉 ${difficulty.toUpperCase()} tier successful! Got required questions.`
+          );
           break;
         }
-
       } catch (err) {
-        console.warn(`   ❌ ${difficulty.toUpperCase()} attempt ${attemptCount} failed:`, err.message);
+        console.warn(
+          `   ❌ ${difficulty.toUpperCase()} attempt ${attemptCount} failed:`,
+          err.message
+        );
       }
     }
 
     return aggregated;
   }
 
-  /**
-   * Merges unique questions from new batch into existing array.
-   * @param {Array} existing Existing questions.
-   * @param {Array} toAdd New questions to add.
-   * @param {number} limit Maximum total questions.
-   * @returns {Array} Merged questions array.
-   */
   _mergeUniqueQuestions(existing, toAdd, limit) {
     const out = [...existing];
     const seen = new Set(existing.map(q => this._fingerprint(q.question)));
@@ -82,48 +102,32 @@ export class GenerationService {
     return out;
   }
 
-  /**
-   * Creates a fingerprint for question deduplication.
-   * @param {string} text Question text.
-   * @returns {string} Fingerprint.
-   */
   _fingerprint(text) {
-    return (text || '').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 200);
+    return (text || '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 200);
   }
 
-  /**
-   * Gets fallback difficulty for progressive generation.
-   * @param {string} primary Primary difficulty.
-   * @returns {string} Fallback difficulty.
-   */
   static getFallbackDifficulty(primary) {
     const fallbacks = {
-      'high': 'medium',
-      'medium': 'easy',
-      'easy': 'medium'
+      high: 'medium',
+      medium: 'easy',
+      easy: 'medium',
     };
     return fallbacks[primary] || 'medium';
   }
 
-  /**
-   * Gets second fallback difficulty.
-   * @param {string} primary Primary difficulty.
-   * @returns {string} Second fallback difficulty.
-   */
   static getSecondFallbackDifficulty(primary) {
     const fallbacks = {
-      'high': 'easy',
-      'medium': 'high',
-      'easy': 'high'
+      high: 'easy',
+      medium: 'high',
+      easy: 'high',
     };
     return fallbacks[primary] || 'easy';
   }
 
-  /**
-   * Gets quality configuration based on quality setting.
-   * @param {string} quality Quality level.
-   * @returns {object} Quality configuration.
-   */
   static getQualityConfig(quality) {
     const configs = {
       quick: {
@@ -143,37 +147,44 @@ export class GenerationService {
         highQualityAttempts: 4,
         mediumQualityAttempts: 3,
         easyQualityAttempts: 3,
-      }
+      },
     };
     return configs[quality] || configs.normal;
   }
 
-  /**
-   * Synthesizes questions when generation is insufficient.
-   * @param {Array} existing Existing questions.
-   * @param {string[]} keyFacts Key facts.
-   * @param {number} needed Number needed.
-   * @returns {Array} Synthesized questions.
-   */
   synthesizeQuestions(existing, keyFacts, needed) {
-    return this.questionSynthesizer.synthesizeQuestions(existing, keyFacts, needed);
+    return this.questionSynthesizer.synthesizeQuestions(
+      existing,
+      keyFacts,
+      needed
+    );
   }
 }
 
 /**
  * Convenience function for attempt generation (used by main LLMService).
- * @param {string} text Source text.
- * @param {string[]} keyFacts Key facts.
- * @param {number} requested Number requested.
- * @param {string} difficulty Difficulty level.
- * @param {number} maxAttempts Max attempts.
- * @param {Array} existingQuestions Existing questions.
- * @param {number} startAttemptNum Start attempt number.
- * @param {object} apiClient API client instance.
- * @param {string} language Language.
- * @returns {Promise<Array>} Generated questions.
  */
-export async function attemptGeneration(text, keyFacts, requested, difficulty, maxAttempts, existingQuestions, startAttemptNum, apiClient, language = 'en') {
+export async function attemptGeneration(
+  text,
+  keyFacts,
+  requested,
+  difficulty,
+  maxAttempts,
+  existingQuestions,
+  startAttemptNum,
+  apiClient,
+  language = 'en',
+  customInstructions = '' // ✅ pass down
+) {
   const service = new GenerationService(apiClient, language);
-  return service.attemptGeneration(text, keyFacts, requested, difficulty, maxAttempts, existingQuestions, startAttemptNum);
+  return service.attemptGeneration(
+    text,
+    keyFacts,
+    requested,
+    difficulty,
+    maxAttempts,
+    existingQuestions,
+    startAttemptNum,
+    customInstructions
+  );
 }
