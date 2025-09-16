@@ -56,6 +56,9 @@ const LoadingFallback = ({ text = 'Loading...' }) => (
 // Route-based lazy imports - Only load when needed
 const LandingPage = lazy(() => import('./components/Landing/LandingPage'));
 const ModernAuthForm = lazy(() => import('./components/Auth/ModernAuthForm'));
+const TermsAndConditions = lazy(() =>
+	import('./components/Landing/Legal/TermsAndConditions')
+);
 
 // Main app components - loaded together for performance
 const ModernHeader = lazy(() => import('./components/Layout/ModernHeader'));
@@ -119,9 +122,12 @@ const FileUploadWrapper = ({ apiKey, baseUrl }) => {
 		const quiz = QuizManager.createQuiz(uploadedQuestions, {
 			title: options?.title || null, // Let the quiz generate its own title
 			aiGenerated: isAI,
-			source: options?.source || options?.fileName || (isAI ? 'AI Generated Quiz' : 'File Upload')
+			source:
+				options?.source ||
+				options?.fileName ||
+				(isAI ? 'AI Generated Quiz' : 'File Upload'),
 		});
-		
+
 		navigate(`/quiz/${quiz.id}`);
 	};
 
@@ -149,7 +155,7 @@ const QuizEngineWrapper = () => {
 			try {
 				setLoading(true);
 				let currentQuiz;
-				
+
 				if (quizId) {
 					// Load quiz by ID
 					currentQuiz = await QuizManager.getQuizById(quizId);
@@ -165,7 +171,7 @@ const QuizEngineWrapper = () => {
 						return;
 					}
 				}
-				
+
 				setQuiz(currentQuiz);
 			} catch (err) {
 				console.error('Failed to load quiz:', err);
@@ -174,7 +180,7 @@ const QuizEngineWrapper = () => {
 				setLoading(false);
 			}
 		};
-		
+
 		loadQuiz();
 	}, [quizId, navigate]);
 
@@ -197,7 +203,10 @@ const QuizEngineWrapper = () => {
 					{error}
 				</Typography>
 				<Typography variant='body2' sx={{ mt: 2 }}>
-					<button onClick={() => navigate('/dashboard')} style={{ padding: '8px 16px', cursor: 'pointer' }}>
+					<button
+						onClick={() => navigate('/dashboard')}
+						style={{ padding: '8px 16px', cursor: 'pointer' }}
+					>
 						Go to Dashboard
 					</button>
 				</Typography>
@@ -234,7 +243,7 @@ const ResultPageWrapper = () => {
 			try {
 				setLoading(true);
 				let currentQuiz;
-				
+
 				if (quizId) {
 					// Load quiz by ID
 					currentQuiz = await QuizManager.getQuizById(quizId);
@@ -256,7 +265,7 @@ const ResultPageWrapper = () => {
 						return;
 					}
 				}
-				
+
 				setQuiz(currentQuiz);
 				// Get or generate results
 				const quizResults = currentQuiz.getResults();
@@ -268,7 +277,7 @@ const ResultPageWrapper = () => {
 				setLoading(false);
 			}
 		};
-		
+
 		loadResults();
 	}, [quizId, navigate]);
 
@@ -282,7 +291,7 @@ const ResultPageWrapper = () => {
 		try {
 			// Get questions from the quiz or results
 			let questions = quiz?.questions || results?.questions;
-			
+
 			if (!questions || !Array.isArray(questions) || questions.length === 0) {
 				console.error('No questions found for retake:', { quiz, results });
 				alert('Unable to retake quiz: No questions found.');
@@ -293,9 +302,9 @@ const ResultPageWrapper = () => {
 			const newQuiz = QuizManager.createQuiz(questions, {
 				title: `Retake: ${quiz?.title || results?.title || 'Quiz'}`,
 				aiGenerated: quiz?.aiGenerated || false,
-				source: quiz?.source || quiz?.title || results?.title || 'Retake'
+				source: quiz?.source || quiz?.title || results?.title || 'Retake',
 			});
-			
+
 			console.log('Created new quiz for retake from results page:', newQuiz);
 			navigate(`/quiz/${newQuiz.id}`);
 		} catch (error) {
@@ -315,7 +324,10 @@ const ResultPageWrapper = () => {
 					{error}
 				</Typography>
 				<Typography variant='body2' sx={{ mt: 2 }}>
-					<button onClick={() => navigate('/dashboard')} style={{ padding: '8px 16px', cursor: 'pointer' }}>
+					<button
+						onClick={() => navigate('/dashboard')}
+						style={{ padding: '8px 16px', cursor: 'pointer' }}
+					>
 						Go to Dashboard
 					</button>
 				</Typography>
@@ -372,7 +384,7 @@ const DashboardWrapper = () => {
 		try {
 			// Get questions from the quiz data
 			let questions = quiz.questions;
-			
+
 			// If questions aren't directly available, check if they're in results
 			if (!questions && quiz.results && quiz.results.questions) {
 				questions = quiz.results.questions;
@@ -388,9 +400,9 @@ const DashboardWrapper = () => {
 			const newQuiz = QuizManager.createQuiz(questions, {
 				title: `Retake: ${quiz.title || quiz.quizTitle || 'Quiz'}`,
 				aiGenerated: quiz.aiGenerated || false,
-				source: quiz.source || quiz.title || 'Retake'
+				source: quiz.source || quiz.title || 'Retake',
 			});
-			
+
 			console.log('Created new quiz for retake:', newQuiz);
 			navigate(`/quiz/${newQuiz.id}`);
 		} catch (error) {
@@ -419,10 +431,8 @@ const HeaderWrapper = ({ onProfileClick, onApiConfigClick, showApiConfig }) => (
 			onApiConfigClick={onApiConfigClick}
 			showApiConfig={showApiConfig}
 		/>
-	</Suspense> 
-	
+	</Suspense>
 );
-
 
 // Main App
 const App = () => {
@@ -447,7 +457,6 @@ const App = () => {
 	});
 	const [baseUrl] = useState(import.meta.env.VITE_DEFAULT_BASE_URL);
 
-
 	// Optimized API Key fetching with error handling
 	useEffect(() => {
 		if (!user || apiKey) return;
@@ -460,7 +469,6 @@ const App = () => {
 				const docSnap = await getDoc(doc(db, 'settings', 'apiKey'));
 
 				if (!isMounted) return;
-				
 
 				if (docSnap.exists()) {
 					const key = docSnap.data().value;
@@ -508,6 +516,23 @@ const App = () => {
 						<Routes>
 							<Route path='/' element={<LandingPage />} />
 							<Route path='/auth' element={<ModernAuthForm />} />
+							<Route
+								path='/terms'
+								element={
+									<>
+										<HeaderWrapper
+											onProfileClick={() => setShowUserInfo(true)}
+											onApiConfigClick={() => setShowApiConfig(true)}
+											showApiConfig={showApiConfig}
+										/>
+										<Suspense
+											fallback={<LoadingFallback text='Loading Terms...' />}
+										>
+											<TermsAndConditions />
+										</Suspense>
+									</>
+								}
+							/>
 							<Route path='*' element={<Navigate to='/' replace />} />
 						</Routes>
 					</Suspense>
@@ -557,10 +582,7 @@ const App = () => {
 										onApiConfigClick={() => setShowApiConfig(true)}
 										showApiConfig={showApiConfig}
 									/>
-									<FileUploadWrapper
-										apiKey={apiKey}
-										baseUrl={baseUrl}
-									/>
+									<FileUploadWrapper apiKey={apiKey} baseUrl={baseUrl} />
 								</>
 							}
 						/>
