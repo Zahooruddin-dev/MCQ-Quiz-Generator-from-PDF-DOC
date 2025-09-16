@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -11,46 +11,52 @@ import {
   Fade,
   Divider,
 } from "@mui/material";
-import {
-  Crown,
-  Award,
-} from "lucide-react";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { Crown, Award } from "lucide-react";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 
 const ProfilePremiumCard = ({ user, isPremium }) => {
-  const [requestSent, setRequestSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  const handleRequestPremium = async () => {
-    setLoading(true);
-    try {
-      const requestRef = doc(db, "premiumRequests", user.uid);
-      const existing = await getDoc(requestRef);
-
-      if (existing.exists() && existing.data().status === "pending") {
-        setRequestSent(true);
-        return;
-      }
-
-      await setDoc(
-        requestRef,
-        {
-          uid: user.uid,
-          email: user.email,
-          name: user.displayName || "N/A",
-          createdAt: serverTimestamp(),
-          status: "pending",
-        },
-        { merge: true }
-      );
-
-      setRequestSent(true);
-    } catch (err) {
-      console.error("Failed to send premium request:", err);
-    } finally {
-      setLoading(false);
+  // Load Paddle.js SDK
+  useEffect(() => {
+    if (!window.Paddle) {
+      const script = document.createElement("script");
+      script.src = "https://cdn.paddle.com/paddle/v2/paddle.js";
+      script.onload = () => {
+        window.Paddle.Setup({
+          vendor: Number(import.meta.env.VITE_PADDLE_VENDOR_ID), // set in .env
+        });
+      };
+      document.body.appendChild(script);
     }
+  }, []);
+
+  const handleCheckout = async () => {
+    if (!window.Paddle) return;
+
+    setLoading(true);
+
+    window.Paddle.Checkout.open({
+      product: Number(import.meta.env.VITE_PADDLE_PREMIUM_PRODUCT_ID), // set your Paddle product ID
+      email: user.email,
+      successCallback: async (data) => {
+        try {
+          // Update Firestore user document
+          const userRef = doc(db, "users", user.uid);
+          await updateDoc(userRef, { isPremium: true });
+          setSuccess(true);
+        } catch (err) {
+          console.error("Failed to update premium status:", err);
+        } finally {
+          setLoading(false);
+        }
+      },
+      closeCallback: () => {
+        setLoading(false);
+      },
+    });
   };
 
   if (isPremium) return null;
@@ -102,11 +108,11 @@ const ProfilePremiumCard = ({ user, isPremium }) => {
               />
             </Stack>
 
-            {!requestSent ? (
+            {!success ? (
               <Button
                 variant="contained"
                 fullWidth
-                onClick={handleRequestPremium}
+                onClick={handleCheckout}
                 disabled={loading}
                 startIcon={<Award size={16} />}
                 sx={{
@@ -118,11 +124,11 @@ const ProfilePremiumCard = ({ user, isPremium }) => {
                   },
                 }}
               >
-                {loading ? "Sending Request..." : "Request Premium Upgrade"}
+                {loading ? "Redirecting..." : "Upgrade with Paddle"}
               </Button>
             ) : (
               <Alert severity="success" sx={{ borderRadius: 2 }}>
-                Premium request submitted! Waiting for admin approval.
+                🎉 Premium unlocked! Enjoy your new features.
               </Alert>
             )}
           </CardContent>
