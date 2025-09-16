@@ -1,7 +1,11 @@
-// ProfileStats.jsx
 import React from "react";
-import { Box, Typography, Stack, CardContent } from "@mui/material";
-import { StatsCard } from "./ProfileStyles";
+import {
+  Box,
+  Typography,
+  Stack,
+  Card,
+  CardContent,
+} from "@mui/material";
 
 const ProfileStats = ({ userStats }) => {
   return (
@@ -11,7 +15,14 @@ const ProfileStats = ({ userStats }) => {
       </Typography>
 
       <Stack direction="row" spacing={2}>
-        <StatsCard sx={{ flex: 1 }}>
+        <Card 
+          sx={{ 
+            flex: 1,
+            borderRadius: 2,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            border: "1px solid rgba(0,0,0,0.08)"
+          }}
+        >
           <CardContent sx={{ p: 2, textAlign: "center" }}>
             <Typography
               variant="h4"
@@ -23,9 +34,16 @@ const ProfileStats = ({ userStats }) => {
               Quizzes Completed
             </Typography>
           </CardContent>
-        </StatsCard>
+        </Card>
 
-        <StatsCard sx={{ flex: 1 }}>
+        <Card 
+          sx={{ 
+            flex: 1,
+            borderRadius: 2,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            border: "1px solid rgba(0,0,0,0.08)"
+          }}
+        >
           <CardContent sx={{ p: 2, textAlign: "center" }}>
             <Typography
               variant="h4"
@@ -37,7 +55,7 @@ const ProfileStats = ({ userStats }) => {
               Average Score
             </Typography>
           </CardContent>
-        </StatsCard>
+        </Card>
       </Stack>
     </Box>
   );

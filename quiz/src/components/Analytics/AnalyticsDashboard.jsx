@@ -9,8 +9,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Skeleton,
-  Alert,
 } from '@mui/material';
 import {
   PollOutlined as AnalyticsIcon,
@@ -23,9 +21,10 @@ import {
   getFirestore,
   collection,
   query,
-  where,
   orderBy,
   getDocs,
+  doc,
+  updateDoc,
 } from 'firebase/firestore';
 
 // Import sub-components
@@ -36,6 +35,7 @@ import TopicPerformanceChart from './TopicPerformanceChart';
 import PerformanceTrendChart from './PerformanceTrendChart';
 import AnalyticsLoadingState from './AnalyticsLoadingState';
 import AnalyticsErrorState from './AnalyticsErrorState';
+
 const db = getFirestore();
 
 // Time period constants
@@ -66,7 +66,7 @@ const AnalyticsDashboard = ({
     switch (period) {
       case TimePeriod.THIS_WEEK: {
         const d = new Date(now);
-        const diff = d.getDay(); // 0 (Sun) - 6 (Sat)
+        const diff = d.getDay();
         d.setHours(0, 0, 0, 0);
         d.setDate(d.getDate() - diff);
         return d;
@@ -79,11 +79,13 @@ const AnalyticsDashboard = ({
         return d;
       }
       default:
-        return null; // ALL_TIME
+        return null;
     }
   };
 
   const processQuizData = (quizzes) => {
+    console.log('Processing quiz data:', quizzes?.length || 0, 'quizzes');
+    
     if (!quizzes || quizzes.length === 0) {
       return {
         totalQuizzes: 0,
@@ -93,8 +95,15 @@ const AnalyticsDashboard = ({
         scoreDistribution: [],
         monthlyStats: [],
         topicPerformance: [],
+        quizzesCompleted: 0,
+        averageScore: 0,
       };
     }
+
+    // Helper function to get score from quiz data
+    const getScore = (quiz) => {
+      return quiz.results?.percentage || quiz.score || 0;
+    };
 
     // Score distribution
     const scoreRanges = [
@@ -106,18 +115,19 @@ const AnalyticsDashboard = ({
     ];
 
     quizzes.forEach(quiz => {
-      const score = quiz.score || 0;
+      const score = getScore(quiz);
       const range = scoreRanges.find(r => score >= r.min && score <= r.max);
       if (range) range.count++;
     });
 
-    // Filter out empty ranges
     const scoreDistribution = scoreRanges.filter(range => range.count > 0);
 
     // Monthly stats
     const monthlyData = {};
     quizzes.forEach(quiz => {
-      const date = quiz.completedAt?.toDate ? quiz.completedAt.toDate() : new Date(quiz.completedAt);
+      // Handle timestamp numbers from quiz manager
+      const timestamp = quiz.completedAt || quiz.createdAt || 0;
+      const date = new Date(timestamp);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       
       if (!monthlyData[monthKey]) {
@@ -130,19 +140,19 @@ const AnalyticsDashboard = ({
       }
       
       monthlyData[monthKey].quizzes++;
-      monthlyData[monthKey].totalScore += quiz.score || 0;
+      monthlyData[monthKey].totalScore += getScore(quiz);
       monthlyData[monthKey].avgScore = monthlyData[monthKey].totalScore / monthlyData[monthKey].quizzes;
     });
 
     const monthlyStats = Object.keys(monthlyData)
-      .sort() // 'YYYY-MM' string sort respects chronological order
+      .sort()
       .map(k => monthlyData[k])
-      .slice(-6); // Last 6 months
+      .slice(-6);
 
-    // Topic performance
+    // Topic performance (use title as topic since quiz manager doesn't set topic)
     const topicData = {};
     quizzes.forEach(quiz => {
-      const topic = quiz.topic || 'General';
+      const topic = quiz.topic || quiz.title || 'General';
       if (!topicData[topic]) {
         topicData[topic] = {
           topic,
@@ -152,7 +162,7 @@ const AnalyticsDashboard = ({
         };
       }
       
-      topicData[topic].totalScore += quiz.score || 0;
+      topicData[topic].totalScore += getScore(quiz);
       topicData[topic].quizCount++;
       topicData[topic].avgScore = topicData[topic].totalScore / topicData[topic].quizCount;
     });
@@ -160,22 +170,21 @@ const AnalyticsDashboard = ({
     const topicPerformance = Object.values(topicData)
       .sort((a, b) => b.avgScore - a.avgScore);
 
-    // Calculate overall stats
     const totalQuizzes = quizzes.length;
-    const totalScore = quizzes.reduce((sum, quiz) => sum + (quiz.score || 0), 0);
-    const avgScore = totalScore / totalQuizzes;
-    const bestScore = Math.max(...quizzes.map(quiz => quiz.score || 0));
+    const totalScore = quizzes.reduce((sum, quiz) => sum + getScore(quiz), 0);
+    const avgScore = totalQuizzes > 0 ? totalScore / totalQuizzes : 0;
+    const bestScore = Math.max(...quizzes.map(quiz => getScore(quiz)));
 
-    // Calculate current streak
+    // Calculate streak
     let streak = 0;
     const sortedQuizzes = [...quizzes].sort((a, b) => {
-      const dateA = a.completedAt?.toDate ? a.completedAt.toDate() : new Date(a.completedAt);
-      const dateB = b.completedAt?.toDate ? b.completedAt.toDate() : new Date(b.completedAt);
-      return dateB - dateA;
+      const timestampA = a.completedAt || a.createdAt || 0;
+      const timestampB = b.completedAt || b.createdAt || 0;
+      return timestampB - timestampA;
     });
 
     for (const quiz of sortedQuizzes) {
-      if ((quiz.score || 0) >= 70) {
+      if (getScore(quiz) >= 70) {
         streak++;
       } else {
         break;
@@ -190,6 +199,8 @@ const AnalyticsDashboard = ({
       scoreDistribution,
       monthlyStats,
       topicPerformance,
+      quizzesCompleted: totalQuizzes,
+      averageScore: avgScore,
     };
   };
 
@@ -201,57 +212,73 @@ const AnalyticsDashboard = ({
       setError(null);
       
       try {
-        const dateFilter = getDateFilter(timePeriod);
-
-        // Try efficient query with index: by userId and completedAt desc
+        console.log('Fetching analytics for user:', targetUserId);
+        
+        // Read from the correct subcollection path
+        const quizzesRef = collection(db, 'users', targetUserId, 'quizzes');
         let allQuizzes = [];
+        
         try {
-          const baseConstraints = [
-            where('userId', '==', targetUserId),
-          ];
-          // If filtering by date, push where('completedAt', '>=', dateFilter)
-          if (dateFilter) {
-            baseConstraints.push(where('completedAt', '>=', dateFilter));
-          }
-          baseConstraints.push(orderBy('completedAt', 'desc'));
-
-          const indexedQuery = query(
-            collection(db, 'quizzes'),
-            ...baseConstraints,
-          );
-          const snapshot = await getDocs(indexedQuery);
+          // Try with ordering first
+          const quizzesQuery = query(quizzesRef, orderBy('createdAt', 'desc'));
+          const snapshot = await getDocs(quizzesQuery);
           allQuizzes = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch (idxErr) {
-          // Fallback: no index, do basic query by userId and sort/filter client-side
-          const fallbackQuery = query(
-            collection(db, 'quizzes'),
-            where('userId', '==', targetUserId)
-          );
-          const snapshot = await getDocs(fallbackQuery);
+          console.log(`Fetched ${allQuizzes.length} quizzes from subcollection`);
+        } catch (orderError) {
+          console.log('Ordering failed, fetching all quizzes:', orderError);
+          // Fallback: get all without ordering
+          const snapshot = await getDocs(quizzesRef);
           allQuizzes = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          
+          // Sort manually by timestamp
           allQuizzes.sort((a, b) => {
-            const dateA = a.completedAt?.toDate ? a.completedAt.toDate() : new Date(a.completedAt);
-            const dateB = b.completedAt?.toDate ? b.completedAt.toDate() : new Date(b.completedAt);
-            return dateB - dateA;
+            const timestampA = a.createdAt || 0;
+            const timestampB = b.createdAt || 0;
+            return timestampB - timestampA;
           });
+          console.log(`Fetched ${allQuizzes.length} quizzes using fallback`);
         }
 
-        // Apply client-side date filtering if needed and not already filtered
+        // Apply date filtering if needed
+        const dateFilter = getDateFilter(timePeriod);
         let filteredQuizzes = allQuizzes;
+        
         if (dateFilter) {
           filteredQuizzes = allQuizzes.filter(quiz => {
-            const quizDate = quiz.completedAt?.toDate ? quiz.completedAt.toDate() : new Date(quiz.completedAt);
-            return quizDate >= dateFilter;
+            const timestamp = quiz.completedAt || quiz.createdAt || 0;
+            return timestamp >= dateFilter.getTime();
           });
+          console.log(`Filtered to ${filteredQuizzes.length} quizzes for ${timePeriod}`);
         }
 
-        // Recent 10 for trend chart
+        // Get recent quizzes for trend chart
         const recent = allQuizzes.slice(0, 10);
         setRecentQuizzes(recent);
 
-        // Process the filtered data
+        // Process the data
         const processedData = processQuizData(filteredQuizzes);
+        console.log('Processed analytics data:', processedData);
         setAnalyticsData(processedData);
+
+        // Update user stats with all-time data (for ProfileStats)
+        const allTimeStats = processQuizData(allQuizzes);
+        try {
+          const userRef = doc(db, "users", targetUserId);
+          await updateDoc(userRef, { 
+            stats: {
+              quizzesCompleted: allTimeStats.quizzesCompleted,
+              averageScore: allTimeStats.averageScore,
+              totalQuizzes: allTimeStats.totalQuizzes,
+              avgScore: allTimeStats.avgScore,
+              bestScore: allTimeStats.bestScore,
+              streak: allTimeStats.streak,
+              lastUpdated: new Date()
+            }
+          });
+          console.log(`Updated user stats: ${allTimeStats.quizzesCompleted} quizzes, ${allTimeStats.averageScore.toFixed(1)}% avg`);
+        } catch (updateError) {
+          console.error("Failed to update user stats:", updateError);
+        }
 
       } catch (error) {
         console.error('Failed to fetch analytics data:', error);
@@ -305,6 +332,18 @@ const AnalyticsDashboard = ({
           )}
         </Stack>
       </Stack>
+
+      {/* Debug info - remove this once working */}
+      {analyticsData && (
+        <Card sx={{ mb: 2, bgcolor: 'info.light', color: 'info.contrastText' }}>
+          <CardContent sx={{ p: 2 }}>
+            <Typography variant="body2">
+              📊 Debug: {analyticsData.totalQuizzes} quizzes, {analyticsData.avgScore.toFixed(1)}% avg, 
+              {analyticsData.scoreDistribution?.length} score ranges, {analyticsData.monthlyStats?.length} months
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
       
       {analyticsData?.totalQuizzes === 0 ? (
         <Card>
@@ -319,27 +358,36 @@ const AnalyticsDashboard = ({
         </Card>
       ) : (
         <Stack spacing={3}>
-          {/* First Row - Score Distribution and Monthly Stats */}
           <Stack direction="row" spacing={2}>
             <Box sx={{ flex: 1 }}>
-              <ScoreDistributionChart data={analyticsData?.scoreDistribution || []} />
+              <ScoreDistributionChart 
+                data={analyticsData?.scoreDistribution || []} 
+                key={`score-${analyticsData?.totalQuizzes || 0}`}
+              />
             </Box>
             <Box sx={{ flex: 1 }}>
-              <MonthlyStatsChart data={analyticsData?.monthlyStats || []} />
+              <MonthlyStatsChart 
+                data={analyticsData?.monthlyStats || []} 
+                key={`monthly-${analyticsData?.totalQuizzes || 0}`}
+              />
             </Box>
           </Stack>
           
-          {/* Second Row - Topic Performance and Performance Trend */}
           <Stack direction="row" spacing={2}>
             <Box sx={{ flex: 1 }}>
-              <TopicPerformanceChart data={analyticsData?.topicPerformance || []} />
+              <TopicPerformanceChart 
+                data={analyticsData?.topicPerformance || []} 
+                key={`topic-${analyticsData?.totalQuizzes || 0}`}
+              />
             </Box>
             <Box sx={{ flex: 1 }}>
-              <PerformanceTrendChart quizzes={recentQuizzes} />
+              <PerformanceTrendChart 
+                quizzes={recentQuizzes || []} 
+                key={`trend-${recentQuizzes?.length || 0}`}
+              />
             </Box>
           </Stack>
           
-          {/* Summary Insights */}
           <Card>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>

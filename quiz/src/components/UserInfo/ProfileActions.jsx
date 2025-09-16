@@ -1,7 +1,12 @@
-// ProfileActions.jsx
 import React from "react";
-import { DialogActions, Button, Stack } from "@mui/material";
-import { Settings } from "lucide-react";
+import {
+  DialogActions,
+  Button,
+  Stack,
+} from "@mui/material";
+import {
+  Settings,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const ProfileActions = ({ isAdmin, onClose }) => {

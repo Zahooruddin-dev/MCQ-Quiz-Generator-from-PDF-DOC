@@ -1,7 +1,7 @@
 // utils/quizManager.js - Comprehensive quiz state management with persistence
 import { nanoid } from 'nanoid';
 import { getAuth } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
 // Quiz storage keys
@@ -154,6 +154,32 @@ export class QuizSession {
     return results;
   }
 
+  // Helper method to clean data for Firestore (remove undefined values)
+  cleanDataForFirestore(obj) {
+    if (obj === null || obj === undefined) {
+      return null;
+    }
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.cleanDataForFirestore(item)).filter(item => item !== undefined);
+    }
+    
+    if (typeof obj === 'object') {
+      const cleaned = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined) {
+          const cleanedValue = this.cleanDataForFirestore(value);
+          if (cleanedValue !== undefined) {
+            cleaned[key] = cleanedValue;
+          }
+        }
+      }
+      return cleaned;
+    }
+    
+    return obj;
+  }
+
   // Save session to localStorage
   save() {
     try {
@@ -185,14 +211,56 @@ export class QuizSession {
       // Save to Firebase if user is logged in
       const auth = getAuth();
       if (auth.currentUser) {
-        const quizRef = doc(collection(db, 'users', auth.currentUser.uid, 'quizzes'));
-        await setDoc(quizRef, {
+        // Clean the data to remove undefined values
+        const cleanQuizData = this.cleanDataForFirestore({
           ...quizData,
           userId: auth.currentUser.uid
         });
+        
+        // Save quiz to subcollection
+        const quizRef = doc(collection(db, 'users', auth.currentUser.uid, 'quizzes'));
+        await setDoc(quizRef, cleanQuizData);
+        
+        // Update user stats in main user document
+        await this.updateUserStats(auth.currentUser.uid, quizData.results);
       }
     } catch (error) {
       console.warn('Failed to save quiz to history:', error);
+    }
+  }
+
+  // Update user statistics in main user document
+  async updateUserStats(userId, results) {
+    try {
+      const userRef = doc(db, 'users', userId);
+      
+      // Get current user data to calculate new averages
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.exists() ? userSnap.data() : {};
+      
+      const currentQuizzesTaken = userData.quizzesTaken || 0;
+      const currentTotalQuestions = userData.totalQuestions || 0;
+      const currentAvgScore = userData.avgScore || 0;
+      
+      // Calculate new averages
+      const newQuizzesTaken = currentQuizzesTaken + 1;
+      const newTotalQuestions = currentTotalQuestions + results.totalQuestions;
+      const newAvgScore = currentQuizzesTaken === 0 ? 
+        results.percentage : 
+        ((currentAvgScore * currentQuizzesTaken) + results.percentage) / newQuizzesTaken;
+      
+      // Update only the specific stats fields - don't spread userData
+      await updateDoc(userRef, {
+        quizzesTaken: newQuizzesTaken,
+        totalQuestions: newTotalQuestions,
+        avgScore: Math.round(newAvgScore * 10) / 10, // Round to 1 decimal place
+        lastQuizDate: Date.now()
+      });
+      
+      console.log(`Updated user stats: ${currentQuizzesTaken} -> ${newQuizzesTaken} quizzes completed`);
+      
+    } catch (error) {
+      console.warn('Failed to update user stats:', error);
     }
   }
 

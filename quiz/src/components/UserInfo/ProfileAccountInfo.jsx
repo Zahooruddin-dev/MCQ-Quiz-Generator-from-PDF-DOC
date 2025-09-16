@@ -1,9 +1,25 @@
-// ProfileAccountInfo.jsx
 import React from "react";
-import { Box, Typography, Stack } from "@mui/material";
-import { Mail, Calendar, Clock } from "lucide-react";
+import {
+  Box,
+  Typography,
+  Stack,
+} from "@mui/material";
+import {
+  Mail,
+  Calendar,
+  Clock,
+} from "lucide-react";
 
-const ProfileAccountInfo = ({ user, formatDate }) => {
+const ProfileAccountInfo = ({ user }) => {
+  const formatDate = (timestamp) => {
+    if (!timestamp) return "Unknown";
+    return new Date(timestamp).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   return (
     <Box>
       <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
