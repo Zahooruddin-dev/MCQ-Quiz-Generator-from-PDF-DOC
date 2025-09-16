@@ -28,8 +28,8 @@ import {
   Refresh as RetakeIcon,
   Visibility as ViewIcon,
 } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
-import { QuizManager } from '../../utils/quizManager';
+import { useAuth } from '../../../context/AuthContext';
+import { QuizManager } from '../../../utils/quizManager';
 
 const RecentQuizzesCard = styled(Card)(({ theme }) => ({
   transition: 'all 0.2s ease',

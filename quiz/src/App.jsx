@@ -69,15 +69,15 @@ const ModernFileUpload = lazy(() =>
 	import('./components/FileUpload/ModernFileUpload')
 );
 const ModernQuizEngine = lazy(() =>
-	import('./components/Engine/ModernQuizEngine')
+	import('./components/FileUpload/Engine/ModernQuizEngine')
 );
 const ModernResultPage = lazy(() =>
-	import('./components/Results/ModernResultPage')
+	import('./components/FileUpload/Engine/Results/ModernResultPage')
 );
 
 // Admin and settings
 const ModernAPIConfig = lazy(() =>
-	import('./components/APIconfig/ModernAPIConfig')
+	import('./components/Admin/APIconfig/ModernAPIConfig')
 );
 const ModernUserProfile = lazy(() =>
 	import('./components/UserInfo/ModernUserProfile')

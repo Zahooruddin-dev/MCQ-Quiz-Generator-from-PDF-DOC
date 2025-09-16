@@ -31,7 +31,7 @@ import {
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
-import DownloadQuizButton from '../DownloadQuizButton/DownloadQuizButton';
+import DownloadQuizButton from './DownloadQuizButton/DownloadQuizButton';
 
 const ShareDialog = styled(Dialog)(({ theme }) => ({
 	'& .MuiDialog-paper': {

@@ -26,9 +26,9 @@ import { useNavigate } from 'react-router-dom';
 import { WelcomeCard } from './StyledCards';
 import QuickActions from './QuickActions';
 
-const ProgressTracking = lazy(() => import('../ProgressTracking/ProgressTracking'));
-const AnalyticsDashboard = lazy(() => import('../Analytics/AnalyticsDashboard'));
-const RecentQuizzes = lazy(() => import('../RecentQuizzes/RecentQuizzes'));
+const ProgressTracking = lazy(() => import('./ProgressTracking/ProgressTracking'));
+const AnalyticsDashboard = lazy(() => import('./Analytics/AnalyticsDashboard'));
+const RecentQuizzes = lazy(() => import('./RecentQuizzes/RecentQuizzes'));
 
 const ComponentLoader = () => (
   <Box

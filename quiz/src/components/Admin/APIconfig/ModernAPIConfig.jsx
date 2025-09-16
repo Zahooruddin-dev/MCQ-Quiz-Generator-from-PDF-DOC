@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { db } from '../../firebaseConfig';
+import { db } from '../../../firebaseConfig';
 import { StyledDialog } from './styles';
 
 import ConfigHeader from './ConfigHeader';

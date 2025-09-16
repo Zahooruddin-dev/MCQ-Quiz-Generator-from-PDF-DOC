@@ -14,7 +14,7 @@ import {
   PollOutlined as AnalyticsIcon,
   FilterAltOutlined as FilterIcon,
 } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 
 // Firebase imports
 import {
