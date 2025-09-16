@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Stack, Typography, Container, Button } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUpOutlined';
-import { useAuth } from '../../context/AuthContext';
+
 import { db } from '../../firebaseConfig';
 import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import StatsGrid from './StatsGrid';
@@ -10,6 +10,7 @@ import CompletionCard from './CompletionCard';
 import LoadingSkeleton from './LoadingSkeleton';
 import Alerts from './Alerts';
 import { getEmptyProgressData, calculateProgressFromQuizzes, generateMockWeeklyProgress } from './helpers';
+import { useAuth } from '../../../context/AuthContext';
 
 const ProgressTracking = ({ userId, onBack, timePeriod = 'all_time', showCharts = true, compact = false }) => {
   const { user } = useAuth();
