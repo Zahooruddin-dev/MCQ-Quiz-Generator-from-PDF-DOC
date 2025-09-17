@@ -1,100 +1,82 @@
-// FileDropZone Handlers
+// src/components/FileDropZone/handlers.js
 export const createHandlers = ({
-  fileName,
-  effectiveLoading,
-  fileInputRef,
-  onFileSelect,
-  onDrop,
-  onDragOver,
-  onDragLeave,
-  setError,
-  setShowQuizOptions,
-  onGenerateQuiz,
-  extractedText, // optional for consistency
+	fileName,
+	effectiveLoading,
+	fileInputRef,
+	onFileSelect,
+	onDrop,
+	onDragOver,
+	onDragLeave,
+	setError,
+	setShowQuizOptions, // This is now optional (can be null)
+	onGenerateQuiz,
+	onStartInteractiveQuiz, // NEW: Handler for starting interactive quiz
 }) => {
-  // Close error snackbar
-  const handleCloseError = () => {
-    setError?.(null);
-  };
+	const handleCloseError = () => {
+		setError(null);
+	};
 
-  // Drop zone click
-  const handleDropZoneClick = (e) => {
-    if (fileName || effectiveLoading) {
-      e.stopPropagation();
-      return;
-    }
-    if (e.target.closest('button') || e.target.closest('input')) {
-      e.stopPropagation();
-      return;
-    }
-    e.stopPropagation();
-    fileInputRef.current?.click();
-  };
+	const handleDropZoneClick = () => {
+		if (fileInputRef.current && !effectiveLoading) {
+			fileInputRef.current.click();
+		}
+	};
 
-  // File input change
-  const handleFileInputChange = (e) => {
-    e.stopPropagation();
-    const file = e.target.files?.[0];
-    if (file) {
-      onFileSelect(file);
-    }
-    e.target.value = ''; // reset input
-  };
+	const handleFileInputChange = (e) => {
+		const file = e.target.files?.[0];
+		if (file) {
+			onFileSelect(file);
+		}
+	};
 
-  // Drag events
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onDrop?.(e);
-  };
+	const handleDrop = (e) => {
+		e.preventDefault();
+		onDrop(e);
+	};
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onDragOver?.(e);
-  };
+	const handleDragOver = (e) => {
+		e.preventDefault();
+		onDragOver(e);
+	};
 
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onDragLeave?.(e);
-  };
+	const handleDragLeave = (e) => {
+		e.preventDefault();
+		onDragLeave(e);
+	};
 
-  // Keyboard handler
-  const handleKeyDown = (e) => {
-    if (
-      !fileName &&
-      !effectiveLoading &&
-      (e.key === 'Enter' || e.key === ' ')
-    ) {
-      e.preventDefault();
-      e.stopPropagation();
-      fileInputRef.current?.click();
-    }
-  };
+	const handleKeyDown = (e) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			if (!effectiveLoading) {
+				handleDropZoneClick();
+			}
+		}
+	};
 
-  // Quiz generation
-  const handleGenerateQuizClick = (e) => {
-    e.stopPropagation();
-    console.log('Generate quiz clicked, opening dialog...');
-    setShowQuizOptions?.(true);
-  };
+	// MODIFIED: Now directly triggers quiz generation instead of showing dialog
+	const handleGenerateQuizClick = () => {
+		if (!fileName || effectiveLoading) return;
+		
+		// Call the quiz generation function directly
+		onGenerateQuiz();
+	};
 
-  const handleInteractiveQuiz = () => {
-    console.log('Interactive quiz selected');
-    setShowQuizOptions?.(false);
-    onGenerateQuiz?.();
-  };
+	// NEW: Handler for interactive quiz (called from dialog)
+	const handleInteractiveQuiz = () => {
+		if (onStartInteractiveQuiz) {
+			onStartInteractiveQuiz();
+		}
+	};
 
-  return {
-    handleCloseError,
-    handleDropZoneClick,
-    handleFileInputChange,
-    handleDrop,
-    handleDragOver,
-    handleDragLeave,
-    handleKeyDown,
-    handleGenerateQuizClick,
-    handleInteractiveQuiz,
-  };
+	return {
+		handleCloseError,
+		handleDropZoneClick,
+		handleFileInputChange,
+		handleDrop,
+		handleDragOver,
+		handleDragLeave,
+		handleKeyDown,
+		handleGenerateQuizClick,
+		handleInteractiveQuiz,
+	};
 };

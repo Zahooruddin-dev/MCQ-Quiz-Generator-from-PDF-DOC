@@ -45,12 +45,15 @@ const UploadMainCard = ({
   onFileUpload,
   fileReadStatus,
   extractedText,
-  // Props to pass through to FileDropZone
   selectedFile,
-  // NEW: Loading control functions
   startLoading,
   stopLoading,
   updateLoadingStage,
+  // NEW: Props for the new flow
+  generatedQuestions,
+  showQuizOptionsDialog,
+  onCloseQuizOptions,
+  onStartInteractiveQuiz,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -194,15 +197,18 @@ const UploadMainCard = ({
           setError={setError}
           fileReadStatus={fileReadStatus}
           extractedText={extractedText}
-          // Props needed for dialog functionality
           selectedFile={selectedFile}
           apiKey={apiKey}
           aiOptions={aiOptions}
           onFileUpload={onFileUpload}
-          // NEW: Loading control functions
           startLoading={startLoading}
           stopLoading={stopLoading}
           updateLoadingStage={updateLoadingStage}
+          // NEW: Props for the new flow
+          generatedQuestions={generatedQuestions}
+          showQuizOptionsDialog={showQuizOptionsDialog}
+          onCloseQuizOptions={onCloseQuizOptions}
+          onStartInteractiveQuiz={onStartInteractiveQuiz}
         />
       </Box>
 

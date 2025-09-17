@@ -34,9 +34,13 @@ const ModernFileUpload = ({
 	const [uploadProgress, setUploadProgress] = useState(0);
 	const [selectedFile, setSelectedFile] = useState(null);
 
-	// NEW STATE: Store extracted text and file read status
+	// Store extracted text and file read status
 	const [extractedText, setExtractedText] = useState('');
 	const [fileReadStatus, setFileReadStatus] = useState('none'); // 'none', 'reading', 'ready', 'error'
+
+	// NEW: State for the new flow
+	const [generatedQuestions, setGeneratedQuestions] = useState(null);
+	const [showQuizOptionsDialog, setShowQuizOptionsDialog] = useState(false);
 
 	const [loadingStage, setLoadingStage] = useState('');
 	const [stageMessage, setStageMessage] = useState('');
@@ -50,7 +54,7 @@ const ModernFileUpload = ({
 
 	const effectiveLoading = isLoading || loadingFromParent;
 
-	// ----- Call preloadApiConfig on component mount -----
+	// Call preloadApiConfig on component mount
 	useEffect(() => {
 		LLMService.preloadApiConfig().catch(console.error);
 	}, []);
@@ -91,8 +95,10 @@ const ModernFileUpload = ({
 		setFileSize(null);
 		setFileType('');
 		setSelectedFile(null);
-		setExtractedText(''); // NEW: Clear extracted text
-		setFileReadStatus('none'); // NEW: Reset status
+		setExtractedText('');
+		setFileReadStatus('none');
+		setGeneratedQuestions(null); // NEW: Clear generated questions
+		setShowQuizOptionsDialog(false); // NEW: Close dialog
 		setError(null);
 		if (fileInputRef.current) {
 			fileInputRef.current.value = '';
@@ -107,7 +113,7 @@ const ModernFileUpload = ({
 		[onReconfigure]
 	);
 
-	// MODIFIED: Now only handles AI processing, not file reading
+	// MODIFIED: Process file for AI and show dialog after completion
 	const processFileForAI = useCallback(
 		async (file, preExtractedText) => {
 			if (busyRef.current) return;
@@ -130,13 +136,12 @@ const ModernFileUpload = ({
 					return;
 				}
 
-				// Start AI processing - file already read!
+				// Start AI processing
 				startLoading('analyzing', 'Analyzing content...');
 
 				try {
 					const llmService = new LLMService();
 
-					// Use the pre-extracted text instead of reading again
 					updateLoadingStage('analyzing', 'Analyzing content...', 30, {
 						textExtracted: preExtractedText?.length || 0,
 					});
@@ -174,14 +179,15 @@ const ModernFileUpload = ({
 							{ questionsGenerated: questions.length }
 						);
 
-						// Complete
+						// Store generated questions and show dialog
+						updateLoadingStage('complete', 'Quiz ready!', 100);
+						
 						setTimeout(() => {
-							updateLoadingStage('complete', 'Quiz ready!', 100);
-							setTimeout(() => {
-								onFileUpload(questions, true, aiOptions);
-								stopLoading();
-							}, 500);
+							setGeneratedQuestions(questions);
+							setShowQuizOptionsDialog(true);
+							stopLoading();
 						}, 800);
+
 					} catch (apiError) {
 						// If API call fails after credit deduction, refund the credit
 						if (creditDeducted) {
@@ -234,7 +240,6 @@ const ModernFileUpload = ({
 			useAI,
 			apiKey,
 			aiOptions,
-			onFileUpload,
 			startLoading,
 			stopLoading,
 			updateLoadingStage,
@@ -252,15 +257,14 @@ const ModernFileUpload = ({
 		setFileSize,
 		setFileType,
 		setSelectedFile,
-		setExtractedText, // NEW: Pass extracted text setter
-		setFileReadStatus, // NEW: Pass status setter
+		setExtractedText,
+		setFileReadStatus,
 		clearSelectedFile,
-		processFile: processFileForAI, // This is now just AI processing
+		processFile: processFileForAI,
 		useAI,
 		startLoading,
 		stopLoading,
 		updateLoadingStage,
-		// Remove the duplicates - you had these twice
 	});
 
 	// MODIFIED: Generate quiz using pre-extracted text
@@ -309,6 +313,20 @@ const ModernFileUpload = ({
 			handleNonAIUpload();
 		}
 	}, [selectedFile, useAI, fileReadStatus, handleNonAIUpload]);
+
+	// NEW: Handle starting interactive quiz
+	const handleStartInteractiveQuiz = useCallback(() => {
+		if (generatedQuestions) {
+			onFileUpload(generatedQuestions, true, aiOptions);
+		}
+	}, [generatedQuestions, onFileUpload, aiOptions]);
+
+	// NEW: Handle closing quiz options dialog
+	const handleCloseQuizOptions = useCallback(() => {
+		setShowQuizOptionsDialog(false);
+		// Optionally clear generated questions if you want to regenerate
+		// setGeneratedQuestions(null);
+	}, []);
 
 	const handleDrop = useCallback(
 		(e) => {
@@ -385,6 +403,11 @@ const ModernFileUpload = ({
 					startLoading={startLoading}
 					stopLoading={stopLoading}
 					updateLoadingStage={updateLoadingStage}
+					// NEW: Props for the new flow
+					generatedQuestions={generatedQuestions}
+					showQuizOptionsDialog={showQuizOptionsDialog}
+					onCloseQuizOptions={handleCloseQuizOptions}
+					onStartInteractiveQuiz={handleStartInteractiveQuiz}
 				/>
 			</Stack>
 		</UploadContainer>

@@ -1,5 +1,5 @@
 // src/components/FileDropZone.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
 	Box,
 	Typography,
@@ -15,12 +15,8 @@ import {
 	Divider,
 } from '@mui/material';
 import {
-	FileText,
 	Brain,
 	X,
-	File,
-	FileType,
-	Type,
 	PlayCircle,
 	Download,
 } from 'lucide-react';
@@ -52,11 +48,16 @@ const FileDropZone = ({
 	onGenerateQuiz,
 	error,
 	setError,
-	fileReadStatus = 'none', // 'none', 'reading', 'ready', 'error'
+	fileReadStatus = 'none',
 	extractedText = '',
+	// NEW: Props for the new flow
+	generatedQuestions = null,
+	showQuizOptionsDialog = false,
+	onCloseQuizOptions,
+	onStartInteractiveQuiz,
 }) => {
-	// State for quiz generation options dialog
-	const [showQuizOptions, setShowQuizOptions] = useState(false);
+	// Remove local showQuizOptions state since it's now controlled from parent
+	// const [showQuizOptions, setShowQuizOptions] = useState(false);
 
 	const {
 		handleCloseError,
@@ -77,8 +78,10 @@ const FileDropZone = ({
 		onDragOver,
 		onDragLeave,
 		setError,
-		setShowQuizOptions,
+		setShowQuizOptions: null, // No longer needed
 		onGenerateQuiz,
+		// NEW: Pass the interactive quiz handler
+		onStartInteractiveQuiz,
 	});
 
 	const StageIcon = getStageIcon(loadingStage);
@@ -90,25 +93,30 @@ const FileDropZone = ({
 		questionsGenerated: 0,
 	};
 
-	// Create mock quiz data for download component with extracted text
-	const mockQuizData = {
+	// Create quiz data based on generated questions or mock data
+	const quizData = generatedQuestions ? {
+		title: fileName ? fileName.replace(/\.[^/.]+$/, '') : 'Quiz',
+		totalQuestions: generatedQuestions.length,
+		difficulty: 'Medium',
+		extractedText: extractedText,
+		questions: generatedQuestions,
+	} : {
 		title: fileName ? fileName.replace(/\.[^/.]+$/, '') : 'Quiz',
 		totalQuestions: Math.min(
 			Math.max(Math.floor(extractedText.length / 200), 5),
 			20
-		), // Dynamic based on content
+		),
 		difficulty: 'Medium',
-		extractedText: extractedText, // Pass the actual extracted text
-		questions: generateMockQuestions(extractedText), // Generate some mock questions
+		extractedText: extractedText,
+		questions: generateMockQuestions(extractedText),
 	};
 
-	// Generate mock questions based on extracted text
+	// Generate mock questions based on extracted text (fallback)
 	function generateMockQuestions(text) {
 		if (!text || text.length < 100) {
 			return [];
 		}
 
-		// Create some basic mock questions from the text
 		const sentences = text
 			.split(/[.!?]+/)
 			.filter((s) => s.trim().length > 20)
@@ -165,31 +173,28 @@ const FileDropZone = ({
 				isQuizGenerationDisabled={isQuizGenerationDisabled}
 				pulse={pulse}
 				StageIcon={StageIcon}
-				// ✅ these come from FileDropZone.jsx itself
 				formatBytes={formatBytes}
 				MAX_FILE_SIZE={MAX_FILE_SIZE}
 				FileIcon={FileIcon}
 				LoadingOverlay={LoadingOverlay}
 				getFileIcon={getFileIcon}
 			/>
-			{/* Quiz Generation Options Dialog */}
+
+			{/* Quiz Options Dialog - Now controlled from parent */}
 			<Dialog
-				open={showQuizOptions}
-				onClose={() => {
-					console.log('Dialog closed'); // Debug log
-					setShowQuizOptions(false);
-				}}
+				open={showQuizOptionsDialog}
+				onClose={onCloseQuizOptions}
 				maxWidth='sm'
 				fullWidth
 				PaperProps={{
 					sx: {
 						borderRadius: 3,
 						boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-						zIndex: 9999, // Ensure it's on top
+						zIndex: 9999,
 					},
 				}}
 				sx={{
-					zIndex: 9998, // Ensure dialog backdrop is on top
+					zIndex: 9998,
 				}}
 			>
 				<DialogTitle>
@@ -201,11 +206,11 @@ const FileDropZone = ({
 						<Stack direction='row' spacing={2} alignItems='center'>
 							<Brain color='#6366F1' size={24} />
 							<Typography variant='h6' sx={{ fontWeight: 600 }}>
-								Choose Quiz Type
+								Quiz Generated Successfully!
 							</Typography>
 						</Stack>
 						<IconButton
-							onClick={() => setShowQuizOptions(false)}
+							onClick={onCloseQuizOptions}
 							size='small'
 							sx={{ color: 'text.secondary' }}
 						>
@@ -216,8 +221,8 @@ const FileDropZone = ({
 
 				<DialogContent sx={{ pb: 2 }}>
 					<Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
-						How would you like to use your quiz? Choose interactive mode to take
-						the quiz online, or download it for offline use.
+						Your quiz has been generated with {generatedQuestions?.length || 0} questions! 
+						Choose how you'd like to use it:
 					</Typography>
 
 					<Stack spacing={2}>
@@ -235,7 +240,10 @@ const FileDropZone = ({
 									boxShadow: '0 8px 25px rgba(99, 102, 241, 0.15)',
 								},
 							}}
-							onClick={handleInteractiveQuiz}
+							onClick={() => {
+								onStartInteractiveQuiz();
+								onCloseQuizOptions();
+							}}
 						>
 							<Stack direction='row' spacing={3} alignItems='center'>
 								<Box
@@ -254,10 +262,10 @@ const FileDropZone = ({
 								</Box>
 								<Box sx={{ flex: 1 }}>
 									<Typography variant='h6' sx={{ fontWeight: 600, mb: 0.5 }}>
-										Interactive Quiz
+										Take Interactive Quiz
 									</Typography>
 									<Typography variant='body2' color='text.secondary'>
-										Take the quiz online with instant feedback, timer, and
+										Start the quiz now with instant feedback, timer, and
 										detailed results
 									</Typography>
 									<Stack direction='row' spacing={1} sx={{ mt: 1 }}>
@@ -284,8 +292,8 @@ const FileDropZone = ({
 								p: 3,
 								border: '2px solid transparent',
 								transition: 'all 0.2s ease',
-								position: 'relative', // 👈 make it layerable
-								zIndex: (theme) => theme.zIndex.modal + 1, // 👈 ensure above dialog content
+								position: 'relative',
+								zIndex: (theme) => theme.zIndex.modal + 1,
 								'&:hover': {
 									borderColor: 'secondary.main',
 									bgcolor: 'grey.50',
@@ -327,20 +335,13 @@ const FileDropZone = ({
 										<Chip label='Printable' size='small' variant='outlined' />
 									</Stack>
 
-									{/* Use the existing DownloadQuizButton component */}
-									{extractedText ? (
-										<DownloadQuizButton
-											quizData={mockQuizData}
-											questions={mockQuizData.questions}
-											variant='contained'
-											size='medium'
-											fullWidth={false}
-										/>
-									) : (
-										<Button variant='outlined' disabled size='medium'>
-											Download Quiz (No content available)
-										</Button>
-									)}
+									<DownloadQuizButton
+										quizData={quizData}
+										questions={quizData.questions}
+										variant='contained'
+										size='medium'
+										fullWidth={false}
+									/>
 								</Box>
 							</Stack>
 						</Paper>
@@ -349,11 +350,11 @@ const FileDropZone = ({
 
 				<DialogActions sx={{ p: 3, pt: 0 }}>
 					<Button
-						onClick={() => setShowQuizOptions(false)}
+						onClick={onCloseQuizOptions}
 						color='inherit'
 						sx={{ borderRadius: 2 }}
 					>
-						Cancel
+						Close
 					</Button>
 				</DialogActions>
 			</Dialog>
