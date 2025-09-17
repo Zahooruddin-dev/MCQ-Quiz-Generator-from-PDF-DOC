@@ -24,16 +24,13 @@ import {
 	PlayCircle,
 	Download,
 } from 'lucide-react';
-import {
-	FileIcon,
-	LoadingOverlay,
-	pulse,
-} from '../../ModernFileUpload.styles';
+import { FileIcon, LoadingOverlay, pulse } from '../../ModernFileUpload.styles';
 import { formatBytes, MAX_FILE_SIZE } from '../../utils';
 import DownloadQuizButton from './DownloadQuizButton/DownloadQuizButton';
-import { getStageIcon, getStageColor, getFileReadStatusInfo } from './getStage';
+import { getStageIcon, getStageColor } from './getStage';
 import { createHandlers } from './handlers';
 import DropZoneContent from './DropZoneContent';
+import { getFileIcon } from './getFileIcon';
 
 const FileDropZone = ({
 	dragOver,
@@ -57,22 +54,10 @@ const FileDropZone = ({
 	setError,
 	fileReadStatus = 'none', // 'none', 'reading', 'ready', 'error'
 	extractedText = '',
-	selectedFile = null,
-	apiKey = null,
-	aiOptions = {},
-	onFileUpload = null,
 }) => {
 	// State for quiz generation options dialog
 	const [showQuizOptions, setShowQuizOptions] = useState(false);
 
-	const getFileIcon = (type) => {
-		const t = (type || '').toLowerCase();
-		if (t.includes('pdf')) return <FileType size={40} />;
-		if (t.includes('word') || t.includes('document') || t.includes('msword'))
-			return <FileText size={40} />;
-		if (t.includes('text') || t.includes('plain')) return <Type size={40} />;
-		return <File size={40} />;
-	};
 	const {
 		handleCloseError,
 		handleDropZoneClick,
@@ -98,10 +83,6 @@ const FileDropZone = ({
 
 	const StageIcon = getStageIcon(loadingStage);
 	const stageColor = getStageColor(loadingStage);
-	const fileReadStatusInfo = getFileReadStatusInfo(
-		fileReadStatus,
-		extractedText
-	);
 
 	const safeDetails = processingDetails || {
 		textExtracted: 0,
