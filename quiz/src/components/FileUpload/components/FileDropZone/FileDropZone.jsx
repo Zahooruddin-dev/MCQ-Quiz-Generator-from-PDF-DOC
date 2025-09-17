@@ -15,6 +15,7 @@ import {
 	Divider,
 	useTheme,
 	useMediaQuery,
+	Slide,
 } from '@mui/material';
 import {
 	Brain,
@@ -29,6 +30,11 @@ import { getStageIcon, getStageColor } from './getStage';
 import { createHandlers } from './handlers';
 import DropZoneContent from './DropZoneContent';
 import { getFileIcon } from './getFileIcon';
+
+// Slide transition for mobile
+const SlideTransition = React.forwardRef(function Transition(props, ref) {
+	return <Slide direction="up" ref={ref} {...props} />;
+});
 
 const FileDropZone = ({
 	dragOver,
@@ -211,7 +217,8 @@ const FileDropZone = ({
 				onClose={onCloseQuizOptions}
 				maxWidth="sm"
 				fullWidth
-				fullScreen={isMobile} // Full screen on mobile for better UX
+				fullScreen={isMobile}
+				TransitionComponent={isMobile ? SlideTransition : undefined}
 				PaperProps={{
 					sx: {
 						borderRadius: isMobile ? 0 : 3,
@@ -220,12 +227,19 @@ const FileDropZone = ({
 						margin: isMobile ? 0 : 'auto',
 						maxHeight: isMobile ? '100vh' : '90vh',
 						overflowY: 'auto',
+						background: isMobile ? 
+							'linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%)' : 
+							'#ffffff',
 					},
 				}}
 				sx={{
 					zIndex: 9998,
 					'& .MuiDialog-container': {
 						padding: isMobile ? 0 : theme.spacing(2),
+						alignItems: isMobile ? 'flex-end' : 'center',
+					},
+					'& .MuiBackdrop-root': {
+						backgroundColor: isMobile ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
 					},
 				}}
 			>
