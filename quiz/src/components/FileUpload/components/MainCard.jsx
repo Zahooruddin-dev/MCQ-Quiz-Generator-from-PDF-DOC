@@ -13,7 +13,7 @@ import {
 import { X, Smartphone, Upload, FileText } from "lucide-react";
 
 import ConfigPanel from "./ConfigPanel";
-import FileDropZone from "./FileDropZone";
+import FileDropZone from "./FileDropZone/FileDropZone";
 import TextModeInput from "./TextModeInput";
 
 const UploadMainCard = ({
