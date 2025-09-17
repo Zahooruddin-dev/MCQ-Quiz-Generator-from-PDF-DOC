@@ -1,5 +1,5 @@
 // src/components/FileDropZone.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
 	Box,
 	Typography,
@@ -13,6 +13,8 @@ import {
 	IconButton,
 	Paper,
 	Divider,
+	useTheme,
+	useMediaQuery,
 } from '@mui/material';
 import {
 	Brain,
@@ -50,14 +52,40 @@ const FileDropZone = ({
 	setError,
 	fileReadStatus = 'none',
 	extractedText = '',
-	// NEW: Props for the new flow
 	generatedQuestions = null,
 	showQuizOptionsDialog = false,
 	onCloseQuizOptions,
 	onStartInteractiveQuiz,
 }) => {
-	// Remove local showQuizOptions state since it's now controlled from parent
-	// const [showQuizOptions, setShowQuizOptions] = useState(false);
+	const theme = useTheme();
+	const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+	const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+	
+	// Memoize handlers to prevent unnecessary re-renders
+	const handlers = useMemo(() => createHandlers({
+		fileName,
+		effectiveLoading,
+		fileInputRef,
+		onFileSelect,
+		onDrop,
+		onDragOver,
+		onDragLeave,
+		setError,
+		setShowQuizOptions: null,
+		onGenerateQuiz,
+		onStartInteractiveQuiz,
+	}), [
+		fileName,
+		effectiveLoading,
+		fileInputRef,
+		onFileSelect,
+		onDrop,
+		onDragOver,
+		onDragLeave,
+		setError,
+		onGenerateQuiz,
+		onStartInteractiveQuiz,
+	]);
 
 	const {
 		handleCloseError,
@@ -69,50 +97,23 @@ const FileDropZone = ({
 		handleKeyDown,
 		handleGenerateQuizClick,
 		handleInteractiveQuiz,
-	} = createHandlers({
-		fileName,
-		effectiveLoading,
-		fileInputRef,
-		onFileSelect,
-		onDrop,
-		onDragOver,
-		onDragLeave,
-		setError,
-		setShowQuizOptions: null, // No longer needed
-		onGenerateQuiz,
-		// NEW: Pass the interactive quiz handler
-		onStartInteractiveQuiz,
-	});
+	} = handlers;
 
-	const StageIcon = getStageIcon(loadingStage);
-	const stageColor = getStageColor(loadingStage);
+	// Memoize stage data
+	const stageData = useMemo(() => ({
+		icon: getStageIcon(loadingStage),
+		color: getStageColor(loadingStage),
+	}), [loadingStage]);
 
-	const safeDetails = processingDetails || {
+	// Memoize processing details with defaults
+	const safeDetails = useMemo(() => processingDetails || {
 		textExtracted: 0,
 		ocrConfidence: null,
 		questionsGenerated: 0,
-	};
+	}, [processingDetails]);
 
-	// Create quiz data based on generated questions or mock data
-	const quizData = generatedQuestions ? {
-		title: fileName ? fileName.replace(/\.[^/.]+$/, '') : 'Quiz',
-		totalQuestions: generatedQuestions.length,
-		difficulty: 'Medium',
-		extractedText: extractedText,
-		questions: generatedQuestions,
-	} : {
-		title: fileName ? fileName.replace(/\.[^/.]+$/, '') : 'Quiz',
-		totalQuestions: Math.min(
-			Math.max(Math.floor(extractedText.length / 200), 5),
-			20
-		),
-		difficulty: 'Medium',
-		extractedText: extractedText,
-		questions: generateMockQuestions(extractedText),
-	};
-
-	// Generate mock questions based on extracted text (fallback)
-	function generateMockQuestions(text) {
+	// Generate mock questions with better performance
+	const generateMockQuestions = useCallback((text) => {
 		if (!text || text.length < 100) {
 			return [];
 		}
@@ -132,17 +133,41 @@ const FileDropZone = ({
 				'Option D (Mock)',
 			],
 			correctAnswer: 0,
-			explanation:
-				'This is a mock question generated from your document content.',
+			explanation: 'This is a mock question generated from your document content.',
 			type: 'multiple-choice',
 		}));
-	}
+	}, []);
 
-	const isQuizGenerationDisabled =
+	// Memoize quiz data
+	const quizData = useMemo(() => {
+		const baseTitle = fileName ? fileName.replace(/\.[^/.]+$/, '') : 'Quiz';
+		const totalQuestions = generatedQuestions 
+			? generatedQuestions.length 
+			: Math.min(Math.max(Math.floor(extractedText.length / 200), 5), 20);
+
+		return {
+			title: baseTitle,
+			totalQuestions,
+			difficulty: 'Medium',
+			extractedText: extractedText,
+			questions: generatedQuestions || generateMockQuestions(extractedText),
+		};
+	}, [fileName, generatedQuestions, extractedText, generateMockQuestions]);
+
+	// Memoize disabled state
+	const isQuizGenerationDisabled = useMemo(() => 
 		effectiveLoading ||
 		fileReadStatus === 'reading' ||
 		fileReadStatus === 'error' ||
-		!extractedText;
+		!extractedText,
+		[effectiveLoading, fileReadStatus, extractedText]
+	);
+
+	// Handle interactive quiz with better UX
+	const handleInteractiveQuizClick = useCallback(() => {
+		onStartInteractiveQuiz();
+		onCloseQuizOptions();
+	}, [onStartInteractiveQuiz, onCloseQuizOptions]);
 
 	return (
 		<>
@@ -156,7 +181,7 @@ const FileDropZone = ({
 				effectiveLoading={effectiveLoading}
 				uploadProgress={uploadProgress}
 				loadingStage={loadingStage}
-				stageColor={stageColor}
+				stageColor={stageData.color}
 				stageMessage={stageMessage}
 				safeDetails={safeDetails}
 				fileInputRef={fileInputRef}
@@ -172,7 +197,7 @@ const FileDropZone = ({
 				useAI={useAI}
 				isQuizGenerationDisabled={isQuizGenerationDisabled}
 				pulse={pulse}
-				StageIcon={StageIcon}
+				StageIcon={stageData.icon}
 				formatBytes={formatBytes}
 				MAX_FILE_SIZE={MAX_FILE_SIZE}
 				FileIcon={FileIcon}
@@ -180,100 +205,179 @@ const FileDropZone = ({
 				getFileIcon={getFileIcon}
 			/>
 
-			{/* Quiz Options Dialog - Now controlled from parent */}
+			{/* Enhanced Mobile-Friendly Quiz Options Dialog */}
 			<Dialog
 				open={showQuizOptionsDialog}
 				onClose={onCloseQuizOptions}
-				maxWidth='sm'
+				maxWidth="sm"
 				fullWidth
+				fullScreen={isMobile} // Full screen on mobile for better UX
 				PaperProps={{
 					sx: {
-						borderRadius: 3,
-						boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+						borderRadius: isMobile ? 0 : 3,
+						boxShadow: isMobile ? 'none' : '0 20px 40px rgba(0,0,0,0.1)',
 						zIndex: 9999,
+						margin: isMobile ? 0 : 'auto',
+						maxHeight: isMobile ? '100vh' : '90vh',
+						overflowY: 'auto',
 					},
 				}}
 				sx={{
 					zIndex: 9998,
+					'& .MuiDialog-container': {
+						padding: isMobile ? 0 : theme.spacing(2),
+					},
 				}}
 			>
-				<DialogTitle>
+				<DialogTitle
+					sx={{
+						pb: 1,
+						pt: isMobile ? 2 : 3,
+						px: isMobile ? 2 : 3,
+						position: 'sticky',
+						top: 0,
+						bgcolor: 'background.paper',
+						zIndex: 1,
+						borderBottom: isMobile ? '1px solid' : 'none',
+						borderColor: 'divider',
+					}}
+				>
 					<Stack
-						direction='row'
-						justifyContent='space-between'
-						alignItems='center'
+						direction="row"
+						justifyContent="space-between"
+						alignItems="center"
+						spacing={2}
 					>
-						<Stack direction='row' spacing={2} alignItems='center'>
-							<Brain color='#6366F1' size={24} />
-							<Typography variant='h6' sx={{ fontWeight: 600 }}>
-								Quiz Generated Successfully!
+						<Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
+							<Brain color="#6366F1" size={isMobile ? 20 : 24} />
+							<Typography 
+								variant={isMobile ? 'h6' : 'h6'} 
+								sx={{ 
+									fontWeight: 600,
+									fontSize: isMobile ? '1.1rem' : '1.25rem',
+									lineHeight: 1.2,
+								}}
+							>
+								Quiz Generated!
 							</Typography>
 						</Stack>
 						<IconButton
 							onClick={onCloseQuizOptions}
-							size='small'
-							sx={{ color: 'text.secondary' }}
+							size="small"
+							sx={{ 
+								color: 'text.secondary',
+								flexShrink: 0,
+							}}
 						>
 							<X size={20} />
 						</IconButton>
 					</Stack>
 				</DialogTitle>
 
-				<DialogContent sx={{ pb: 2 }}>
-					<Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
+				<DialogContent 
+					sx={{ 
+						pb: 2, 
+						px: isMobile ? 2 : 3,
+						pt: 2,
+					}}
+				>
+					<Typography 
+						variant="body2" 
+						color="text.secondary" 
+						sx={{ 
+							mb: 3,
+							fontSize: isMobile ? '0.875rem' : '0.875rem',
+							lineHeight: 1.5,
+						}}
+					>
 						Your quiz has been generated with {generatedQuestions?.length || 0} questions! 
 						Choose how you'd like to use it:
 					</Typography>
 
-					<Stack spacing={2}>
-						{/* Interactive Quiz Option */}
+					<Stack spacing={isMobile ? 2 : 2}>
+						{/* Interactive Quiz Option - Enhanced for Mobile */}
 						<Paper
 							sx={{
-								p: 3,
+								p: isMobile ? 2 : 3,
 								cursor: 'pointer',
 								border: '2px solid transparent',
 								transition: 'all 0.2s ease',
 								'&:hover': {
 									borderColor: 'primary.main',
 									bgcolor: 'primary.50',
-									transform: 'translateY(-2px)',
-									boxShadow: '0 8px 25px rgba(99, 102, 241, 0.15)',
+									transform: isMobile ? 'none' : 'translateY(-2px)',
+									boxShadow: isMobile ? 
+										'0 4px 12px rgba(99, 102, 241, 0.15)' :
+										'0 8px 25px rgba(99, 102, 241, 0.15)',
+								},
+								'&:active': {
+									transform: 'scale(0.98)',
 								},
 							}}
-							onClick={() => {
-								onStartInteractiveQuiz();
-								onCloseQuizOptions();
-							}}
+							onClick={handleInteractiveQuizClick}
 						>
-							<Stack direction='row' spacing={3} alignItems='center'>
+							<Stack 
+								direction={isMobile ? 'column' : 'row'} 
+								spacing={isMobile ? 2 : 3} 
+								alignItems={isMobile ? 'stretch' : 'center'}
+							>
 								<Box
 									sx={{
-										width: 60,
+										width: isMobile ? '100%' : 60,
 										height: 60,
 										borderRadius: 2,
-										background:
-											'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+										background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
 										display: 'flex',
 										alignItems: 'center',
 										justifyContent: 'center',
+										alignSelf: isMobile ? 'center' : 'flex-start',
+										flexShrink: 0,
+										maxWidth: isMobile ? 60 : 'none',
 									}}
 								>
-									<PlayCircle color='white' size={28} />
+									<PlayCircle color="white" size={isMobile ? 24 : 28} />
 								</Box>
-								<Box sx={{ flex: 1 }}>
-									<Typography variant='h6' sx={{ fontWeight: 600, mb: 0.5 }}>
+								<Box sx={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
+									<Typography 
+										variant="h6" 
+										sx={{ 
+											fontWeight: 600, 
+											mb: 0.5,
+											fontSize: isMobile ? '1rem' : '1.25rem',
+										}}
+									>
 										Take Interactive Quiz
 									</Typography>
-									<Typography variant='body2' color='text.secondary'>
-										Start the quiz now with instant feedback, timer, and
-										detailed results
+									<Typography 
+										variant="body2" 
+										color="text.secondary"
+										sx={{
+											fontSize: isMobile ? '0.8rem' : '0.875rem',
+											lineHeight: 1.4,
+										}}
+									>
+										Start the quiz now with instant feedback, timer, and detailed results
 									</Typography>
-									<Stack direction='row' spacing={1} sx={{ mt: 1 }}>
-										<Chip label='AI Generated' size='small' color='primary' />
+									<Stack 
+										direction="row" 
+										spacing={1} 
+										sx={{ 
+											mt: 1.5,
+											justifyContent: isMobile ? 'center' : 'flex-start',
+											flexWrap: 'wrap',
+										}}
+									>
+										<Chip 
+											label="AI Generated" 
+											size="small" 
+											color="primary"
+											sx={{ fontSize: isMobile ? '0.7rem' : '0.75rem' }}
+										/>
 										<Chip
-											label='Instant Feedback'
-											size='small'
-											variant='outlined'
+											label="Instant Feedback"
+											size="small"
+											variant="outlined"
+											sx={{ fontSize: isMobile ? '0.7rem' : '0.75rem' }}
 										/>
 									</Stack>
 								</Box>
@@ -281,15 +385,15 @@ const FileDropZone = ({
 						</Paper>
 
 						<Divider sx={{ my: 1 }}>
-							<Typography variant='caption' color='text.secondary'>
+							<Typography variant="caption" color="text.secondary">
 								OR
 							</Typography>
 						</Divider>
 
-						{/* Download Quiz Option */}
+						{/* Download Quiz Option - Enhanced for Mobile */}
 						<Paper
 							sx={{
-								p: 3,
+								p: isMobile ? 2 : 3,
 								border: '2px solid transparent',
 								transition: 'all 0.2s ease',
 								position: 'relative',
@@ -297,50 +401,92 @@ const FileDropZone = ({
 								'&:hover': {
 									borderColor: 'secondary.main',
 									bgcolor: 'grey.50',
-									transform: 'translateY(-2px)',
-									boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
+									transform: isMobile ? 'none' : 'translateY(-2px)',
+									boxShadow: isMobile ? 
+										'0 4px 12px rgba(0, 0, 0, 0.1)' :
+										'0 8px 25px rgba(0, 0, 0, 0.1)',
 								},
 							}}
 						>
-							<Stack direction='row' spacing={3} alignItems='center'>
+							<Stack 
+								direction={isMobile ? 'column' : 'row'} 
+								spacing={isMobile ? 2 : 3} 
+								alignItems={isMobile ? 'stretch' : 'center'}
+							>
 								<Box
 									sx={{
-										width: 60,
+										width: isMobile ? '100%' : 60,
 										height: 60,
 										borderRadius: 2,
-										background:
-											'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+										background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
 										display: 'flex',
 										alignItems: 'center',
 										justifyContent: 'center',
+										alignSelf: isMobile ? 'center' : 'flex-start',
+										flexShrink: 0,
+										maxWidth: isMobile ? 60 : 'none',
 									}}
 								>
-									<Download color='white' size={28} />
+									<Download color="white" size={isMobile ? 24 : 28} />
 								</Box>
-								<Box sx={{ flex: 1 }}>
-									<Typography variant='h6' sx={{ fontWeight: 600, mb: 0.5 }}>
+								<Box sx={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
+									<Typography 
+										variant="h6" 
+										sx={{ 
+											fontWeight: 600, 
+											mb: 0.5,
+											fontSize: isMobile ? '1rem' : '1.25rem',
+										}}
+									>
 										Download Quiz
 									</Typography>
 									<Typography
-										variant='body2'
-										color='text.secondary'
-										sx={{ mb: 2 }}
+										variant="body2"
+										color="text.secondary"
+										sx={{ 
+											mb: 2,
+											fontSize: isMobile ? '0.8rem' : '0.875rem',
+											lineHeight: 1.4,
+										}}
 									>
-										Generate and download PDF or DOCX files for offline use or
-										printing
+										Generate and download PDF or DOCX files for offline use or printing
 									</Typography>
-									<Stack direction='row' spacing={1} sx={{ mb: 2 }}>
-										<Chip label='PDF Format' size='small' color='error' />
-										<Chip label='DOCX Format' size='small' color='info' />
-										<Chip label='Printable' size='small' variant='outlined' />
+									<Stack 
+										direction="row" 
+										spacing={1} 
+										sx={{ 
+											mb: 2,
+											justifyContent: isMobile ? 'center' : 'flex-start',
+											flexWrap: 'wrap',
+											gap: 1,
+										}}
+									>
+										<Chip 
+											label="PDF Format" 
+											size="small" 
+											color="error"
+											sx={{ fontSize: isMobile ? '0.7rem' : '0.75rem' }}
+										/>
+										<Chip 
+											label="DOCX Format" 
+											size="small" 
+											color="info"
+											sx={{ fontSize: isMobile ? '0.7rem' : '0.75rem' }}
+										/>
+										<Chip 
+											label="Printable" 
+											size="small" 
+											variant="outlined"
+											sx={{ fontSize: isMobile ? '0.7rem' : '0.75rem' }}
+										/>
 									</Stack>
 
 									<DownloadQuizButton
 										quizData={quizData}
 										questions={quizData.questions}
-										variant='contained'
-										size='medium'
-										fullWidth={false}
+										variant="contained"
+										size={isMobile ? "medium" : "medium"}
+										fullWidth={isMobile}
 									/>
 								</Box>
 							</Stack>
@@ -348,11 +494,25 @@ const FileDropZone = ({
 					</Stack>
 				</DialogContent>
 
-				<DialogActions sx={{ p: 3, pt: 0 }}>
+				<DialogActions 
+					sx={{ 
+						p: isMobile ? 2 : 3, 
+						pt: 1,
+						position: isMobile ? 'sticky' : 'static',
+						bottom: 0,
+						bgcolor: 'background.paper',
+						borderTop: isMobile ? '1px solid' : 'none',
+						borderColor: 'divider',
+					}}
+				>
 					<Button
 						onClick={onCloseQuizOptions}
-						color='inherit'
-						sx={{ borderRadius: 2 }}
+						color="inherit"
+						sx={{ 
+							borderRadius: 2,
+							minWidth: isMobile ? 80 : 'auto',
+						}}
+						fullWidth={isMobile}
 					>
 						Close
 					</Button>
