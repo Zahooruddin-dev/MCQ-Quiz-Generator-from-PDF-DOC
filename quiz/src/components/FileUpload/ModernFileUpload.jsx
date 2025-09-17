@@ -33,11 +33,11 @@ const ModernFileUpload = ({
 	const [isLoading, setIsLoading] = useState(false);
 	const [uploadProgress, setUploadProgress] = useState(0);
 	const [selectedFile, setSelectedFile] = useState(null);
-	
+
 	// NEW STATE: Store extracted text and file read status
 	const [extractedText, setExtractedText] = useState('');
 	const [fileReadStatus, setFileReadStatus] = useState('none'); // 'none', 'reading', 'ready', 'error'
-	
+
 	const [loadingStage, setLoadingStage] = useState('');
 	const [stageMessage, setStageMessage] = useState('');
 	const [processingDetails, setProcessingDetails] = useState({
@@ -56,14 +56,17 @@ const ModernFileUpload = ({
 	}, []);
 
 	// Stage-based loading helpers
-	const startLoading = useCallback((stage = 'reading', message = 'Reading file...') => {
-		setError(null);
-		setIsLoading(true);
-		busyRef.current = true;
-		setUploadProgress(0);
-		setLoadingStage(stage);
-		setStageMessage(message);
-	}, []);
+	const startLoading = useCallback(
+		(stage = 'reading', message = 'Reading file...') => {
+			setError(null);
+			setIsLoading(true);
+			busyRef.current = true;
+			setUploadProgress(0);
+			setLoadingStage(stage);
+			setStageMessage(message);
+		},
+		[]
+	);
 
 	const stopLoading = useCallback(() => {
 		setIsLoading(false);
@@ -73,12 +76,15 @@ const ModernFileUpload = ({
 		setStageMessage('');
 	}, []);
 
-	const updateLoadingStage = useCallback((stage, message, progress, details = {}) => {
-		setLoadingStage(stage);
-		setStageMessage(message);
-		setUploadProgress(progress);
-		setProcessingDetails(prev => ({ ...prev, ...details }));
-	}, []);
+	const updateLoadingStage = useCallback(
+		(stage, message, progress, details = {}) => {
+			setLoadingStage(stage);
+			setStageMessage(message);
+			setUploadProgress(progress);
+			setProcessingDetails((prev) => ({ ...prev, ...details }));
+		},
+		[]
+	);
 
 	const clearSelectedFile = useCallback(() => {
 		setFileName('');
@@ -137,17 +143,23 @@ const ModernFileUpload = ({
 
 					// Deduct credit before AI generation
 					updateLoadingStage('validating', 'Checking credits...', 40);
-					
+
 					const canUseCredit = await useCredit();
 					if (!canUseCredit) {
-						throw new Error('Insufficient credits. You need at least 1 credit to generate a quiz.');
+						throw new Error(
+							'Insufficient credits. You need at least 1 credit to generate a quiz.'
+						);
 					}
 
 					let creditDeducted = true;
 
 					try {
 						// AI question generation
-						updateLoadingStage('generating', 'AI is generating quiz questions...', 50);
+						updateLoadingStage(
+							'generating',
+							'AI is generating quiz questions...',
+							50
+						);
 
 						const questions = await llmService.generateQuizQuestions(
 							preExtractedText,
@@ -189,7 +201,8 @@ const ModernFileUpload = ({
 				console.error('Error processing file for AI:', err);
 
 				// Enhanced error handling
-				let userMessage = err?.message || 'Failed to process file. Please try again.';
+				let userMessage =
+					err?.message || 'Failed to process file. Please try again.';
 
 				// Add helpful suggestions based on error type
 				if (userMessage.includes('API key')) {
@@ -201,14 +214,16 @@ const ModernFileUpload = ({
 					userMessage.includes('overloaded') ||
 					userMessage.includes('Service Unavailable')
 				) {
-					userMessage += ' The AI service is temporarily unavailable. Your credit has been refunded. Please try again later.';
+					userMessage +=
+						' The AI service is temporarily unavailable. Your credit has been refunded. Please try again later.';
 				} else if (
 					userMessage.includes('API failed') ||
 					userMessage.includes('500') ||
 					userMessage.includes('502') ||
 					userMessage.includes('504')
 				) {
-					userMessage += ' Server error occurred. Your credit has been refunded. Please try again.';
+					userMessage +=
+						' Server error occurred. Your credit has been refunded. Please try again.';
 				}
 
 				setError(userMessage);
@@ -232,21 +247,21 @@ const ModernFileUpload = ({
 	);
 
 	const { handleFileSelect } = useFileSelector({
-    setError,
-    setFileName,
-    setFileSize,
-    setFileType,
-    setSelectedFile,
-    setExtractedText, // NEW: Pass extracted text setter
-    setFileReadStatus, // NEW: Pass status setter
-    clearSelectedFile,
-    processFile: processFileForAI, // This is now just AI processing
-    useAI,
-    startLoading,
-    stopLoading,
-    updateLoadingStage,
-    // Remove the duplicates - you had these twice
-});
+		setError,
+		setFileName,
+		setFileSize,
+		setFileType,
+		setSelectedFile,
+		setExtractedText, // NEW: Pass extracted text setter
+		setFileReadStatus, // NEW: Pass status setter
+		clearSelectedFile,
+		processFile: processFileForAI, // This is now just AI processing
+		useAI,
+		startLoading,
+		stopLoading,
+		updateLoadingStage,
+		// Remove the duplicates - you had these twice
+	});
 
 	// MODIFIED: Generate quiz using pre-extracted text
 	const handleGenerateQuiz = useCallback(async () => {
@@ -254,22 +269,24 @@ const ModernFileUpload = ({
 			setError('No file selected. Please upload a file first.');
 			return;
 		}
-		
+
 		if (fileReadStatus === 'reading') {
 			setError('File is still being read. Please wait for it to complete.');
 			return;
 		}
-		
+
 		if (fileReadStatus === 'error') {
 			setError('File reading failed. Please try uploading a different file.');
 			return;
 		}
-		
+
 		if (!extractedText) {
-			setError('No text was extracted from the file. Please try a different file.');
+			setError(
+				'No text was extracted from the file. Please try a different file.'
+			);
 			return;
 		}
-		
+
 		try {
 			// Use the pre-extracted text for AI processing
 			await processFileForAI(selectedFile, extractedText);
@@ -364,6 +381,10 @@ const ModernFileUpload = ({
 					onFileUpload={onFileUpload}
 					fileReadStatus={fileReadStatus}
 					extractedText={extractedText}
+					selectedFile={selectedFile}
+					startLoading={startLoading}
+					stopLoading={stopLoading}
+					updateLoadingStage={updateLoadingStage}
 				/>
 			</Stack>
 		</UploadContainer>

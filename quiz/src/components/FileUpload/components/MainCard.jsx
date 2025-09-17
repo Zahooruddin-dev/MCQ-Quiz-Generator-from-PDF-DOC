@@ -45,8 +45,12 @@ const UploadMainCard = ({
   onFileUpload,
   fileReadStatus,
   extractedText,
-  // NEW: Add these props to pass through to FileDropZone
+  // Props to pass through to FileDropZone
   selectedFile,
+  // NEW: Loading control functions
+  startLoading,
+  stopLoading,
+  updateLoadingStage,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -190,11 +194,15 @@ const UploadMainCard = ({
           setError={setError}
           fileReadStatus={fileReadStatus}
           extractedText={extractedText}
-          // NEW: Pass additional props needed for dialog functionality
+          // Props needed for dialog functionality
           selectedFile={selectedFile}
           apiKey={apiKey}
           aiOptions={aiOptions}
           onFileUpload={onFileUpload}
+          // NEW: Loading control functions
+          startLoading={startLoading}
+          stopLoading={stopLoading}
+          updateLoadingStage={updateLoadingStage}
         />
       </Box>
 

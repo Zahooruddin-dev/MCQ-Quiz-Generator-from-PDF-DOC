@@ -67,14 +67,20 @@ const FileDropZone = ({
 	// File read status props
 	fileReadStatus = 'none', // 'none', 'reading', 'ready', 'error'
 	extractedText = '',
-	// NEW: Add props to handle quiz generation options
+	// Props to handle quiz generation options
 	selectedFile = null,
 	apiKey = null,
 	aiOptions = {},
 	onFileUpload = null,
+	// NEW: Loading control functions from parent
+	startLoading = null,
+	stopLoading = null,
+	updateLoadingStage = null,
 }) => {
 	// State for quiz generation options dialog
 	const [showQuizOptions, setShowQuizOptions] = useState(false);
+	const [downloadFormat, setDownloadFormat] = useState(null); // Track download format
+	const [generatedQuestions, setGeneratedQuestions] = useState([]); // Store generated questions
 
 	const getFileIcon = (type) => {
 		const t = (type || '').toLowerCase();
@@ -162,6 +168,107 @@ const FileDropZone = ({
 		console.log('Interactive quiz selected'); // Debug log
 		setShowQuizOptions(false);
 		onGenerateQuiz(); // Call the original function for interactive quiz
+	};
+
+	// NEW: Handle download quiz selection with format choice
+	const handleDownloadQuiz = async (format) => {
+		console.log(`Download quiz selected - Format: ${format}`);
+		setDownloadFormat(format);
+		setShowQuizOptions(false);
+		
+		// First generate the quiz using AI, then download
+		await generateQuizForDownload(format);
+	};
+
+	// NEW: Generate quiz specifically for download
+	const generateQuizForDownload = async (format) => {
+		if (!selectedFile || !extractedText) {
+			setError('No file content available for quiz generation.');
+			return;
+		}
+
+		try {
+			// Use parent's loading system if available
+			if (startLoading) {
+				startLoading('analyzing', 'Preparing quiz for download...');
+			}
+
+			// Import the AI service
+			const { LLMService } = await import('../../../utils/llmService');
+			const llmService = new LLMService();
+
+			// Update progress
+			if (updateLoadingStage) {
+				updateLoadingStage('analyzing', 'Analyzing content for quiz...', 20);
+			}
+
+			// Generate questions using AI
+			if (updateLoadingStage) {
+				updateLoadingStage('generating', 'AI is generating quiz questions...', 50);
+			}
+			
+			const questions = await llmService.generateQuizQuestions(extractedText, aiOptions);
+			
+			if (!questions || questions.length === 0) {
+				throw new Error('No questions were generated from the content.');
+			}
+
+			// Update progress
+			if (updateLoadingStage) {
+				updateLoadingStage('finalizing', `Generated ${questions.length} questions. Preparing download...`, 80, {
+					questionsGenerated: questions.length
+				});
+			}
+
+			// Create quiz data for download
+			const quizDataForDownload = {
+				title: fileName ? fileName.replace(/\.[^/.]+$/, '') : 'Quiz',
+				totalQuestions: questions.length,
+				difficulty: aiOptions.difficulty || 'Medium',
+				questions: questions,
+				extractedText: extractedText
+			};
+
+			// Import and use the download components
+			if (format === 'pdf') {
+				const { default: CombinedPDFGenerator } = await import('../Engine/Results/ShareQuizModal/DownloadQuizButton/CombinedPDFGenerator');
+				await CombinedPDFGenerator.generate(quizDataForDownload, questions);
+			} else if (format === 'docx') {
+				const { default: DOCXDownloadComponent } = await import('../Engine/Results/ShareQuizModal/DownloadQuizButton/DOCXDownloadComponent');
+				await DOCXDownloadComponent.generate(quizDataForDownload, questions, (message) => {
+					console.log(message);
+				});
+			}
+
+			// Complete the process
+			if (updateLoadingStage) {
+				updateLoadingStage('complete', 'Download ready!', 100);
+			}
+
+			// Clear any errors
+			if (setError) {
+				setError(null);
+			}
+
+		} catch (error) {
+			console.error('Download quiz generation failed:', error);
+			let errorMessage = error.message || 'Failed to generate quiz for download';
+			
+			// Add specific error handling for common issues
+			if (errorMessage.includes('API key')) {
+				errorMessage += ' Please check your AI configuration.';
+			} else if (errorMessage.includes('network') || errorMessage.includes('timeout')) {
+				errorMessage += ' Please check your internet connection and try again.';
+			}
+			
+			setError(errorMessage);
+		} finally {
+			// Stop loading
+			if (stopLoading) {
+				stopLoading();
+			}
+			setDownloadFormat(null);
+		}
 	};
 
 	// Get stage-specific icon and color
@@ -658,29 +765,45 @@ const FileDropZone = ({
 										Generate and download PDF or DOCX files for offline use or printing
 									</Typography>
 									<Stack direction='row' spacing={1} sx={{ mb: 2 }}>
+										<Chip label='AI Generated' size='small' color='primary' />
 										<Chip label='PDF Format' size='small' color='error' />
 										<Chip label='DOCX Format' size='small' color='info' />
 										<Chip label='Printable' size='small' variant='outlined' />
 									</Stack>
 									
-									{/* Use the existing DownloadQuizButton component */}
-									{extractedText ? (
-										<DownloadQuizButton
-											quizData={mockQuizData}
-											questions={mockQuizData.questions}
+									{/* Download Format Buttons */}
+									<Stack direction='row' spacing={2}>
+										<Button
 											variant='contained'
 											size='medium'
-											fullWidth={false}
-										/>
-									) : (
-										<Button
-											variant='outlined'
-											disabled
-											size='medium'
+											onClick={() => handleDownloadQuiz('pdf')}
+											disabled={isQuizGenerationDisabled}
+											sx={{
+												background: 'linear-gradient(45deg, #DC2626 30%, #EF4444 90%)',
+												color: 'white',
+												'&:hover': {
+													background: 'linear-gradient(45deg, #B91C1C 30%, #DC2626 90%)',
+												}
+											}}
 										>
-											Download Quiz (No content available)
+											Download PDF
 										</Button>
-									)}
+										<Button
+											variant='contained'
+											size='medium'
+											onClick={() => handleDownloadQuiz('docx')}
+											disabled={isQuizGenerationDisabled}
+											sx={{
+												background: 'linear-gradient(45deg, #2563EB 30%, #3B82F6 90%)',
+												color: 'white',
+												'&:hover': {
+													background: 'linear-gradient(45deg, #1D4ED8 30%, #2563EB 90%)',
+												}
+											}}
+										>
+											Download DOCX
+										</Button>
+									</Stack>
 								</Box>
 							</Stack>
 						</Paper>
