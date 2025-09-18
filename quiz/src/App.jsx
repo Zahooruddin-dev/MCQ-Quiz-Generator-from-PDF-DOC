@@ -59,6 +59,7 @@ const ModernAuthForm = lazy(() => import('./components/Auth/ModernAuthForm'));
 const TermsAndConditions = lazy(() =>
 	import('./components/Landing/Legal/TermsAndConditions')
 );
+const Pricing = lazy(() => import('./components/Landing/PricingSection'));
 
 // Main app components - loaded together for performance
 const ModernHeader = lazy(() => import('./components/Layout/ModernHeader'));
@@ -529,6 +530,23 @@ const App = () => {
 											fallback={<LoadingFallback text='Loading Terms...' />}
 										>
 											<TermsAndConditions />
+										</Suspense>
+									</>
+								}
+							/>
+							<Route
+								path='/pricing'
+								element={
+									<>
+										<HeaderWrapper
+											onProfileClick={() => setShowUserInfo(true)}
+											onApiConfigClick={() => setShowApiConfig(true)}
+											showApiConfig={showApiConfig}
+										/>
+										<Suspense
+											fallback={<LoadingFallback text='Loading Pricing...' />}
+										>
+											<Pricing />
 										</Suspense>
 									</>
 								}
