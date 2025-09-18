@@ -12,7 +12,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
+.qodo
+.kombai
 node_modules
 dist
 dist-ssr
