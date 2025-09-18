@@ -1,6 +1,6 @@
 // src/components/FileDropZone.jsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useTheme, useMediaQuery, Slide } from '@mui/material';
+import { useTheme, useMediaQuery } from '@mui/material';
 
 import { FileIcon, LoadingOverlay, pulse } from '../../ModernFileUpload.styles';
 import { formatBytes, MAX_FILE_SIZE } from '../../utils';
@@ -80,7 +80,6 @@ const FileDropZone = ({
 		handleDragLeave,
 		handleKeyDown,
 		handleGenerateQuizClick,
-		handleInteractiveQuiz,
 	} = handlers;
 
 	// Memoize stage data
@@ -156,11 +155,6 @@ const FileDropZone = ({
 		[effectiveLoading, fileReadStatus, extractedText]
 	);
 
-	// Handle interactive quiz with better UX
-	const handleInteractiveQuizClick = useCallback(() => {
-		onStartInteractiveQuiz();
-		onCloseQuizOptions();
-	}, [onStartInteractiveQuiz, onCloseQuizOptions]);
 
 	return (
 		<>

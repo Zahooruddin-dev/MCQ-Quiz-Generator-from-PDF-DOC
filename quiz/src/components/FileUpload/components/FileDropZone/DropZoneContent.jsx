@@ -359,7 +359,7 @@ const DropZoneContent = ({
 							sx={{
 								mb: isMobile ? 1.5 : 2,
 								fontSize: isMobile ? '2.5rem' : '3rem',
-								color: dragOver ? 'primary.main' : 'text.secondary',
+								color: dragOver ? 'white' : 'white',
 								transition: 'all 0.3s ease',
 							}}
 						>
