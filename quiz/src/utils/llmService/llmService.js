@@ -10,10 +10,10 @@ import {
 import { withRetry } from '../retryUtils.js';
 import { shuffleArray as shuffleArrayImported, validateQuestions as validateQuestionsImported } from '../quizValidator.js';
 import { ApiConfigService }   from './api/apiConfigService.js';
-import { UserCreditService }  from './Service/userCreditService.js';
-import { CacheService } from './Service/cacheService.js';
+import { UserCreditService }  from './service/userCreditService.js';
+import { CacheService } from './service/cacheService.js';
 import { ApiClient } from './api/apiClient.js';
-import { GenerationService, attemptGeneration } from './Service/generationService.js';
+import { GenerationService, attemptGeneration } from './service/generationService.js';
 import { QuestionProcessor } from './processor/questionProcessor.js';
 import { QuestionSynthesizer } from './processor/questionSynthesizer.js';
 
