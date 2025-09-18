@@ -1,5 +1,5 @@
 // questionProcessor.js
-import { extractJson } from '../textUtils.js';
+import { extractJson } from '../../textUtils.js';
 
 /**
  * Service for processing and validating questions from LLM responses.

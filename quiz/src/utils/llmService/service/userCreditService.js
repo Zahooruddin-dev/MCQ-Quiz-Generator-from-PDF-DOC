@@ -1,7 +1,7 @@
 // userCreditService.js
 import { getAuth } from 'firebase/auth';
-import { db } from '../../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../firebaseConfig';
 
 
 /**

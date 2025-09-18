@@ -1,5 +1,5 @@
 // apiClient.js
-import { REQUEST_TIMEOUT_MS } from '../constants.js';
+import { REQUEST_TIMEOUT_MS } from '../../constants.js';
 
 export class ApiClient {
     constructor(baseUrl, apiKey) {

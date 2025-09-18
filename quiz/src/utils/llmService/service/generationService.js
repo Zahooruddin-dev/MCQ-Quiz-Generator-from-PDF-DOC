@@ -1,8 +1,7 @@
 // generationService.js
-import { PromptBuilder } from './promptBuilder.js';
-import { QuestionProcessor } from './questionProcessor.js';
-import { QuestionSynthesizer } from './questionSynthesizer.js';
-import { shuffleArray as shuffleArrayImported } from '../quizValidator.js';
+import { PromptBuilder } from '../processor/promptBuilder.js';
+import { QuestionProcessor } from '../processor/questionProcessor.js';
+import { QuestionSynthesizer } from '../processor/questionSynthesizer.js';
 
 /**
  * Service for handling the main quiz generation logic.

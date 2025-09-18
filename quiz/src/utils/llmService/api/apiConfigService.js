@@ -1,6 +1,6 @@
 // apiConfigService.js
 
-import { getGlobalApiKey, getGlobalApiConfig } from '../firebaseService.js';
+import { getGlobalApiKey, getGlobalApiConfig } from '../../firebaseService.js';
 
 /**
  * Manages the API key and endpoint configuration by fetching from Firestore

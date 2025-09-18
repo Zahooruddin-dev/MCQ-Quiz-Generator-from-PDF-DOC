@@ -1,23 +1,23 @@
 // fileReader.js - Main optimized file reader with modular architecture
-import { MAX_CHARS, PROCESSING_STAGES } from './FileReader/types/types.js';
+import { MAX_CHARS, PROCESSING_STAGES } from './types/types.js';
 import {
 	FileProcessingError,
 	getErrorMessage,
-} from './FileReader/types/errors.js';
-import { ProcessingProgress } from './FileReader/types/progress.js';
-import { validateFile } from './FileReader/tracking/validator.js';
-import { processPDF } from './FileReader/monitor/pdfProcessor.js';
-import { processImage } from './FileReader/monitor/imageProcessor.js';
+} from './types/errors.js';
+import { ProcessingProgress } from './types/progress.js';
+import { validateFile } from './tracking/validator.js';
+import { processPDF } from './monitor/pdfProcessor.js';
+import { processImage } from './monitor/imageProcessor.js';
 import {
 	processTextFile,
 	processDOCX,
-} from './FileReader/monitor/textProcessor.js';
+} from './monitor/textProcessor.js';
 import {
 	PerformanceMonitor,
 	MemoryMonitor,
 	ResourceManager,
-} from './FileReader/tracking/performanceMonitor.js';
-import { cleanupOCR } from './FileReader/monitor/ocrProcessor.js';
+} from './tracking/performanceMonitor.js';
+import { cleanupOCR } from './monitor/ocrProcessor.js';
 
 // Global instances for monitoring (optional)
 const performanceMonitor = new PerformanceMonitor(
@@ -273,7 +273,7 @@ export { getErrorMessage, FileProcessingError };
 export {
 	PerformanceMonitor,
 	MemoryMonitor,
-} from './FileReader/tracking/performanceMonitor.js';
+} from './tracking/performanceMonitor.js';
 
 // Pre-warming function for better first-load performance
 export async function preWarmFileReader() {
