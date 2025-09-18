@@ -1,8 +1,8 @@
 import React from 'react';
 import { Dialog, Slide } from '@mui/material';
-import FinishDialogActions from './FinishDialog/FinishDialog';
-import FinishDialogContent from './FinishDialog/FinishDialogContent';
-import QuizDialogHeader from './FinishDialog/QuizDialogHeader';
+import FinishDialogActions from './FinishDialog';
+import FinishDialogContent from './FinishDialogContent';
+import QuizDialogHeader from './QuizDialogHeader';
 const Transition = React.forwardRef(function Transition(props, ref) {
 	return <Slide direction='up' ref={ref} {...props} />;
 });

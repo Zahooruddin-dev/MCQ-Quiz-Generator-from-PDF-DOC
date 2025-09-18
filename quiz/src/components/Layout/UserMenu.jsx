@@ -11,8 +11,7 @@ import {
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
-import { User, Settings, LogOut, Crown, Coins, BarChart3 } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { User, Settings, LogOut, Crown, Coins } from 'lucide-react';
 
 const UserMenu = ({
   anchorEl,
@@ -123,18 +122,6 @@ const UserMenu = ({
         />
       </MenuItem>
     )}
-
-   {/*  <MenuItem sx={{ py: 1.5 }}>
-      <ListItemIcon>
-        <BarChart3 size={20} />
-      </ListItemIcon>
-      <ListItemText
-        primary="Analytics"
-        secondary="View your quiz stats"
-        secondaryTypographyProps={{ fontSize: '0.75rem' }}
-      />
-    </MenuItem>
- */}
     <Divider />
 
     <MenuItem onClick={onLogout} sx={{ py: 1.5, color: 'error.main' }}>
