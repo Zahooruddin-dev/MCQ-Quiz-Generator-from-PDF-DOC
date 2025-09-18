@@ -1,11 +1,10 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Stack } from '@mui/material';
-import { LLMService } from '../../utils/llmService';
+import { LLMService } from '../../utils/llmService/llmService';
 import { useAuth } from '../../context/AuthContext';
-import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from './utils';
 import Header from './components/Header';
 import Features from './components/Features';
-import { UploadContainer, MainCard } from './ModernFileUpload.styles';
+import { UploadContainer } from './ModernFileUpload.styles';
 import UploadMainCard from './components/MainCard';
 import { useFileSelector } from './hooks/useFileSelector';
 

@@ -12,7 +12,7 @@ import {
   Fade,
 } from '@mui/material';
 import { Brain, Sparkles, X, Type } from 'lucide-react';
-import { LLMService } from '../../../utils/llmService';
+import { LLMService } from '../../../utils/llmService/llmService';
 import { useAuth } from '../../../context/AuthContext';
 import { pulse } from '../ModernFileUpload.styles';
 

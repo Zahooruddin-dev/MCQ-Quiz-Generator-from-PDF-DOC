@@ -1,5 +1,5 @@
 // index.js - Main export file
-export { LLMService } from './llmService.js';
+export { LLMService } from './llmService/llmService.js';
 export * from './constants.js';
 export * from './languageUtils.js';
 export * from './textUtils.js';

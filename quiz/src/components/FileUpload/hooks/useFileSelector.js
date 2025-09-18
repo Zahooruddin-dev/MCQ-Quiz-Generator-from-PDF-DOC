@@ -95,7 +95,7 @@ export const useFileSelector = ({
           startLoading('reading', `Reading ${file.name}...`);
           
           // Dynamic import of LLMService to avoid import issues
-          const { LLMService } = await import('../../../utils/llmService');
+          const { LLMService } = await import('../../../utils/llmService/llmService');
           console.log("✅ LLMService imported successfully");
           
           const llmService = new LLMService();

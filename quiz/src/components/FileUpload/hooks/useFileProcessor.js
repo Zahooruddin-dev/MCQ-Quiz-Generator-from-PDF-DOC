@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { LLMService } from "../../../utils/llmService";
+import { LLMService } from "../../../utils/llmService/llmService";
 import { MAX_FILE_SIZE, SUPPORTED, formatBytes } from "../utils";
 
 export function useFileProcessor({ apiKey, baseUrl, aiOptions, onFileUpload }) {

@@ -1,21 +1,21 @@
 // LLMService.js - Enhanced with custom instructions support (fixed synthesis call)
-import { detectLanguage } from './languageUtils.js';
-import { trimForPrompt, extractKeyFacts } from './textUtils.js';
-import { readFileContent } from './FileReader/fileReader.js';
+import { detectLanguage } from '../languageUtils.js';
+import { trimForPrompt, extractKeyFacts } from '../textUtils.js';
+import { readFileContent } from '../FileReader/fileReader.js';
 import {
   saveQuizResults,
   getDashboardData,
   saveChatMessage,
-} from './firebaseService.js';
-import { withRetry } from './retryUtils.js';
-import { shuffleArray as shuffleArrayImported, validateQuestions as validateQuestionsImported } from './quizValidator.js';
-import { ApiConfigService }   from './llmService/api/apiConfigService.js';
-import { UserCreditService }  from './llmService/Service/userCreditService.js';
-import { CacheService } from './llmService/Service/cacheService.js';
-import { ApiClient } from './llmService/api/apiClient.js';
-import { GenerationService, attemptGeneration } from './llmService/Service/generationService.js';
-import { QuestionProcessor } from './llmService/processor/questionProcessor.js';
-import { QuestionSynthesizer } from './llmService/processor/questionSynthesizer.js';
+} from '../firebaseService.js';
+import { withRetry } from '../retryUtils.js';
+import { shuffleArray as shuffleArrayImported, validateQuestions as validateQuestionsImported } from '../quizValidator.js';
+import { ApiConfigService }   from './api/apiConfigService.js';
+import { UserCreditService }  from './Service/userCreditService.js';
+import { CacheService } from './Service/cacheService.js';
+import { ApiClient } from './api/apiClient.js';
+import { GenerationService, attemptGeneration } from './Service/generationService.js';
+import { QuestionProcessor } from './processor/questionProcessor.js';
+import { QuestionSynthesizer } from './processor/questionSynthesizer.js';
 
 export class LLMService {
   static instance = null;
