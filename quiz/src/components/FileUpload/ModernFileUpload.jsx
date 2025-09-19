@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Stack } from '@mui/material';
+import { Stack, Fade, Zoom } from '@mui/material';
 import { LLMService } from '../../utils/llmService/llmService';
 import { useAuth } from '../../context/AuthContext';
 import Header from './components/Header';
@@ -37,9 +37,10 @@ const ModernFileUpload = ({
 	const [extractedText, setExtractedText] = useState('');
 	const [fileReadStatus, setFileReadStatus] = useState('none'); // 'none', 'reading', 'ready', 'error'
 
-	// NEW: State for the new flow
+	// Enhanced state for better UX
 	const [generatedQuestions, setGeneratedQuestions] = useState(null);
 	const [showQuizOptionsDialog, setShowQuizOptionsDialog] = useState(false);
+	const [mounted, setMounted] = useState(false);
 
 	const [loadingStage, setLoadingStage] = useState('');
 	const [stageMessage, setStageMessage] = useState('');
@@ -53,12 +54,14 @@ const ModernFileUpload = ({
 
 	const effectiveLoading = isLoading || loadingFromParent;
 
-	// Call preloadApiConfig on component mount
+	// Enhanced mount effect with staggered animations
 	useEffect(() => {
+		const timer = setTimeout(() => setMounted(true), 100);
 		LLMService.preloadApiConfig().catch(console.error);
+		return () => clearTimeout(timer);
 	}, []);
 
-	// Stage-based loading helpers
+	// Enhanced loading helpers with better feedback
 	const startLoading = useCallback(
 		(stage = 'reading', message = 'Reading file...') => {
 			setError(null);
@@ -96,8 +99,8 @@ const ModernFileUpload = ({
 		setSelectedFile(null);
 		setExtractedText('');
 		setFileReadStatus('none');
-		setGeneratedQuestions(null); // NEW: Clear generated questions
-		setShowQuizOptionsDialog(false); // NEW: Close dialog
+		setGeneratedQuestions(null);
+		setShowQuizOptionsDialog(false);
 		setError(null);
 		if (fileInputRef.current) {
 			fileInputRef.current.value = '';
@@ -112,41 +115,41 @@ const ModernFileUpload = ({
 		[onReconfigure]
 	);
 
-	// MODIFIED: Process file for AI and show dialog after completion
+	// Enhanced AI processing with better error handling and user feedback
 	const processFileForAI = useCallback(
 		async (file, preExtractedText) => {
 			if (busyRef.current) return;
 			setError(null);
 
 			try {
-				// Check credit availability first
+				// Enhanced credit checking with better messaging
 				if (!isPremium && !isAdmin && credits <= 0) {
 					setError(
-						'You have no credits remaining. Please upgrade to Premium or wait 24 hours for daily credit reset.'
+						'No credits remaining. Upgrade to Premium for unlimited access or wait 24 hours for daily credit reset.'
 					);
 					return;
 				}
 
-				// Check API key availability
+				// Enhanced API key validation
 				if (!apiKey && !sessionStorage.getItem('llm_apiKey')) {
 					setError(
-						'Please configure your API key first. Click the settings button to get started.'
+						'API configuration required. Please configure your AI provider in Settings to continue.'
 					);
 					return;
 				}
 
-				// Start AI processing
-				startLoading('analyzing', 'Analyzing content...');
+				// Start AI processing with enhanced feedback
+				startLoading('analyzing', 'Analyzing document content...');
 
 				try {
 					const llmService = new LLMService();
 
-					updateLoadingStage('analyzing', 'Analyzing content...', 30, {
+					updateLoadingStage('analyzing', 'Processing text content...', 25, {
 						textExtracted: preExtractedText?.length || 0,
 					});
 
-					// Deduct credit before AI generation
-					updateLoadingStage('validating', 'Checking credits...', 40);
+					// Credit validation with better UX
+					updateLoadingStage('validating', 'Validating credits...', 35);
 
 					const canUseCredit = await useCredit();
 					if (!canUseCredit) {
@@ -158,10 +161,10 @@ const ModernFileUpload = ({
 					let creditDeducted = true;
 
 					try {
-						// AI question generation
+						// Enhanced AI generation with progress updates
 						updateLoadingStage(
 							'generating',
-							'AI is generating quiz questions...',
+							'AI is crafting personalized quiz questions...',
 							50
 						);
 
@@ -170,25 +173,25 @@ const ModernFileUpload = ({
 							aiOptions
 						);
 
-						// Finalizing
+						// Success feedback with celebration
 						updateLoadingStage(
 							'finalizing',
-							`Generated ${questions.length} questions successfully! 1 credit used.`,
+							`Successfully generated ${questions.length} questions! 🎉`,
 							90,
 							{ questionsGenerated: questions.length }
 						);
 
-						// Store generated questions and show dialog
-						updateLoadingStage('complete', 'Quiz ready!', 100);
+						updateLoadingStage('complete', 'Quiz ready for review!', 100);
 						
+						// Smooth transition to dialog
 						setTimeout(() => {
 							setGeneratedQuestions(questions);
 							setShowQuizOptionsDialog(true);
 							stopLoading();
-						}, 800);
+						}, 1200);
 
 					} catch (apiError) {
-						// If API call fails after credit deduction, refund the credit
+						// Enhanced error handling with credit refund
 						if (creditDeducted) {
 							try {
 								await refundCredit();
@@ -205,13 +208,11 @@ const ModernFileUpload = ({
 			} catch (err) {
 				console.error('Error processing file for AI:', err);
 
-				// Enhanced error handling
-				let userMessage =
-					err?.message || 'Failed to process file. Please try again.';
+				// Enhanced error messaging with actionable suggestions
+				let userMessage = err?.message || 'Failed to process file. Please try again.';
 
-				// Add helpful suggestions based on error type
 				if (userMessage.includes('API key')) {
-					userMessage += ' Go to Settings to configure your AI provider.';
+					userMessage = '🔑 API key missing. Please configure your AI provider in Settings.';
 				} else if (
 					userMessage.includes('network') ||
 					userMessage.includes('timeout') ||
@@ -219,16 +220,14 @@ const ModernFileUpload = ({
 					userMessage.includes('overloaded') ||
 					userMessage.includes('Service Unavailable')
 				) {
-					userMessage +=
-						' The AI service is temporarily unavailable. Your credit has been refunded. Please try again later.';
+					userMessage = '🌐 AI service temporarily unavailable. Credit refunded. Please retry in a moment.';
 				} else if (
 					userMessage.includes('API failed') ||
 					userMessage.includes('500') ||
 					userMessage.includes('502') ||
 					userMessage.includes('504')
 				) {
-					userMessage +=
-						' Server error occurred. Your credit has been refunded. Please try again.';
+					userMessage = '⚠️ Server error occurred. Credit refunded. Please try again.';
 				}
 
 				setError(userMessage);
@@ -266,32 +265,29 @@ const ModernFileUpload = ({
 		updateLoadingStage,
 	});
 
-	// MODIFIED: Generate quiz using pre-extracted text
+	// Enhanced quiz generation with better validation
 	const handleGenerateQuiz = useCallback(async () => {
 		if (!selectedFile) {
-			setError('No file selected. Please upload a file first.');
+			setError('📁 Please select a file to generate quiz questions.');
 			return;
 		}
 
 		if (fileReadStatus === 'reading') {
-			setError('File is still being read. Please wait for it to complete.');
+			setError('⏳ File is still being processed. Please wait...');
 			return;
 		}
 
 		if (fileReadStatus === 'error') {
-			setError('File reading failed. Please try uploading a different file.');
+			setError('❌ File reading failed. Please try a different file or format.');
 			return;
 		}
 
-		if (!extractedText) {
-			setError(
-				'No text was extracted from the file. Please try a different file.'
-			);
+		if (!extractedText?.trim()) {
+			setError('📄 No text content found. Please try a file with readable text.');
 			return;
 		}
 
 		try {
-			// Use the pre-extracted text for AI processing
 			await processFileForAI(selectedFile, extractedText);
 		} catch (error) {
 			console.error('Quiz generation failed:', error);
@@ -299,49 +295,50 @@ const ModernFileUpload = ({
 		}
 	}, [selectedFile, extractedText, fileReadStatus, processFileForAI]);
 
-	// Handle non-AI file uploads immediately
+	// Enhanced non-AI upload handling
 	const handleNonAIUpload = useCallback(() => {
 		if (selectedFile && !useAI) {
 			onFileUpload(selectedFile, false, null);
 		}
 	}, [selectedFile, useAI, onFileUpload]);
 
-	// Auto-upload for non-AI files when file is selected
+	// Auto-upload for non-AI files with smooth transition
 	useEffect(() => {
 		if (selectedFile && !useAI && fileReadStatus === 'ready') {
-			handleNonAIUpload();
+			const timer = setTimeout(handleNonAIUpload, 300);
+			return () => clearTimeout(timer);
 		}
 	}, [selectedFile, useAI, fileReadStatus, handleNonAIUpload]);
 
-	// NEW: Handle starting interactive quiz
+	// Enhanced quiz handling
 	const handleStartInteractiveQuiz = useCallback(() => {
 		if (generatedQuestions) {
 			onFileUpload(generatedQuestions, true, aiOptions);
 		}
 	}, [generatedQuestions, onFileUpload, aiOptions]);
 
-	// NEW: Handle closing quiz options dialog
 	const handleCloseQuizOptions = useCallback(() => {
 		setShowQuizOptionsDialog(false);
-		// Optionally clear generated questions if you want to regenerate
-		// setGeneratedQuestions(null);
 	}, []);
 
+	// Enhanced drag and drop with better feedback
 	const handleDrop = useCallback(
 		(e) => {
 			e.preventDefault();
 			setDragOver(false);
-			if (e.dataTransfer.files.length) {
+			if (e.dataTransfer.files.length && !effectiveLoading) {
 				handleFileSelect(e.dataTransfer.files[0]);
 			}
 		},
-		[handleFileSelect]
+		[handleFileSelect, effectiveLoading]
 	);
 
 	const handleDragOver = useCallback((e) => {
 		e.preventDefault();
-		setDragOver(true);
-	}, []);
+		if (!effectiveLoading) {
+			setDragOver(true);
+		}
+	}, [effectiveLoading]);
 
 	const handleDragLeave = useCallback((e) => {
 		e.preventDefault();
@@ -350,11 +347,12 @@ const ModernFileUpload = ({
 		}
 	}, []);
 
+	// Enhanced keyboard navigation
 	const handleKeyDown = useCallback(
 		(e) => {
-			if (e.key === 'Enter' || e.key === ' ') {
+			if ((e.key === 'Enter' || e.key === ' ') && !effectiveLoading) {
 				e.preventDefault();
-				if (fileInputRef.current && !effectiveLoading) {
+				if (fileInputRef.current) {
 					fileInputRef.current.click();
 				}
 			}
@@ -364,51 +362,65 @@ const ModernFileUpload = ({
 
 	return (
 		<UploadContainer maxWidth='lg'>
-			<Stack spacing={{ xs: 3, sm: 4, md: 5 }}>
-				<Header />
-				<Features />
+			<Fade in={mounted} timeout={800}>
+				<Stack spacing={{ xs: 2, sm: 3, md: 4, lg: 5 }}>
+					<Zoom in={mounted} timeout={600} style={{ transitionDelay: '200ms' }}>
+						<div>
+							<Header />
+						</div>
+					</Zoom>
+					
+					<Zoom in={mounted} timeout={600} style={{ transitionDelay: '400ms' }}>
+						<div>
+							<Features />
+						</div>
+					</Zoom>
 
-				<UploadMainCard
-					error={error}
-					setError={setError}
-					hasAI={hasAI}
-					apiKey={apiKey}
-					effectiveLoading={effectiveLoading}
-					aiOptions={aiOptions}
-					setAiOptions={setAiOptions}
-					handleReconfigure={handleReconfigure}
-					dragOver={dragOver}
-					fileName={fileName}
-					fileSize={fileSize}
-					fileType={fileType}
-					useAI={useAI}
-					uploadProgress={uploadProgress}
-					loadingStage={loadingStage}
-					stageMessage={stageMessage}
-					processingDetails={processingDetails}
-					fileInputRef={fileInputRef}
-					handleDrop={handleDrop}
-					handleDragOver={handleDragOver}
-					handleDragLeave={handleDragLeave}
-					handleFileSelect={handleFileSelect}
-					clearSelectedFile={clearSelectedFile}
-					handleGenerateQuiz={handleGenerateQuiz}
-					handleKeyDown={handleKeyDown}
-					baseUrl={baseUrl}
-					onFileUpload={onFileUpload}
-					fileReadStatus={fileReadStatus}
-					extractedText={extractedText}
-					selectedFile={selectedFile}
-					startLoading={startLoading}
-					stopLoading={stopLoading}
-					updateLoadingStage={updateLoadingStage}
-					// NEW: Props for the new flow
-					generatedQuestions={generatedQuestions}
-					showQuizOptionsDialog={showQuizOptionsDialog}
-					onCloseQuizOptions={handleCloseQuizOptions}
-					onStartInteractiveQuiz={handleStartInteractiveQuiz}
-				/>
-			</Stack>
+					<Zoom in={mounted} timeout={600} style={{ transitionDelay: '600ms' }}>
+						<div>
+							<UploadMainCard
+								error={error}
+								setError={setError}
+								hasAI={hasAI}
+								apiKey={apiKey}
+								effectiveLoading={effectiveLoading}
+								aiOptions={aiOptions}
+								setAiOptions={setAiOptions}
+								handleReconfigure={handleReconfigure}
+								dragOver={dragOver}
+								fileName={fileName}
+								fileSize={fileSize}
+								fileType={fileType}
+								useAI={useAI}
+								uploadProgress={uploadProgress}
+								loadingStage={loadingStage}
+								stageMessage={stageMessage}
+								processingDetails={processingDetails}
+								fileInputRef={fileInputRef}
+								handleDrop={handleDrop}
+								handleDragOver={handleDragOver}
+								handleDragLeave={handleDragLeave}
+								handleFileSelect={handleFileSelect}
+								clearSelectedFile={clearSelectedFile}
+								handleGenerateQuiz={handleGenerateQuiz}
+								handleKeyDown={handleKeyDown}
+								baseUrl={baseUrl}
+								onFileUpload={onFileUpload}
+								fileReadStatus={fileReadStatus}
+								extractedText={extractedText}
+								selectedFile={selectedFile}
+								startLoading={startLoading}
+								stopLoading={stopLoading}
+								updateLoadingStage={updateLoadingStage}
+								generatedQuestions={generatedQuestions}
+								showQuizOptionsDialog={showQuizOptionsDialog}
+								onCloseQuizOptions={handleCloseQuizOptions}
+								onStartInteractiveQuiz={handleStartInteractiveQuiz}
+							/>
+						</div>
+					</Zoom>
+				</Stack>
+			</Fade>
 		</UploadContainer>
 	);
 };
