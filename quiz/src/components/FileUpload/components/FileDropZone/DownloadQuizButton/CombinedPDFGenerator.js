@@ -1,9 +1,9 @@
 import React from 'react';
 
 const CombinedPDFGenerator = {
-  // Generate watermark style for PDF
-  getWatermarkStyle: () => {
-    return `
+	// Generate watermark style for PDF
+	getWatermarkStyle: () => {
+		return `
       @media print {
         .watermark {
           position: fixed;
@@ -78,14 +78,14 @@ const CombinedPDFGenerator = {
         }
       }
     `;
-  },
+	},
 
-  // Generate Combined PDF (Quiz + Answer Key)
-  generate: async (quizData, questions) => {
-    const quizTitle = quizData?.title || 'Quiz Sheet';
-    const date = new Date().toLocaleDateString();
-    
-    const htmlContent = `
+	// Generate Combined PDF (Quiz + Answer Key)
+	generate: async (quizData, questions) => {
+		const quizTitle = (quizData?.title || 'Quiz Sheet').toUpperCase();
+		const date = new Date().toLocaleDateString();
+
+		const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -278,7 +278,7 @@ const CombinedPDFGenerator = {
           <div class="title">${quizTitle}</div>
           <div class="info">Date: ${date}</div>
           <div class="info">Total Questions: ${questions.length}</div>
-          <div class="info">Name: _________________________ Class: _________</div>
+          <div class="info">Name: _____________________________________________________________________ Class: ________________  Date: ________________ </div>
         </div>
         
         <div class="instructions">
@@ -291,24 +291,39 @@ const CombinedPDFGenerator = {
           </ul>
         </div>
         
-        ${questions.map((question, index) => `
+        ${questions
+					.map(
+						(question, index) => `
           <div class="question">
             <div class="question-header">
               ${index + 1}. ${question.question}
             </div>
-            ${question.context ? `<div class="context">${question.context}</div>` : ''}
+            ${
+							question.context
+								? `<div class="context">${question.context}</div>`
+								: ''
+						}
             <div class="options">
-              ${question.options?.map((option, optionIndex) => 
-                `<div class="option">
-                  <span class="option-letter">${String.fromCharCode(65 + optionIndex)}.</span> ${option}
+              ${
+								question.options
+									?.map(
+										(option, optionIndex) =>
+											`<div class="option">
+                  <span class="option-letter">${String.fromCharCode(
+										65 + optionIndex
+									)}.</span> ${option}
                 </div>`
-              ).join('') || ''}
+									)
+									.join('') || ''
+							}
             </div>
             <div class="answer-line">
               Answer: _________________________________________
             </div>
           </div>
-        `).join('')}
+        `
+					)
+					.join('')}
         
         <!-- ANSWER KEY SECTION -->
         <div class="page-break">
@@ -320,31 +335,45 @@ const CombinedPDFGenerator = {
           </div>
           
           <div class="answer-grid">
-            ${questions.map((question, index) => `
+            ${questions
+							.map(
+								(question, index) => `
               <div class="answer-item">
                 <div class="question-number">${index + 1}</div>
                 ${String.fromCharCode(65 + question.correctAnswer)}
               </div>
-            `).join('')}
+            `
+							)
+							.join('')}
           </div>
           
           <div class="detailed-answers">
             <div class="section-title">Detailed Answers & Explanations</div>
-            ${questions.map((question, index) => `
+            ${questions
+							.map(
+								(question, index) => `
               <div class="question-answer">
                 <div class="question-text">
                   ${index + 1}. ${question.question}
                 </div>
                 <div class="correct-answer">
-                  ✅ Correct Answer: ${String.fromCharCode(65 + question.correctAnswer)}. ${question.options[question.correctAnswer]}
+                  ✅ Correct Answer: ${String.fromCharCode(
+										65 + question.correctAnswer
+									)}. ${question.options[question.correctAnswer]}
                 </div>
-                ${question.explanation ? `
+                ${
+									question.explanation
+										? `
                   <div class="explanation">
                     💡 Explanation: ${question.explanation}
                   </div>
-                ` : ''}
+                `
+										: ''
+								}
               </div>
-            `).join('')}
+            `
+							)
+							.join('')}
           </div>
           
           <div class="footer warning">
@@ -356,14 +385,14 @@ const CombinedPDFGenerator = {
       </html>
     `;
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
-  }
+		const printWindow = window.open('', '_blank');
+		printWindow.document.write(htmlContent);
+		printWindow.document.close();
+
+		setTimeout(() => {
+			printWindow.print();
+		}, 500);
+	},
 };
 
 export default CombinedPDFGenerator;
