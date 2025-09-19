@@ -2,83 +2,86 @@ import React from 'react';
 
 const CombinedPDFGenerator = {
 	// Generate watermark style for PDF
-	getWatermarkStyle: () => {
-		return `
-      @media print {
-        .watermark {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%) rotate(-45deg);
-          font-size: 8em;
-          opacity: 0.08;
-          color: #cccccc;
-          pointer-events: none;
-          z-index: -1;
-          font-weight: 300;
-          font-family: 'Arial', sans-serif;
-          letter-spacing: 0.1em;
-          user-select: none;
-        }
-        
-        .watermark-multiple {
-          position: fixed;
-          width: 100%;
-          height: 100%;
-          top: 0;
-          left: 0;
-          pointer-events: none;
-          z-index: -1;
-          background-image: 
-            radial-gradient(circle at 25% 25%, transparent 20px, transparent 20px),
-            radial-gradient(circle at 75% 25%, transparent 20px, transparent 20px),
-            radial-gradient(circle at 25% 75%, transparent 20px, transparent 20px),
-            radial-gradient(circle at 75% 75%, transparent 20px, transparent 20px);
-          background-size: 200px 200px;
-          opacity: 0.03;
-        }
-        
-        .watermark-multiple::before {
-          content: 'QuizAI';
-          position: absolute;
-          top: 20%;
-          left: 20%;
-          transform: rotate(-45deg);
-          font-size: 3em;
-          color: #ddd;
-          opacity: 0.5;
-        }
-        
-        .watermark-multiple::after {
-          content: 'QuizAI';
-          position: absolute;
-          bottom: 20%;
-          right: 20%;
-          transform: rotate(-45deg);
-          font-size: 3em;
-          color: #ddd;
-          opacity: 0.5;
-        }
+getWatermarkStyle: () => {
+  return `
+    @media print {
+      .watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 8em;
+        opacity: 0.06; /* slightly reduced */
+        color: #e6e6e6; /* lighter grey */
+        pointer-events: none;
+        z-index: 9999 !important;
+        font-weight: 300;
+        font-family: 'Arial', sans-serif;
+        letter-spacing: 0.1em;
+        user-select: none;
       }
       
-      @media screen {
-        .watermark {
-          display: block;
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%) rotate(-45deg);
-          font-size: 6em;
-          opacity: 0.05;
-          color: #999;
-          pointer-events: none;
-          z-index: -1;
-          font-weight: 300;
-          font-family: 'Arial', sans-serif;
-        }
+      .watermark-multiple {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        z-index: 9999 !important;
+        background-image: 
+          radial-gradient(circle at 25% 25%, transparent 20px, transparent 20px),
+          radial-gradient(circle at 75% 25%, transparent 20px, transparent 20px),
+          radial-gradient(circle at 25% 75%, transparent 20px, transparent 20px),
+          radial-gradient(circle at 75% 75%, transparent 20px, transparent 20px);
+        background-size: 200px 200px;
+        opacity: 0.02; /* lighter background effect */
       }
-    `;
-	},
+      
+      .watermark-multiple::before {
+        content: 'QuizAI';
+        position: absolute;
+        top: 20%;
+        left: 20%;
+        transform: rotate(-45deg);
+        font-size: 3em;
+        color: #f0f0f0; /* even lighter */
+        opacity: 0.4;
+        z-index: 9999 !important;
+      }
+      
+      .watermark-multiple::after {
+        content: 'QuizAI';
+        position: absolute;
+        bottom: 20%;
+        right: 20%;
+        transform: rotate(-45deg);
+        font-size: 3em;
+        color: #f0f0f0;
+        opacity: 0.4;
+        z-index: 9999 !important;
+      }
+    }
+    
+    @media screen {
+      .watermark {
+        display: block;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 6em;
+        opacity: 0.04; /* lighter for screen */
+        color: #e0e0e0;
+        pointer-events: none;
+        z-index: 9999 !important;
+        font-weight: 300;
+        font-family: 'Arial', sans-serif;
+      }
+    }
+  `;
+},
+
 
 	// Generate Combined PDF (Quiz + Answer Key)
 	generate: async (quizData, questions) => {
