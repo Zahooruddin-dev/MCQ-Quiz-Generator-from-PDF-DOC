@@ -56,11 +56,12 @@ const QuickActions = ({ quickActions }) => {
 				variant='h4'
 				component='h2'
 				sx={{
-					mb: { xs: 3, sm: 4 },
+					mb: { xs: 2.5, sm: 3.5 },
 					fontWeight: 700,
 					fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
 					color: '#111827',
 					letterSpacing: '-0.025em',
+					textAlign: { xs: 'center', sm: 'left' },
 				}}
 			>
 				Quick Actions
