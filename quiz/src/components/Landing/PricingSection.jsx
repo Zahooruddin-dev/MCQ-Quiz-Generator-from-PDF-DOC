@@ -200,7 +200,7 @@ const PricingSection = ({ user }) => {
                   <Box
                     sx={{
                       position: 'absolute',
-                      top: { xs: -12, md: -16 },
+                      top: { xs: -0, md: -0 },
                       left: '50%',
                       transform: 'translateX(-50%)',
                       background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
@@ -212,13 +212,14 @@ const PricingSection = ({ user }) => {
                       alignItems: 'center',
                       gap: 1,
                       fontWeight: 'bold',
-                      fontSize: { xs: '0.8rem', md: '0.875rem' },
+                      margin: 0.4,
+                      fontSize: { xs: '0.4rem', md: '0.475rem' },
                       boxShadow: `0 4px 15px ${alpha(theme.palette.primary.main, 0.3)}`,
                       zIndex: 1
                     }}
                   >
                     <StarIcon sx={{ fontSize: { xs: 14, md: 16 } }} />
-                    Most Popular
+                    Popular
                   </Box>
                 )}
 

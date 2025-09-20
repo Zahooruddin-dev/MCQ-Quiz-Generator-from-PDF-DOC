@@ -184,6 +184,7 @@ const HowItWorks = () => {
                     } : {}
                   }}
                 >
+                  
                   {/* Step number */}
                   <Box
                     sx={{
