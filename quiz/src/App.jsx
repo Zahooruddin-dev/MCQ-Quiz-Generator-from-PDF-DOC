@@ -11,7 +11,6 @@ import {
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline, Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
-
 import theme from './theme';
 import { useAuth } from './context/AuthContext';
 import ShareQuizModal from './components/FileUpload/Engine/Results/ShareQuizModal/ShareQuizModal';
