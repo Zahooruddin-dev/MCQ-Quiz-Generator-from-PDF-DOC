@@ -116,8 +116,8 @@ export const MainCard = styled(Card)(({ theme }) => ({
   `,
 	overflow: 'visible',
 	position: 'relative',
-	animation: `${fadeInUp} 0.8s cubic-bezier(0.4, 0, 0.2, 1)`,
-	transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+	animation: `${fadeInUp} 0.6s cubic-bezier(0.4, 0, 0.2, 1)`,
+	transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
 
 	// Enhanced gradient border
 	'&::before': {
@@ -139,7 +139,7 @@ export const MainCard = styled(Card)(({ theme }) => ({
     `,
 		borderRadius: `${theme.spacing(4)} ${theme.spacing(4)} 0 0`,
 		backgroundSize: '200% 100%',
-		animation: 'borderAnimation 4s ease-in-out infinite',
+		animation: 'borderAnimation 3s ease-in-out infinite',
 	},
 
 	'@keyframes borderAnimation': {
@@ -209,7 +209,7 @@ export const DropZone = styled(Box, {
 	flexDirection: 'column',
 	alignItems: 'center',
 	justifyContent: 'center',
-	transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+	transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
 
 	// Dynamic backgrounds with better visual hierarchy
 	background: isDragActive
@@ -353,8 +353,8 @@ export const FileIcon = styled(Box)(({ theme }) => ({
     0 16px 40px rgba(102, 126, 234, 0.25),
     0 8px 20px rgba(102, 126, 234, 0.15)
   `,
-	animation: `${pulse} 4s ease-in-out infinite`,
-	transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+	animation: `${pulse} 3s ease-in-out infinite`,
+	transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
 
 	// Enhanced glowing border effect
 	'&::before': {
@@ -371,7 +371,7 @@ export const FileIcon = styled(Box)(({ theme }) => ({
     `,
 		borderRadius: theme.spacing(2.8),
 		backgroundSize: '300% 300%',
-		animation: 'borderGlow 6s linear infinite',
+		animation: 'borderGlow 4s linear infinite',
 		zIndex: -1,
 	},
 
@@ -385,7 +385,7 @@ export const FileIcon = styled(Box)(({ theme }) => ({
 		border: '2px solid rgba(255, 255, 255, 0.2)',
 		borderRadius: theme.spacing(3),
 		transform: 'translate(-50%, -50%)',
-		animation: `${pulse} 4s ease-in-out infinite`,
+		animation: `${pulse} 3s ease-in-out infinite`,
 		animationDelay: '1s',
 	},
 
@@ -441,7 +441,7 @@ export const ConfigPanel = styled(Card)(({ theme }) => ({
     0 4px 16px rgba(0, 0, 0, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.6)
   `,
-	transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+	transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
 	position: 'relative',
 	overflow: 'hidden',
 
@@ -500,7 +500,7 @@ export const LoadingOverlay = styled(Box)(({ theme }) => ({
 	justifyContent: 'center',
 	borderRadius: theme.spacing(3),
 	zIndex: 10,
-	animation: `${fadeInUp} 0.4s cubic-bezier(0.4, 0, 0.2, 1)`,
+	animation: `${fadeInUp} 0.3s cubic-bezier(0.4, 0, 0.2, 1)`,
 
 	// Loading shimmer effect
 	'&::before': {
@@ -519,7 +519,7 @@ export const LoadingOverlay = styled(Box)(({ theme }) => ({
       )
     `,
 		backgroundSize: '200% 200%',
-		animation: 'loadingShimmer 3s ease-in-out infinite',
+		animation: 'loadingShimmer 2s ease-in-out infinite',
 	},
 
 	'@keyframes loadingShimmer': {
@@ -555,7 +555,7 @@ export const TextModeCard = styled(Card)(({ theme }) => ({
     0 4px 16px rgba(0, 0, 0, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.6)
   `,
-	transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+	transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
 	position: 'relative',
 	overflow: 'hidden',
 
@@ -622,10 +622,10 @@ export const ProgressBar = styled(Box)(({ theme }) => ({
       )
     `,
 		borderRadius: '8px',
-		transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+		transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
 		position: 'relative',
 		backgroundSize: '200% 100%',
-		animation: 'progressGradient 3s ease-in-out infinite',
+		animation: 'progressGradient 2s ease-in-out infinite',
 
 		'&::before': {
 			content: '""',
@@ -643,7 +643,7 @@ export const ProgressBar = styled(Box)(({ theme }) => ({
         )
       `,
 			backgroundSize: '50% 100%',
-			animation: `${shimmer} 2s infinite`,
+			animation: `${shimmer} 1.5s infinite`,
 		},
 
 		'&::after': {
@@ -707,7 +707,7 @@ export const ErrorContainer = styled(Box)(({ theme }) => ({
 	border: '1px solid rgba(248, 113, 113, 0.3)',
 	borderRadius: theme.spacing(2),
 	marginTop: theme.spacing(2),
-	animation: `${slideInFromLeft} 0.4s cubic-bezier(0.4, 0, 0.2, 1)`,
+	animation: `${slideInFromLeft} 0.3s cubic-bezier(0.4, 0, 0.2, 1)`,
 	color: '#dc2626',
 	position: 'relative',
 	boxShadow: '0 4px 16px rgba(220, 38, 38, 0.1)',
@@ -756,7 +756,7 @@ export const SuccessContainer = styled(Box)(({ theme }) => ({
 	border: '1px solid rgba(34, 197, 94, 0.3)',
 	borderRadius: theme.spacing(2),
 	marginTop: theme.spacing(2),
-	animation: `${slideInFromLeft} 0.4s cubic-bezier(0.4, 0, 0.2, 1)`,
+	animation: `${slideInFromLeft} 0.3s cubic-bezier(0.4, 0, 0.2, 1)`,
 	color: '#059669',
 	position: 'relative',
 	boxShadow: '0 4px 16px rgba(5, 150, 105, 0.1)',
@@ -787,7 +787,7 @@ export const SuccessContainer = styled(Box)(({ theme }) => ({
 		backgroundSize: '8px 8px, 4px 4px',
 		backgroundPosition: '0 0, 4px 4px',
 		opacity: 0.3,
-		animation: 'celebrate 2s ease-in-out infinite',
+		animation: 'celebrate 1.5s ease-in-out infinite',
 		transform: 'translateY(-50%)',
 	},
 
@@ -838,7 +838,7 @@ export const MobileOptimized = styled(Box)(({ theme }) => ({
 			borderRadius: theme.spacing(1.5),
 			fontWeight: 600,
 			boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-			transition: 'all 0.2s ease-out',
+			transition: 'all 0.15s ease-out',
 
 			'&:active': {
 				transform: 'scale(0.98)',
@@ -901,7 +901,7 @@ export const ModernButton = styled(Box)(({ theme }) => ({
 		fontWeight: 600,
 		textTransform: 'none',
 		boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
-		transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+		transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
 		position: 'relative',
 		overflow: 'hidden',
 
@@ -914,7 +914,7 @@ export const ModernButton = styled(Box)(({ theme }) => ({
 			height: '100%',
 			background:
 				'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)',
-			transition: 'left 0.6s ease',
+			transition: 'left 0.4s ease',
 		},
 
 		'&:hover': {
@@ -952,7 +952,7 @@ export const GlassCard = styled(Card)(({ theme }) => ({
     0 8px 32px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.5)
   `,
-	transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+	transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
 
 	'&:hover': {
 		background: 'rgba(255, 255, 255, 0.15)',

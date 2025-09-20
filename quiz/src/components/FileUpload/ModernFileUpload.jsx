@@ -362,21 +362,16 @@ const ModernFileUpload = ({
 
 	return (
 		<UploadContainer maxWidth='lg'>
-			<Fade in={mounted} timeout={800}>
+			<Fade in={mounted} timeout={600}>
 				<Stack spacing={{ xs: 2, sm: 3, md: 4, lg: 5 }}>
-					<Zoom in={mounted} timeout={600} style={{ transitionDelay: '200ms' }}>
 						<div>
 							<Header />
 						</div>
-					</Zoom>
 					
-					<Zoom in={mounted} timeout={600} style={{ transitionDelay: '400ms' }}>
 						<div>
 							<Features />
 						</div>
-					</Zoom>
 
-					<Zoom in={mounted} timeout={600} style={{ transitionDelay: '600ms' }}>
 						<div>
 							<UploadMainCard
 								error={error}
@@ -418,7 +413,6 @@ const ModernFileUpload = ({
 								onStartInteractiveQuiz={handleStartInteractiveQuiz}
 							/>
 						</div>
-					</Zoom>
 				</Stack>
 			</Fade>
 		</UploadContainer>
